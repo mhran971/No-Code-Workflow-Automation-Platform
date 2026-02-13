@@ -4,6 +4,9 @@ namespace Modules\Auth\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Auth\Repositories\TenantRepository;
+use Modules\Auth\Repositories\UserRepository;
+use Modules\Auth\Services\TenantRegistrationService;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -36,6 +39,10 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+
+        $this->app->singleton(TenantRepository::class);
+        $this->app->singleton(UserRepository::class);
+        $this->app->singleton(TenantRegistrationService::class);
     }
 
     /**
