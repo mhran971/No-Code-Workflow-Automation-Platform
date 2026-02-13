@@ -11,6 +11,8 @@ class LoginController extends Controller
 {
     /**
      * Authenticate the user and return a JWT (with tenant in claims).
+     *
+     * @unauthenticated
      */
     public function __invoke(LoginRequest $request): JsonResponse|LoginSuccessResource
     {

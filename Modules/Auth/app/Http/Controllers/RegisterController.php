@@ -15,6 +15,8 @@ class RegisterController extends Controller
 
     /**
      * Register a new tenant and user (business owner).
+     *
+     * @unauthenticated
      */
     public function __invoke(RegisterTenantRequest $request)
     {
