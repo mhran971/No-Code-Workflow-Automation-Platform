@@ -35,7 +35,7 @@ class RegisterTenantRequest extends FormRequest
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
             ],
             'password_confirmation' => ['required', 'string'],
-            'captcha_token' => ['required', 'string'],
+            // 'captcha_token' => ['required', 'string'],
         ];
     }
 
@@ -54,15 +54,15 @@ class RegisterTenantRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
-        $validator->after(function ($validator) {
-            if ($validator->errors()->isNotEmpty()) {
-                return;
-            }
+        // $validator->after(function ($validator) {
+        //     if ($validator->errors()->isNotEmpty()) {
+        //         return;
+        //     }
 
-            if (! $this->verifyCaptcha()) {
-                $validator->errors()->add('captcha_token', 'CAPTCHA verification failed. Please try again.');
-            }
-        });
+        //     if (! $this->verifyCaptcha()) {
+        //         $validator->errors()->add('captcha_token', 'CAPTCHA verification failed. Please try again.');
+        //     }
+        // });
     }
 
     /**
