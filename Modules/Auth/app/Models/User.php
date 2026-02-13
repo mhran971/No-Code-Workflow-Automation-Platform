@@ -5,8 +5,9 @@ namespace Modules\Auth\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Modules\Auth\Enums\Role;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use HasApiTokens;
 
@@ -49,5 +50,31 @@ class User extends Authenticatable
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * Get the identifier that will be stored in the JWT subject claim.
+     */
+    public function getJWTIdentifier(): mixed
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Get the custom claims to be added to the JWT (includes tenant for context).
+     */
+    public function getJWTCustomClaims(): array
+    {
+        $tenant = $this->relationLoaded('tenant')
+            ? $this->tenant
+            : $this->tenant()->first();
+
+        return [
+            'tenant' => $tenant ? [
+                'id' => $tenant->id,
+                'business_name' => $tenant->business_name,
+                'business_type' => $tenant->business_type?->value ?? $tenant->business_type,
+            ] : null,
+        ];
     }
 }
