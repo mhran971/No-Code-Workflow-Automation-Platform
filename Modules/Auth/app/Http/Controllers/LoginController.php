@@ -4,6 +4,7 @@ namespace Modules\Auth\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Modules\Auth\Http\Requests\LoginRequest;
 use Modules\Auth\Http\Resources\LoginSuccessResource;
 
@@ -16,20 +17,29 @@ class LoginController extends Controller
      */
     public function __invoke(LoginRequest $request): JsonResponse|LoginSuccessResource
     {
-        $credentials = $request->only('email', 'password');
+        DB::beginTransaction();
+        try {
+            $credentials = $request->only('email', 'password');
 
-        if (! $token = auth('api')->attempt($credentials)) {
-            return response()->json([
-                'message' => 'Invalid email or password.',
-            ], 401);
+            if (! $token = auth('api')->attempt($credentials)) {
+                return response()->json([
+                    'message' => 'Invalid email or password.',
+                ], 401);
+            }
+
+            $user = auth('api')->user();
+            $user->load('tenant');
+
+            DB::commit();
+
+            return (new LoginSuccessResource($user))
+                ->additional(['token' => $token])
+                ->response()
+                ->setStatusCode(200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            throw $e;
         }
-
-        $user = auth('api')->user();
-        $user->load('tenant');
-
-        return (new LoginSuccessResource($user))
-            ->additional(['token' => $token])
-            ->response()
-            ->setStatusCode(200);
     }
 }

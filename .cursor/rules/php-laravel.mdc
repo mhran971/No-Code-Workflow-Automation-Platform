@@ -1,0 +1,70 @@
+---
+description: PHP and Laravel conventions for this project
+globs: "**/*.php"
+alwaysApply: false
+---
+
+# PHP & Laravel Conventions
+
+## Controllers
+
+- Thin controllers: call services, return Resources or `response()->json()`.
+- **Transaction control lives in the controller**: use `DB::beginTransaction()`, `DB::commit()`, and `DB::rollBack()` explicitly. Never use `DB::transaction()` closures in services.
+- Catch custom business exceptions from services and return the exception message as JSON with the appropriate status code.
+
+```php
+// Example controller pattern
+DB::beginTransaction();
+try {
+    $result = $this->service->doSomething($request->validated());
+    DB::commit();
+    return new SomeResource($result);
+} catch (SomeBusinessException $e) {
+    DB::rollBack();
+    return response()->json(['message' => $e->getMessage()], 422);
+} catch (\Exception $e) {
+    DB::rollBack();
+    throw $e;
+}
+```
+
+## Services
+
+- **All services extend `App\Services\BaseService`.**
+- `BaseService` provides a `__call()` magic method that delegates unknown method calls to the matching repository:
+    - By convention: `FooService` delegates to `FooRepository` (same module, `Services` namespace swapped to `Repositories`).
+    - Override `protected ?string $repositoryClass` to set an explicit repository when the convention doesn't match.
+- Contain business logic and orchestrate repositories.
+- Throw **custom exception classes** for business/logical errors (e.g. duplicate email, invalid state). The exception message is the user-facing error text.
+- Do NOT catch or handle database-level exceptions; let those bubble up.
+- Do NOT manage transactions; that is the controller's responsibility.
+
+## Repositories
+
+- Encapsulate Eloquent create/update/delete operations (e.g. hash password, set defaults).
+- Return models or throw exceptions on failure.
+- Services can call repository methods directly via `__call()` delegation from BaseService.
+
+## Exceptions
+
+- Custom exceptions live in `Modules/<Name>/app/Exceptions/`.
+- Use static factory methods for readable construction: `SomeException::reasonDescription()`.
+- Exception messages are user-facing; keep them clear and friendly.
+- Exceptions are for **business logic errors only**, not for database-level errors.
+
+## Validation
+
+- Use Form Request classes for all validation.
+- For complex rules (regex, multi-condition checks), create a dedicated Rule class in `Modules/<Name>/app/Rules/` implementing `ValidationRule`.
+- Use `Rule::enum()` for enum validation; use custom Rule classes instead of inline regex patterns.
+
+## Responses
+
+- Use API Resources (`JsonResource`) for success responses. Set status with `->response()->setStatusCode()`.
+- Validation errors use Laravel's default 422 response.
+- Business logic errors return JSON `{ "message": "..." }` with appropriate status code (typically 422).
+
+## Models
+
+- Use `$fillable`, `$casts` (enums, `hashed` for password), and relation methods.
+- Namespaces follow `Modules\<ModuleName>\` pattern.

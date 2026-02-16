@@ -1,0 +1,13 @@
+---
+description: Project overview and stack for No-Code Workflow Automation Platform
+alwaysApply: true
+---
+
+# Project Overview
+
+- **Stack**: Laravel 12, PHP 8.2. API-first workflow automation platform.
+- **Modules**: nwidart/laravel-modules. Feature code lives in `Modules/<ModuleName>/`. Root `app/` is minimal. Stubs in `stubs/nwidart-stubs/`.
+- **Auth**: JWT (tymon/jwt-auth) for API; tenant embedded in token claims.
+- **Docs**: Scramble at `/docs/api`; JWT Bearer is default security scheme.
+- **Base classes**: `App\Services\BaseService` — all services extend it; provides `__call()` that delegates to the matching repository by naming convention.
+- **Database**: Migrations per module under `Modules/<Name>/database/migrations/`. Use manual `DB::beginTransaction()` / `commit()` / `rollBack()` in controllers (not `DB::transaction()` closures in services).

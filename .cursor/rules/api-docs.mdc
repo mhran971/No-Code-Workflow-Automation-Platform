@@ -1,0 +1,16 @@
+---
+description: API design and Scramble documentation conventions
+globs: "**/routes/**/*.php,**/Http/**/*.php"
+alwaysApply: false
+---
+
+# API & Documentation
+
+- **Routes**: Module API routes in `Modules/<Name>/routes/api.php` with prefix `v1`. The module RouteServiceProvider adds the `api` prefix.
+- **Public endpoints**: POST register, POST login (no auth middleware). Use `@unauthenticated` annotation on controller methods.
+- **Protected endpoints**: Behind `auth:api` (JWT guard).
+- **Success responses**: Use API Resources with appropriate status codes (200, 201).
+- **Business error responses**: JSON `{ "message": "..." }` from caught exceptions (typically 422).
+- **Validation errors**: Laravel default 422 format.
+- **Auth failures**: 401 with `{ "message": "Invalid email or password." }`.
+- **Scramble**: Docs at `/docs/api`. JWT Bearer is default security scheme configured in AppServiceProvider.
