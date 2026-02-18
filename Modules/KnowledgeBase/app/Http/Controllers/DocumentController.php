@@ -31,13 +31,14 @@ class DocumentController extends Controller
 
     /**
      * Upload a new PDF document.
+     * Tags are sent as a comma-separated string (e.g. cv,cv2,cv3) and converted to an array here.
      */
     public function store(StoreDocumentRequest $request): JsonResponse
     {
         $file = $request->file('file');
         $title = $request->input('title');
         $documentTypeId = (int) $request->input('document_type_id');
-        $tags = $request->input('tags', []);
+        $tags = StoreDocumentRequest::parseTagsString($request->input('tags', ''));
 
         $document = $this->documentService->upload(
             $file->getRealPath(),
@@ -65,6 +66,7 @@ class DocumentController extends Controller
 
     /**
      * Update document metadata. Only same-tenant users. Uploaded date is not editable.
+     * Tags are sent as a comma-separated string (e.g. cv,cv2,cv3) and converted to an array here.
      */
     public function update(UpdateDocumentRequest $request, int $id): DocumentResource|JsonResponse
     {
@@ -75,7 +77,9 @@ class DocumentController extends Controller
         }
 
         $data = $request->only(['title', 'document_type_id']);
-        $tags = $request->input('tags', []);
+        $tags = $request->has('tags')
+            ? UpdateDocumentRequest::parseTagsString($request->input('tags', ''))
+            : $document->tags->pluck('name')->all();
 
         $document = $this->documentService->updateMetadata($document, $data, $tags);
 
