@@ -19,4 +19,12 @@ class Tag extends Model
     {
         return $this->belongsTo(Tenant::class);
     }
+
+    /**
+     * Get the documents that use this tag.
+     */
+    public function documents()
+    {
+        return $this->belongsToMany(Document::class, 'document_tag')->withTimestamps();
+    }
 }
