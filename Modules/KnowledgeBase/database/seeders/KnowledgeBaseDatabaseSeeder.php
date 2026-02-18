@@ -13,6 +13,7 @@ class KnowledgeBaseDatabaseSeeder extends Seeder
     {
         $this->call([
             DocumentTypeSeeder::class,
+            TagSeeder::class,
         ]);
     }
 }
