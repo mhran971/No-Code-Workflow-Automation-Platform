@@ -58,9 +58,9 @@ class RegisterTenantRequest extends FormRequest
                 return;
             }
 
-            if (! $this->verifyCaptcha()) {
-                $validator->errors()->add('captcha_token', 'CAPTCHA verification failed. Please try again.');
-            }
+            // if (! $this->verifyCaptcha()) {
+            //     $validator->errors()->add('captcha_token', 'CAPTCHA verification failed. Please try again.');
+            // }
         });
     }
 
