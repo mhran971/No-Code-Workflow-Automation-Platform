@@ -1,11 +1,15 @@
 <?php
 
-namespace Modules\Teams\Models;
+namespace Modules\Team\app\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\User; // Assuming User model exists globally
+
+
+
+
+// Assuming User model exists globally
 
 class Team extends Model
 {

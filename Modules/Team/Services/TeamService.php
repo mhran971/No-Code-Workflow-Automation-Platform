@@ -1,12 +1,13 @@
 <?php
 
-namespace  Modules\Teams\Services;
+namespace  Modules\Team\Services;
 
-use App\Modules\Teams\Models\Team;
+
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\Team\app\Repositories\TeamRepository;
 use Exception;
+use Modules\Team\Models\Team;
 
 class TeamService
 {

@@ -2,8 +2,8 @@
 
 namespace Modules\Team\app\Repositories;
 
-use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Collection;
+use Modules\Team\Models\Team;
 
 class TeamRepository
 {

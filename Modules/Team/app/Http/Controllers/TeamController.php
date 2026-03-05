@@ -3,19 +3,21 @@
 namespace Modules\Team\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Teams\Http\Requests\StoreTeamRequest;
-use App\Modules\Teams\Http\Requests\UpdateTeamRequest;
-use App\Modules\Teams\Http\Resources\TeamResource;
-use App\Modules\Teams\Services\TeamService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
+
+use Modules\Team\app\Http\Requests\StoreTeamRequest;
+use Modules\Team\app\Http\Requests\UpdateTeamRequest;
+use Modules\Team\App\Http\Resource\TeamResource;
+use Modules\Team\Services\TeamService;
 
 class TeamController extends Controller
 {
     protected $service;
 
+    /**
+     * Inject TeamService dependency.
+     */
     public function __construct(TeamService $service)
     {
         $this->service = $service;
@@ -23,15 +25,14 @@ class TeamController extends Controller
 
     /**
      * Display a listing of teams for the tenant.
-     * Input JSON: Query Params { "search": "design" }
-     * Header: X-Tenant-ID (Assumed from auth or header)
+     * Supports search via query parameter: ?search=name
      *
      * @param Request $request
      * @return AnonymousResourceCollection
      */
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
-        // Assuming Tenant ID is retrieved from authenticated user or header
+        // Retrieve Tenant ID from Header or Authenticated User
         $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
         $search = $request->query('search');
 
@@ -42,14 +43,14 @@ class TeamController extends Controller
 
     /**
      * Store a newly created team.
-     * Input JSON: { "name": "Sales", "description": "Sales Team" }
      *
      * @param StoreTeamRequest $request
      * @return TeamResource
      */
-    public function store(StoreTeamRequest $request)
+    public function store(StoreTeamRequest $request): TeamResource
     {
         $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+
         $data = $request->validated();
         $data['tenant_id'] = $tenantId;
 
@@ -60,19 +61,19 @@ class TeamController extends Controller
 
     /**
      * Update the specified team.
-     * Input JSON: { "name": "Updated Sales", "description": "..." }
      *
      * @param UpdateTeamRequest $request
      * @param int $id
      * @return TeamResource
      */
-    public function update(UpdateTeamRequest $request, int $id)
+    public function update(UpdateTeamRequest $request, int $id): TeamResource
     {
         $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
-        $team = $this->service->listTeams($tenantId, null)->find($id); // Simplified lookup
+
+        $team = $this->service->getTeamById($tenantId, $id);
 
         if (!$team) {
-            return response()->json(['message' => 'Team not found'], 404);
+            abort(404, 'Team not found');
         }
 
         $updatedTeam = $this->service->updateTeam($team, $request->validated());
@@ -81,17 +82,17 @@ class TeamController extends Controller
     }
 
     /**
-     * Remove the specified team.
-     * Input JSON: (None, ID in URL)
+     * Remove the specified team (Soft Delete).
      *
      * @param Request $request
      * @param int $id
-     * @return Response
+     * @return JsonResponse
      */
-    public function destroy(Request $request, int $id)
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
-        $team = $this->service->listTeams($tenantId, null)->find($id);
+
+        $team = $this->service->getTeamById($tenantId, $id);
 
         if (!$team) {
             return response()->json(['message' => 'Team not found'], 404);
@@ -104,13 +105,13 @@ class TeamController extends Controller
 
     /**
      * Add a member to the team.
-     * Input JSON: { "user_id": 5, "role": "admin" }
+     * Expected JSON: { "user_id": 1, "role": "member" }
      *
      * @param Request $request
      * @param int $teamId
      * @return JsonResponse
      */
-    public function addMember(Request $request, int $teamId)
+    public function addMember(Request $request, int $teamId): JsonResponse
     {
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
@@ -118,39 +119,39 @@ class TeamController extends Controller
         ]);
 
         $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
-        $team = $this->service->listTeams($tenantId, null)->find($teamId);
+        $team = $this->service->getTeamById($tenantId, $teamId);
 
         if (!$team) {
             return response()->json(['message' => 'Team not found'], 404);
         }
 
-        $this->service->addMemberToTeam($team, $request->user_id, $request->role ?? 'member');
+        $this->service->addMemberToTeam($team, $request->input('user_id'), $request->input('role', 'member'));
 
         return response()->json(['message' => 'Member added successfully'], 200);
     }
 
     /**
      * Remove a member from the team.
-     * Input JSON: { "user_id": 5 }
+     * Expected JSON: { "user_id": 1 }
      *
      * @param Request $request
      * @param int $teamId
      * @return JsonResponse
      */
-    public function removeMember(Request $request, int $teamId)
+    public function removeMember(Request $request, int $teamId): JsonResponse
     {
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
         ]);
 
         $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
-        $team = $this->service->listTeams($tenantId, null)->find($teamId);
+        $team = $this->service->getTeamById($tenantId, $teamId);
 
         if (!$team) {
             return response()->json(['message' => 'Team not found'], 404);
         }
 
-        $this->service->removeMemberFromTeam($team, $request->user_id);
+        $this->service->removeMemberFromTeam($team, $request->input('user_id'));
 
         return response()->json(['message' => 'Member removed successfully'], 200);
     }
