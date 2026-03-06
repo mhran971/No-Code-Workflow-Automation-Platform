@@ -41,8 +41,8 @@ class Team extends Model
     public function scopeSearch($query, $search)
     {
         if ($search) {
-            // PostgreSQL ILIKE for case-insensitive search
-            return $query->where('name', 'ILIKE', "%{$search}%");
+            // MySQL/MariaDB case-insensitive search using LOWER()
+            return $query->whereRaw('LOWER(name) LIKE ?', [strtolower("%{$search}%")]);
         }
         return $query;
     }

@@ -3,7 +3,7 @@
 namespace Modules\Team\app\Repositories;
 
 use Illuminate\Database\Eloquent\Collection;
-use Modules\Team\Models\Team;
+use Modules\Team\app\Models\Team;
 
 class TeamRepository
 {

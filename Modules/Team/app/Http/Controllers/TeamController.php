@@ -5,7 +5,6 @@ namespace Modules\Team\app\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
 use Modules\Team\app\Http\Requests\StoreTeamRequest;
 use Modules\Team\app\Http\Requests\UpdateTeamRequest;
 use Modules\Team\App\Http\Resource\TeamResource;
@@ -28,12 +27,21 @@ class TeamController extends Controller
      * Supports search via query parameter: ?search=name
      *
      * @param Request $request
-     * @return AnonymousResourceCollection
+     * @return JsonResponse
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): JsonResponse
     {
         // Retrieve Tenant ID from Header or Authenticated User
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+        $tenantId = $request->header('X-Tenant-ID');
+
+        if (!$tenantId && auth()->check()) {
+            $tenantId = auth()->user()->tenant_id;
+        }
+
+        if (!$tenantId) {
+            return response()->json(['message' => 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.'], 400);
+        }
+
         $search = $request->query('search');
 
         $teams = $this->service->listTeams($tenantId, $search);
@@ -49,7 +57,15 @@ class TeamController extends Controller
      */
     public function store(StoreTeamRequest $request): TeamResource
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+        $tenantId = $request->header('X-Tenant-ID');
+
+        if (!$tenantId && auth()->check()) {
+            $tenantId = auth()->user()->tenant_id;
+        }
+
+        if (!$tenantId) {
+            abort(400, 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.');
+        }
 
         $data = $request->validated();
         $data['tenant_id'] = $tenantId;
@@ -68,7 +84,15 @@ class TeamController extends Controller
      */
     public function update(UpdateTeamRequest $request, int $id): TeamResource
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+        $tenantId = $request->header('X-Tenant-ID');
+
+        if (!$tenantId && auth()->check()) {
+            $tenantId = auth()->user()->tenant_id;
+        }
+
+        if (!$tenantId) {
+            abort(400, 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.');
+        }
 
         $team = $this->service->getTeamById($tenantId, $id);
 
@@ -90,7 +114,15 @@ class TeamController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+        $tenantId = $request->header('X-Tenant-ID');
+
+        if (!$tenantId && auth()->check()) {
+            $tenantId = auth()->user()->tenant_id;
+        }
+
+        if (!$tenantId) {
+            return response()->json(['message' => 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.'], 400);
+        }
 
         $team = $this->service->getTeamById($tenantId, $id);
 
@@ -118,7 +150,16 @@ class TeamController extends Controller
             'role' => 'sometimes|in:owner,admin,member'
         ]);
 
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+        $tenantId = $request->header('X-Tenant-ID');
+
+        if (!$tenantId && auth()->check()) {
+            $tenantId = auth()->user()->tenant_id;
+        }
+
+        if (!$tenantId) {
+            return response()->json(['message' => 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.'], 400);
+        }
+
         $team = $this->service->getTeamById($tenantId, $teamId);
 
         if (!$team) {
@@ -144,7 +185,16 @@ class TeamController extends Controller
             'user_id' => 'required|integer|exists:users,id',
         ]);
 
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+        $tenantId = $request->header('X-Tenant-ID');
+
+        if (!$tenantId && auth()->check()) {
+            $tenantId = auth()->user()->tenant_id;
+        }
+
+        if (!$tenantId) {
+            return response()->json(['message' => 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.'], 400);
+        }
+
         $team = $this->service->getTeamById($tenantId, $teamId);
 
         if (!$team) {

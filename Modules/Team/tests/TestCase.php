@@ -8,7 +8,7 @@ use Modules\Auth\Database\Factories\TenantFactory;
 use Modules\Auth\Database\Factories\UserFactory;
 use Modules\Auth\Models\User;
 use Modules\Team\Database\Factories\TeamFactory;
-use Modules\Team\Models\Team;
+use Modules\Team\app\Models\Team;
 
 abstract class TestCase extends BaseTestCase
 {

@@ -3,7 +3,7 @@
 namespace Modules\Team\Tests\Feature;
 
 use Modules\Team\Tests\TestCase;
-use Modules\Team\Models\Team;
+use Modules\Team\app\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class TeamControllerTest extends TestCase
@@ -39,7 +39,7 @@ class TeamControllerTest extends TestCase
     public function test_can_list_teams_with_search(): void
     {
         $this->actingAsUser();
-        
+
         $this->createTeam(['name' => 'Marketing Team']);
         $this->createTeam(['name' => 'Sales Team']);
         $this->createTeam(['name' => 'HR Team']);
@@ -57,7 +57,7 @@ class TeamControllerTest extends TestCase
     public function test_list_teams_returns_empty_when_no_match(): void
     {
         $this->actingAsUser();
-        
+
         $this->createTeam(['name' => 'Marketing Team']);
 
         $response = $this->getJson('/api/teams?search=nonexistent');
@@ -72,7 +72,7 @@ class TeamControllerTest extends TestCase
     public function test_can_create_team(): void
     {
         $this->actingAsUser();
-        
+
         $teamData = [
             'name' => 'New Team',
             'description' => 'A new team description',
@@ -142,7 +142,7 @@ class TeamControllerTest extends TestCase
     public function test_cannot_create_duplicate_team_name_in_tenant(): void
     {
         $this->actingAsUser();
-        
+
         $this->createTeam(['name' => 'Existing Team']);
 
         $response = $this->postJson('/api/teams', [
@@ -158,7 +158,7 @@ class TeamControllerTest extends TestCase
     public function test_can_update_team(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam(['name' => 'Old Name']);
 
         $response = $this->putJson("/api/teams/{$team->id}", [
@@ -196,7 +196,7 @@ class TeamControllerTest extends TestCase
     public function test_can_delete_team(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
 
         $response = $this->deleteJson("/api/teams/{$team->id}");
@@ -227,7 +227,7 @@ class TeamControllerTest extends TestCase
     public function test_can_add_member_to_team(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
         $user = $this->actingAsUser();
 
@@ -252,7 +252,7 @@ class TeamControllerTest extends TestCase
     public function test_add_member_requires_user_id(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
 
         $response = $this->postJson("/api/teams/{$team->id}/members", [
@@ -269,7 +269,7 @@ class TeamControllerTest extends TestCase
     public function test_add_member_validates_user_exists(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
 
         $response = $this->postJson("/api/teams/{$team->id}/members", [
@@ -286,7 +286,7 @@ class TeamControllerTest extends TestCase
     public function test_add_member_validates_role(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
         $user = $this->actingAsUser();
 
@@ -305,7 +305,7 @@ class TeamControllerTest extends TestCase
     public function test_cannot_add_same_member_twice(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
         $user = $this->actingAsUser();
 
@@ -330,7 +330,7 @@ class TeamControllerTest extends TestCase
     public function test_can_remove_member_from_team(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
         $user = $this->actingAsUser();
 
@@ -356,7 +356,7 @@ class TeamControllerTest extends TestCase
     public function test_remove_member_requires_user_id(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
 
         $response = $this->deleteJson("/api/teams/{$team->id}/members");
@@ -371,7 +371,7 @@ class TeamControllerTest extends TestCase
     public function test_can_add_member_with_tenant_header(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
         $user = $this->actingAsUser();
 
@@ -390,7 +390,7 @@ class TeamControllerTest extends TestCase
     public function test_team_resource_has_correct_structure(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
 
         $response = $this->getJson('/api/teams');
@@ -416,7 +416,7 @@ class TeamControllerTest extends TestCase
     public function test_team_belongs_to_correct_tenant(): void
     {
         $this->actingAsUser();
-        
+
         $team = $this->createTeam();
 
         // Verify the team was created with correct tenant_id in database

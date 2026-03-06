@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\Team\app\Repositories\TeamRepository;
 use Exception;
-use Modules\Team\Models\Team;
+use Modules\Team\app\Models\Team;
 
 class TeamService
 {
@@ -121,5 +121,18 @@ class TeamService
     public function removeMemberFromTeam(Team $team, int $userId): void
     {
         $this->repository->removeMember($team, $userId);
+    }
+
+    /**
+     * Get a team by ID for a specific tenant.
+     * Input JSON: { "tenantId": 1, "teamId": 5 }
+     *
+     * @param int $tenantId
+     * @param int $teamId
+     * @return Team|null
+     */
+    public function getTeamById(int $tenantId, int $teamId): ?Team
+    {
+        return $this->repository->find($tenantId, $teamId);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Team\App\Http\Resource;
+namespace Modules\Team\app\Http\Resource;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -9,44 +9,31 @@ class TeamResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
-     * Input JSON: (Internal Model Data)
      *
      * @param Request $request
      * @return array
      */
-    public function toArray($request)
+    public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'member_count' => $this->members->count(),
-            'members' => $this->members->map(function ($member) {
-                return [
-                    'id' => $member->id,
-                    'name' => $member->name,
-                    // Logic: Avatar or Initials
-                    'avatar' => $member->avatar ?? $this->generateInitials($member->name),
-                ];
+            'member_count' => $this->whenCounted('members', $this->members_count ?? $this->members()->count()),
+            'members' => $this->whenLoaded('members', function () {
+                return $this->members->map(function ($member) {
+                    return [
+                        'id' => $member->id,
+                        'name' => $member->name,
+                        'email' => $member->email,
+                        'pivot' => [
+                            'role' => $member->pivot->role,
+                        ],
+                    ];
+                });
             }),
-            'created_at' => $this->created_at,
+            'created_at' => $this->whenNotNull($this->created_at?->toIso8601String()),
+            'updated_at' => $this->whenNotNull($this->updated_at?->toIso8601String()),
         ];
-    }
-
-    /**
-     * Generate initials from name.
-     * Input JSON: { "name": "John Doe" }
-     *
-     * @param string $name
-     * @return string
-     */
-    private function generateInitials(string $name): string
-    {
-        $words = explode(' ', $name);
-        $initials = '';
-        foreach ($words as $word) {
-            $initials .= strtoupper(substr($word, 0, 1));
-        }
-        return substr($initials, 0, 2); // Max 2 letters
     }
 }
