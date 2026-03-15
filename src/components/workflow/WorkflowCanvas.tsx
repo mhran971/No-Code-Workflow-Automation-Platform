@@ -16,6 +16,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { WorkflowNode } from './WorkflowNode';
 import type { NodeTypeDefinition } from '@/types/workflow';
+import type { SelectedNodeInfo } from '@/pages/Index';
 
 const nodeTypes = {
   workflowNode: WorkflowNode,
@@ -122,7 +123,11 @@ const defaultEdges: Edge[] = [
   { id: 'e3-6', source: 'if-1', target: 'task-1', sourceHandle: 'output-1', targetHandle: 'input-0', style: { stroke: 'hsl(215 20% 35%)', strokeDasharray: '5 5' } },
 ];
 
-export function WorkflowCanvas() {
+interface WorkflowCanvasProps {
+  onNodeSelect?: (node: SelectedNodeInfo | null) => void;
+}
+
+export function WorkflowCanvas({ onNodeSelect }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(defaultNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(defaultEdges);
@@ -138,6 +143,25 @@ export function WorkflowCanvas() {
     },
     [setEdges]
   );
+
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      const d = node.data as Record<string, unknown>;
+      onNodeSelect?.({
+        id: node.id,
+        label: d.label as string,
+        icon: d.icon as string,
+        color: d.color as string,
+        nodeType: d.nodeType as string,
+        description: d.description as string,
+      });
+    },
+    [onNodeSelect]
+  );
+
+  const onPaneClick = useCallback(() => {
+    onNodeSelect?.(null);
+  }, [onNodeSelect]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -189,6 +213,8 @@ export function WorkflowCanvas() {
         onInit={setReactFlowInstance}
         onDrop={onDrop}
         onDragOver={onDragOver}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
