@@ -86,7 +86,7 @@ function NumberField({ field, value, onChange }: { field: ConfigField; value: nu
   return (
     <input
       type="number"
-      value={value !== undefined && value !== null ? value : (field.defaultValue !== undefined ? field.defaultValue : '')}
+      value={String(value ?? field.defaultValue ?? '')}
       onChange={e => onChange(Number(e.target.value))}
       min={field.min}
       max={field.max}
