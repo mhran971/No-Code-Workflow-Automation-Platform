@@ -39,7 +39,7 @@ class TeamController extends Controller
         }
 
         if (!$tenantId) {
-            return response()->json(['message' => 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.'], 400);
+            return response()->json(['message ' => 'Tenant ID is required. Provide X-Tenant-ID header or authenticate.'], 400);
         }
 
         $search = $request->query('search');
