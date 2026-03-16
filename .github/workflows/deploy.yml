@@ -29,6 +29,19 @@ jobs:
       - name: Generate app key
         run: php artisan key:generate
 
+      - name: Setup SSH
+      - run:
+            mkdir -p ~/.ssh
+            echo "${{ secrets.SERV00_SSH_KEY }}" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+            ssh-keyscan -p ${{ secrets.SERV00_PORT }} ${{ secrets.SERV00_HOST }} >> ~/.ssh/known_hosts
+
+             - name: Test SSH Connection
+              run:
+                ssh -v -p ${{ secrets.SERV00_PORT }} \
+                    -i ~/.ssh/id_ed25519 \
+                    -o StrictHostKeyChecking=no \
+                    ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} "echo '✅ SSH Connection OK'"
 #      - name: Run Tests
 #        run: php artisan test
 
