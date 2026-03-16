@@ -1,47 +1,9 @@
 import { useState } from 'react';
 import type { WorkflowExecution, ExecutionStep } from '@/types/workflow';
-import { CheckCircle2, XCircle, Clock, Loader2, ChevronDown, PlayCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Loader2, ChevronDown, PlayCircle, StepForward, Pause, Play, RotateCcw, Zap } from 'lucide-react';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import type { SelectedNodeInfo } from '@/pages/Index';
-
-const MOCK_EXECUTION: WorkflowExecution = {
-  id: 'exec-001',
-  status: 'success',
-  startedAt: '2026-03-15T09:41:00Z',
-  completedAt: '2026-03-15T09:41:08Z',
-  steps: [
-    {
-      id: 's1', nodeId: 'node-1', nodeLabel: 'Webhook Received', nodeType: 'webhook-trigger',
-      status: 'success', timestamp: '09:41:02', duration: 12,
-      variables: { method: 'POST', contentType: 'application/json', body: { leadId: 'LD-4521', email: 'jane@acme.com', company: 'Acme Corp', score: 85 } },
-      message: 'Webhook payload received (245 bytes)'
-    },
-    {
-      id: 's2', nodeId: 'node-2', nodeLabel: 'AI Classifier', nodeType: 'ai-classifier',
-      status: 'success', timestamp: '09:41:03', duration: 890,
-      variables: { classification: { priority: 'high', sentiment: 'positive', confidence: 0.92 }, documentsUsed: ['sales-policy-v3.pdf'], tokensUsed: 1245 },
-      message: 'Classified as "High Priority" (confidence: 0.92)'
-    },
-    {
-      id: 's3', nodeId: 'node-3', nodeLabel: 'If: High Priority', nodeType: 'if-node',
-      status: 'success', timestamp: '09:41:04', duration: 2,
-      variables: { condition: 'priority === "high"', result: true, branch: 'true' },
-      message: 'Condition evaluated: TRUE → taking priority path'
-    },
-    {
-      id: 's4', nodeId: 'node-4', nodeLabel: 'HubSpot: Create Contact', nodeType: 'hubspot-contact',
-      status: 'success', timestamp: '09:41:05', duration: 1200,
-      variables: { contactId: 'HS-89012', email: 'jane@acme.com', lifecycleStage: 'opportunity', hubspotUrl: 'https://app.hubspot.com/contacts/89012' },
-      message: 'Contact created: jane@acme.com (ID: HS-89012)'
-    },
-    {
-      id: 's5', nodeId: 'node-5', nodeLabel: 'Send Email', nodeType: 'send-email',
-      status: 'success', timestamp: '09:41:07', duration: 650,
-      variables: { emailId: 'msg-7745', to: 'sales-team@company.com', subject: 'High Priority Lead: Acme Corp', sendStatus: 'delivered' },
-      message: 'Email delivered to sales-team@company.com'
-    },
-  ],
-};
+import type { ExecutionMode } from '@/hooks/useWorkflowExecution';
 
 const statusIcon: Record<string, React.ReactNode> = {
   success: <CheckCircle2 className="h-3.5 w-3.5 text-success" />,
@@ -91,12 +53,21 @@ function VariableTree({ data, depth = 0 }: { data: unknown; depth?: number }) {
   return <span className="text-foreground font-mono text-[11px]">{String(data)}</span>;
 }
 
-function StepRow({ step }: { step: ExecutionStep }) {
+function StepRow({ step, isActive }: { step: ExecutionStep; isActive?: boolean }) {
   const [expanded, setExpanded] = useState(false);
 
+  // Auto-expand running step
+  const shouldExpand = expanded || (step.status === 'running');
+
   return (
-    <div className="border-l-2 border-border ml-2 pl-3 relative">
-      <div className="absolute -left-[5px] top-2.5 w-2 h-2 rounded-full bg-border" />
+    <div className={`border-l-2 ml-2 pl-3 relative transition-colors ${
+      isActive ? 'border-primary' : step.status === 'success' ? 'border-success/40' : 'border-border'
+    }`}>
+      <div className={`absolute -left-[5px] top-2.5 w-2 h-2 rounded-full transition-colors ${
+        step.status === 'running' ? 'bg-primary animate-pulse' :
+        step.status === 'success' ? 'bg-success' :
+        step.status === 'failed' ? 'bg-destructive' : 'bg-border'
+      }`} />
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-left py-2 group"
@@ -105,15 +76,17 @@ function StepRow({ step }: { step: ExecutionStep }) {
           {statusIcon[step.status]}
           <span className="text-[10px] font-mono text-muted-foreground">[{step.timestamp}]</span>
           <span className="text-xs font-medium text-foreground flex-1 truncate">{step.nodeLabel}</span>
-          {step.duration && <span className="text-[10px] text-muted-foreground">{step.duration}ms</span>}
-          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${expanded ? '' : '-rotate-90'}`} />
+          {step.duration != null && step.status !== 'idle' && (
+            <span className="text-[10px] text-muted-foreground">{step.duration}ms</span>
+          )}
+          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${shouldExpand ? '' : '-rotate-90'}`} />
         </div>
-        {step.message && (
+        {step.message && step.status !== 'idle' && (
           <p className="text-[10px] text-muted-foreground mt-0.5 ml-5 truncate">{step.message}</p>
         )}
       </button>
 
-      {expanded && (
+      {shouldExpand && step.status !== 'idle' && (
         <div className="pb-2 ml-5">
           <div className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wider">Variables</div>
           <div className="bg-muted/40 rounded-md p-2 border border-border/50">
@@ -128,14 +101,39 @@ function StepRow({ step }: { step: ExecutionStep }) {
 interface ExecutionPanelProps {
   selectedNode?: SelectedNodeInfo | null;
   onDeselectNode?: () => void;
+  execution?: WorkflowExecution | null;
+  executionMode?: ExecutionMode;
+  currentStepIndex?: number;
+  onRunAll?: () => void;
+  onStepForward?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onReset?: () => void;
 }
 
-export function ExecutionPanel({ selectedNode, onDeselectNode }: ExecutionPanelProps) {
+export function ExecutionPanel({
+  selectedNode,
+  onDeselectNode,
+  execution,
+  executionMode = 'idle',
+  currentStepIndex = -1,
+  onRunAll,
+  onStepForward,
+  onPause,
+  onResume,
+  onReset,
+}: ExecutionPanelProps) {
   const [activeTab, setActiveTab] = useState<'execution' | 'configuration'>('execution');
-  const execution = MOCK_EXECUTION;
 
-  // Auto-switch to configuration tab when a node is selected
   const effectiveTab = selectedNode ? 'configuration' : activeTab;
+  const isRunning = executionMode === 'running';
+  const isStepping = executionMode === 'stepping';
+  const isPaused = executionMode === 'paused';
+  const isCompleted = executionMode === 'completed';
+  const isIdle = executionMode === 'idle';
+
+  const completedSteps = execution?.steps.filter(s => s.status === 'success').length || 0;
+  const totalSteps = execution?.steps.length || 0;
 
   return (
     <div className="w-[320px] h-full bg-background border-l border-border flex flex-col">
@@ -151,11 +149,14 @@ export function ExecutionPanel({ selectedNode, onDeselectNode }: ExecutionPanelP
         </button>
         <button
           onClick={() => { setActiveTab('execution'); if (onDeselectNode) onDeselectNode(); }}
-          className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
+          className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors relative ${
             effectiveTab === 'execution' ? 'text-foreground border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           Execution
+          {isRunning && (
+            <span className="absolute top-2 right-3 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          )}
         </button>
       </div>
 
@@ -165,23 +166,118 @@ export function ExecutionPanel({ selectedNode, onDeselectNode }: ExecutionPanelP
           <NodeConfigPanel node={selectedNode} onClose={() => onDeselectNode?.()} />
         ) : effectiveTab === 'execution' ? (
           <div className="h-full overflow-y-auto p-3">
-            {/* Execution Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {statusIcon[execution.status]}
-                <span className="text-xs font-medium text-foreground">Run #{execution.id.split('-')[1]}</span>
+            {/* Execution Controls */}
+            <div className="mb-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                {isIdle && (
+                  <>
+                    <button
+                      onClick={onRunAll}
+                      className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+                    >
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      Run All
+                    </button>
+                    <button
+                      onClick={onStepForward}
+                      className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors"
+                    >
+                      <StepForward className="h-3.5 w-3.5" />
+                      Step
+                    </button>
+                  </>
+                )}
+                {isRunning && (
+                  <button
+                    onClick={onPause}
+                    className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-lg bg-warning/15 text-warning text-xs font-semibold hover:bg-warning/25 transition-colors border border-warning/30"
+                  >
+                    <Pause className="h-3.5 w-3.5" />
+                    Pause
+                  </button>
+                )}
+                {isPaused && (
+                  <>
+                    <button
+                      onClick={onResume}
+                      className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      Resume
+                    </button>
+                    <button
+                      onClick={onStepForward}
+                      className="h-8 w-8 flex items-center justify-center rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                      title="Next Step"
+                    >
+                      <StepForward className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
+                {(isRunning || isPaused || isCompleted || isStepping) && (
+                  <button
+                    onClick={onReset}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                    title="Reset"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
-              <span className="text-[10px] text-muted-foreground font-mono">
-                {execution.completedAt ? `${((new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime()) / 1000).toFixed(1)}s` : '—'}
-              </span>
+
+              {/* Progress */}
+              {execution && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-muted-foreground">
+                      {isCompleted ? 'Completed' : isRunning ? 'Running...' : isPaused ? 'Paused' : 'Ready'}
+                    </span>
+                    <span className="text-muted-foreground font-mono">{completedSteps}/{totalSteps} steps</span>
+                  </div>
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        isCompleted ? 'bg-success' : 'bg-primary'
+                      }`}
+                      style={{ width: `${totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Steps */}
-            <div className="space-y-0">
-              {execution.steps.map(step => (
-                <StepRow key={step.id} step={step} />
-              ))}
-            </div>
+            {/* Execution Header */}
+            {execution && (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {isCompleted ? statusIcon.success : isRunning ? statusIcon.running : statusIcon.idle}
+                    <span className="text-xs font-medium text-foreground">Run #{execution.id.split('-')[1]?.slice(0, 6)}</span>
+                  </div>
+                  {execution.completedAt && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {((new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime()) / 1000).toFixed(1)}s
+                    </span>
+                  )}
+                </div>
+
+                {/* Steps */}
+                <div className="space-y-0">
+                  {execution.steps.map((step, i) => (
+                    <StepRow key={step.id} step={step} isActive={i === currentStepIndex} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Empty state */}
+            {!execution && (
+              <div className="flex flex-col items-center justify-center h-48 text-center">
+                <Zap className="h-8 w-8 text-muted-foreground/30 mb-3" />
+                <p className="text-xs text-muted-foreground">No execution yet</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">Click "Run All" or "Step" to start</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="h-full overflow-y-auto p-4 space-y-4">
@@ -219,16 +315,6 @@ export function ExecutionPanel({ selectedNode, onDeselectNode }: ExecutionPanelP
           </div>
         )}
       </div>
-
-      {/* Footer */}
-      {!selectedNode && (
-        <div className="p-3 border-t border-border">
-          <button className="w-full h-9 flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
-            <PlayCircle className="h-3.5 w-3.5" />
-            Run Workflow
-          </button>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,6 +1,14 @@
-import { Workflow, Save, PlayCircle, Settings, ChevronDown } from 'lucide-react';
+import { Workflow, Save, PlayCircle, Settings, ChevronDown, Loader2 } from 'lucide-react';
+import type { ExecutionMode } from '@/hooks/useWorkflowExecution';
 
-export function WorkflowHeader() {
+interface WorkflowHeaderProps {
+  onRunAll?: () => void;
+  executionMode?: ExecutionMode;
+}
+
+export function WorkflowHeader({ onRunAll, executionMode = 'idle' }: WorkflowHeaderProps) {
+  const isRunning = executionMode === 'running' || executionMode === 'stepping';
+
   return (
     <header className="h-12 bg-background border-b border-border flex items-center justify-between px-4">
       <div className="flex items-center gap-3">
@@ -25,9 +33,17 @@ export function WorkflowHeader() {
           <Settings className="h-3.5 w-3.5" />
           Settings
         </button>
-        <button className="h-8 px-4 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
-          <PlayCircle className="h-3.5 w-3.5" />
-          Run
+        <button
+          onClick={onRunAll}
+          disabled={isRunning}
+          className="h-8 px-4 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isRunning ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <PlayCircle className="h-3.5 w-3.5" />
+          )}
+          {isRunning ? 'Running...' : 'Run'}
         </button>
       </div>
     </header>
