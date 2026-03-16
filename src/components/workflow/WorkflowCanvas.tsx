@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { WorkflowNode } from './WorkflowNode';
-import type { NodeTypeDefinition } from '@/types/workflow';
+import type { NodeTypeDefinition, ExecutionStatus } from '@/types/workflow';
 import type { SelectedNodeInfo } from '@/pages/Index';
 
 const nodeTypes = {
@@ -35,7 +35,7 @@ const defaultNodes: Node[] = [
       description: 'POST /api/leads/incoming',
       inputs: 0,
       outputs: 1,
-      executionStatus: 'success',
+      executionStatus: 'idle',
     },
   },
   {
@@ -50,7 +50,7 @@ const defaultNodes: Node[] = [
       description: 'Classify lead priority',
       inputs: 1,
       outputs: 1,
-      executionStatus: 'success',
+      executionStatus: 'idle',
     },
   },
   {
@@ -65,7 +65,7 @@ const defaultNodes: Node[] = [
       description: 'priority === "high"',
       inputs: 1,
       outputs: 2,
-      executionStatus: 'success',
+      executionStatus: 'idle',
     },
   },
   {
@@ -80,7 +80,7 @@ const defaultNodes: Node[] = [
       description: 'Create contact in CRM',
       inputs: 1,
       outputs: 1,
-      executionStatus: 'success',
+      executionStatus: 'idle',
     },
   },
   {
@@ -95,7 +95,7 @@ const defaultNodes: Node[] = [
       description: 'Notify sales team',
       inputs: 1,
       outputs: 1,
-      executionStatus: 'success',
+      executionStatus: 'idle',
     },
   },
   {
@@ -125,13 +125,44 @@ const defaultEdges: Edge[] = [
 
 interface WorkflowCanvasProps {
   onNodeSelect?: (node: SelectedNodeInfo | null) => void;
+  nodeStatuses?: Map<string, ExecutionStatus>;
+  onNodesEdgesChange?: (nodes: Node[], edges: Edge[]) => void;
 }
 
-export function WorkflowCanvas({ onNodeSelect }: WorkflowCanvasProps) {
+export function WorkflowCanvas({ onNodeSelect, nodeStatuses, onNodesEdgesChange }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(defaultNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(defaultEdges);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+
+  // Sync nodes/edges up to parent
+  useEffect(() => {
+    onNodesEdgesChange?.(nodes, edges);
+  }, [nodes, edges, onNodesEdgesChange]);
+
+  // Apply execution statuses to nodes
+  useEffect(() => {
+    if (!nodeStatuses || nodeStatuses.size === 0) {
+      // Reset all to idle if no statuses
+      setNodes(nds => nds.map(n => {
+        const d = n.data as Record<string, unknown>;
+        if (d.executionStatus !== 'idle') {
+          return { ...n, data: { ...d, executionStatus: 'idle' } };
+        }
+        return n;
+      }));
+      return;
+    }
+
+    setNodes(nds => nds.map(n => {
+      const status = nodeStatuses.get(n.id);
+      const d = n.data as Record<string, unknown>;
+      if (status && d.executionStatus !== status) {
+        return { ...n, data: { ...d, executionStatus: status } };
+      }
+      return n;
+    }));
+  }, [nodeStatuses, setNodes]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
