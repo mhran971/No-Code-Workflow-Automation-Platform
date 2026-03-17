@@ -45,15 +45,16 @@ jobs:
 
       - name: Post-deploy commands
         run: |
-          ssh -p ${{ secrets.SERV00_PORT }} \
-              -i ~/.ssh/id_ed25519 \
-              ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} << 'EOF'
-            cd ${{ secrets.SERV00_PATH }}
-            /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            chmod -R 775 storage bootstrap/cache
-            echo "✅ Deploy completed!"
-          EOF
+            ssh -p ${{ secrets.SERV00_PORT }} \
+                -i ~/.ssh/id_ed25519 \
+                ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} << 'EOF'
+              cd ${{ secrets.SERV00_PATH }}
+              /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
+              /usr/local/bin/composer dump-autoload   # ← أضف هذا
+              php artisan migrate --force
+              php artisan config:cache
+              php artisan route:cache
+              php artisan view:cache
+              chmod -R 775 storage bootstrap/cache
+              echo "✅ Deploy completed!"
+            EOF
