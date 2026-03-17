@@ -10,3 +10,4 @@ Route::prefix('v1')->group(function () { //middleware(['auth:sanctum'])->
     Route::post('teams/{team}/members', [TeamController::class, 'addMember']);
     Route::delete('teams/{team}/members', [TeamController::class, 'removeMember']);
 });
+//pipline 5
