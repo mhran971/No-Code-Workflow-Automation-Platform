@@ -6,8 +6,8 @@ on:
       - develop
 
 jobs:
-  test:
-    name: Run Tests
+  deploy:
+    name: Deploy to Serv00
     runs-on: ubuntu-latest
 
     steps:
@@ -19,47 +19,6 @@ jobs:
         with:
           php-version: '8.2'
           extensions: mbstring, bcmath, pdo, pdo_mysql, xml, zip, curl
-
-      - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction
-
-      - name: Copy .env for testing
-        run: cp .env.example .env
-
-      - name: Generate app key
-        run: php artisan key:generate
-
-      - name: Setup SSH
-        run: |
-            mkdir -p ~/.ssh
-            echo "${{ secrets.SERV00_SSH_KEY }}" > ~/.ssh/id_ed25519
-            chmod 600 ~/.ssh/id_ed25519
-            ssh-keyscan -p ${{ secrets.SERV00_PORT }} ${{ secrets.SERV00_HOST }} >> ~/.ssh/known_hosts
-
-
-      - name: Test SSH Connection
-        run: |
-                  ssh -v -p ${{ secrets.SERV00_PORT }} \
-                      -i ~/.ssh/id_ed25519 \
-                      -o StrictHostKeyChecking=no \
-                      ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} "echo '✅ SSH Connection OK'"
-
-  #      - name: Run Tests
-#        run: php artisan test
-
-  deploy:
-    name: Deploy to Serv00
-    runs-on: ubuntu-latest
-#    needs: test   # ينشر فقط إذا نجحت الـ tests
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
 
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
@@ -84,8 +43,17 @@ jobs:
             ./ \
             ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:${{ secrets.SERV00_PATH }}/
 
-      - name: Run post-deploy commands
+      - name: Post-deploy commands
         run: |
           ssh -p ${{ secrets.SERV00_PORT }} \
               -i ~/.ssh/id_ed25519 \
-              ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} 'bash -s' < scripts/deploy.sh
+              ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} << 'EOF'
+            cd ${{ secrets.SERV00_PATH }}
+            /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            chmod -R 775 storage bootstrap/cache
+            echo "✅ Deploy completed!"
+          EOF
