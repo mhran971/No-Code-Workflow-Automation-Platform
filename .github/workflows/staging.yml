@@ -1,4 +1,4 @@
-scriptsname: Deploy Laravel to Serv00 (Staging)
+name: Deploy Laravel to Serv00 on Staging Branch
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to Serv00 Staging
+    name: Deploy to Serv00
     runs-on: ubuntu-latest
 
     steps:
@@ -26,9 +26,9 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SERV00_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p ${{ secrets.STAGING_PORT }} ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.SERV00_PORT }} ${{ secrets.SERV00_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy via rsync
         run: |
@@ -39,22 +39,22 @@ jobs:
             --exclude='.env' \
             --exclude='storage/logs/*' \
             --exclude='storage/framework/cache/*' \
-            -e "ssh -p ${{ secrets.STAGING_PORT }} -i ~/.ssh/id_ed25519" \
+            -e "ssh -p ${{ secrets.SERV00_PORT }} -i ~/.ssh/id_ed25519" \
             ./ \
-            ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:${{ secrets.STAGING_PATH }}/
+            ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:${{ secrets.SERV00_PATH }}/
 
       - name: Post-deploy commands
         run: |
-            ssh -p ${{ secrets.STAGING_PORT }} \
-                -i ~/.ssh/id_ed25519 \
-                ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
-              cd ${{ secrets.STAGING_PATH }}
-              /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
-              /usr/local/bin/composer dump-autoload
-              php artisan migrate --force
-              php artisan config:cache
-              php artisan route:cache
-              php artisan view:cache
-              chmod -R 775 storage bootstrap/cache
-              echo "✅ Staging Deploy completed!"
-            EOF
+          ssh -p ${{ secrets.SERV00_PORT }} \
+              -i ~/.ssh/id_ed25519 \
+              ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} << 'EOF'
+            cd ${{ secrets.SERV00_PATH }}
+            /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
+            /usr/local/bin/composer dump-autoload   # ← أضف هذا
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            chmod -R 775 storage bootstrap/cache
+            echo "✅ Deploy completed!"
+          EOF
