@@ -1,9 +1,9 @@
-name: Deploy Laravel to Serv00
+name: Deploy Laravel to Serv00 on branch main
 
 on:
   push:
     branches:
-      - develop
+      - main
 
 jobs:
   test:
