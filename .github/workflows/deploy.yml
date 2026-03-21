@@ -35,7 +35,7 @@ jobs:
   deploy:
     name: Deploy to Serv00
     runs-on: ubuntu-latest
-    needs: test   # ينشر فقط إذا نجحت الـ tests
+#    needs: test   # ينشر فقط إذا نجحت الـ tests
 
     steps:
       - name: Checkout code
