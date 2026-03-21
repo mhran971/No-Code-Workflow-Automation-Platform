@@ -1,4 +1,4 @@
-name: Deploy Laravel to Serv00 (Staging)
+scriptsname: Deploy Laravel to Serv00 (Staging)
 
 on:
   push:
