@@ -39,6 +39,8 @@ if ! grep -q "^APP_KEY=base64:" .env; then
 fi
 php artisan storage:link || true
 
+chown -R www-data:www-data storage bootstrap/cache || true
+
 # if [ "${RUN_MIGRATIONS}" = "true" ]; then
 #   php artisan migrate --force --no-interaction || true
 # fi

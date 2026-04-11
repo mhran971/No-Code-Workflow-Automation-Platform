@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.2-fpm
 
 RUN apt-get update && apt-get install -y \
     git curl unzip zip \
@@ -17,7 +17,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 COPY . .
 
+RUN chmod +x /var/www/docker/entrypoint.sh
+
 RUN composer install --no-interaction --no-dev --optimize-autoloader \
     && chmod -R 775 storage bootstrap/cache
 
-CMD php artisan serve --host=0.0.0.0 --port=${PORT}
+ENTRYPOINT ["/var/www/docker/entrypoint.sh"]
+CMD ["php-fpm", "-F"]
