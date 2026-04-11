@@ -17,5 +17,22 @@ jobs:
       - name: login to ghaymah
         run: $HOME/ghaymah/bin/gy auth login --email "${{secrets.GHAYMAH_EMAIL}}" --password "${{secrets.GHAYMAH_PW}}"
 
+      - name: inject app env vars into ghaymah config
+        run: |
+          jq '
+          .id = "${{ secrets.GHAYMAH_APP_ID_PROD}}" |
+          .projectId = "${{ secrets.GHAYMAH_PROJECT_ID }}" |
+          .env = {
+            "APP_ENV": "production",
+            "APP_DEBUG": "false",
+            "APP_URL": "${{ secrets.APP_URL_PROD }}",
+            "APP_KEY": "${{ secrets.APP_KEY_PROD }}",
+            "DB_CONNECTION": "pgsql",
+            "DB_URL": "${{ secrets.DATABASE_URL_PROD }}",
+            "DATABASE_URL": "${{ secrets.DATABASE_URL_PROD }}",
+            "DB_SSLMODE": "require",
+            "BUILD_SHA": "${{ github.sha }}"
+          }' .ghaymah.json > /tmp/ghaymah.json && mv /tmp/ghaymah.json .ghaymah.json
+
       - name: deploy
         run: $HOME/ghaymah/bin/gy resource app launch

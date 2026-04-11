@@ -1,7 +1,5 @@
 {
-  "id": "d41e7e49-29aa-4f9c-8b73-9d1ebc55bbff",
   "name": "no-code-workflow-automation-platform",
-  "projectId": "8989d672-ec63-4307-86b4-de1d6d2e2696",
   "ports": [
     {
       "expose": true,
