@@ -24,7 +24,7 @@ jobs:
           .projectId = "${{ secrets.GHAYMAH_PROJECT_ID }}" |
           .env = {
             "APP_ENV": "production",
-            "APP_DEBUG": "false",
+            "APP_DEBUG": "true",
             "APP_URL": "${{ secrets.APP_URL_PROD }}",
             "APP_KEY": "${{ secrets.APP_KEY_PROD }}",
             "DB_CONNECTION": "pgsql",
