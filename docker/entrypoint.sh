@@ -44,8 +44,8 @@ chown -R www-data:www-data storage bootstrap/cache || true
 php artisan config:cache || true
 php artisan route:cache || true
 php artisan view:cache || true
-php artisan optimize
+php artisan optimize || true
 
-php artisan migrate
+php artisan migrate || true
 
 exec "$@"
