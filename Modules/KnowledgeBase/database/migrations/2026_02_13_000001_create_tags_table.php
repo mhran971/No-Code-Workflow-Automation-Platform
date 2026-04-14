@@ -6,22 +6,26 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('tags', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->unsignedBigInteger('tenant_id')->nullable();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->timestamps();
 
-            $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
             $table->unique(['tenant_id', 'name']);
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('tags');
     }
 };
-

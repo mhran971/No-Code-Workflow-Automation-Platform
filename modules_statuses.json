@@ -1,5 +1,4 @@
 {
     "Auth": true,
-    "KnowledgeBase": true,
-    "Team": true
+    "KnowledgeBase": true
 }

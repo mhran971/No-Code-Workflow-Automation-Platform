@@ -36,7 +36,7 @@ class RegisterTenantRequest extends FormRequest
                 new PasswordStrengthRule,
             ],
             'password_confirmation' => ['required', 'string'],
-            'captcha_token' => ['nullable', 'string'],
+            'captcha_token' => ['required', 'string'],
         ];
     }
 
