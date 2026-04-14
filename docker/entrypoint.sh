@@ -34,17 +34,8 @@ set_env APP_DEBUG "${APP_DEBUG}"
 set_env APP_URL "${APP_URL}"
 
 php artisan config:clear || true
-if ! grep -q "^APP_KEY=base64:" .env; then
-  php artisan key:generate --force --no-interaction || true
-fi
-php artisan storage:link || true
 
-chown -R www-data:www-data storage bootstrap/cache || true
-
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
-php artisan optimize || true
+php artisan optimize:clear || true
 
 php artisan migrate || true
 
