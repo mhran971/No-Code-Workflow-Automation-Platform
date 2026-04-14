@@ -27,6 +27,7 @@ jobs:
             "APP_DEBUG": "true",
             "APP_URL": "${{ secrets.APP_URL_PROD }}",
             "APP_KEY": "${{ secrets.APP_KEY_PROD }}",
+            "JWT_SECRET": "${{ secrets.JWT_SECRET_PROD }}",
             "DB_CONNECTION": "pgsql",
             "DB_URL": "${{ secrets.DATABASE_URL_PROD }}",
             "DATABASE_URL": "${{ secrets.DATABASE_URL_PROD }}",
