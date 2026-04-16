@@ -1,4 +1,4 @@
-name: Deploy Laravel to Ghaymah on branch main
+name: Deploy Production
 
 on:
   push:
