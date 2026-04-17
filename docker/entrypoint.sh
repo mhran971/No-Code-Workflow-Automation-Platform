@@ -50,6 +50,9 @@ fi
 
 php artisan migrate --force || true
 
+# seed the knowledge base module
+php artisan module:seed KnowledgeBase
+
 php artisan config:clear || true
 if ! grep -q "^APP_KEY=base64:" .env && [ -z "${APP_KEY}" ]; then
   php artisan key:generate --force --no-interaction || true
