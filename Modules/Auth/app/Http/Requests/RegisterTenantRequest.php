@@ -6,6 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 use Modules\Auth\Enums\BusinessType;
+use Modules\Auth\Rules\PasswordStrengthRule;
 
 class RegisterTenantRequest extends FormRequest
 {
@@ -32,10 +33,10 @@ class RegisterTenantRequest extends FormRequest
                 'string',
                 'min:8',
                 'confirmed',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
+                new PasswordStrengthRule,
             ],
             'password_confirmation' => ['required', 'string'],
-            // 'captcha_token' => ['required', 'string'],
+            'captcha_token' => ['required', 'string'],
         ];
     }
 
@@ -44,9 +45,7 @@ class RegisterTenantRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'password.regex' => 'The password must contain at least one uppercase letter, one lowercase letter, one number and one special character.',
-        ];
+        return [];
     }
 
     /**
@@ -54,15 +53,15 @@ class RegisterTenantRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
-        // $validator->after(function ($validator) {
-        //     if ($validator->errors()->isNotEmpty()) {
-        //         return;
-        //     }
+        $validator->after(function ($validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
 
-        //     if (! $this->verifyCaptcha()) {
-        //         $validator->errors()->add('captcha_token', 'CAPTCHA verification failed. Please try again.');
-        //     }
-        // });
+            // if (! $this->verifyCaptcha()) {
+            //     $validator->errors()->add('captcha_token', 'CAPTCHA verification failed. Please try again.');
+            // }
+        });
     }
 
     /**

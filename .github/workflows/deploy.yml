@@ -1,0 +1,60 @@
+name: Deploy Laravel to Serv00
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    name: Deploy to Serv00
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, pdo, pdo_mysql, xml, zip, curl
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERV00_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.SERV00_PORT }} ${{ secrets.SERV00_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy via rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            -e "ssh -p ${{ secrets.SERV00_PORT }} -i ~/.ssh/id_ed25519" \
+            ./ \
+            ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:${{ secrets.SERV00_PATH }}/
+
+      - name: Post-deploy commands
+        run: |
+            ssh -p ${{ secrets.SERV00_PORT }} \
+                -i ~/.ssh/id_ed25519 \
+                ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} << 'EOF'
+              cd ${{ secrets.SERV00_PATH }}
+              /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
+              /usr/local/bin/composer dump-autoload   # ← أضف هذا
+              php artisan migrate --force
+              php artisan config:cache
+              php artisan route:cache
+              php artisan view:cache
+              chmod -R 775 storage bootstrap/cache
+              echo "✅ Deploy completed!"
+            EOF

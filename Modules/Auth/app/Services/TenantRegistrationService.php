@@ -2,14 +2,20 @@
 
 namespace Modules\Auth\Services;
 
-use Illuminate\Support\Facades\DB;
+use App\Services\BaseService;
 use Modules\Auth\Enums\Role;
+use Modules\Auth\Exceptions\RegistrationException;
 use Modules\Auth\Models\User;
 use Modules\Auth\Repositories\TenantRepository;
 use Modules\Auth\Repositories\UserRepository;
 
-class TenantRegistrationService
+class TenantRegistrationService extends BaseService
 {
+    /**
+     * The primary repository this service delegates unknown calls to.
+     */
+    protected ?string $repositoryClass = TenantRepository::class;
+
     public function __construct(
         protected TenantRepository $tenantRepository,
         protected UserRepository $userRepository
@@ -20,22 +26,24 @@ class TenantRegistrationService
      */
     public function register(array $validated): User
     {
-        return DB::transaction(function () use ($validated) {
-            $tenant = $this->tenantRepository->create([
-                'business_name' => "{$validated['first_name']}'s business",
-                'business_type' => $validated['business_type'],
-            ]);
+        if (User::where('email', $validated['email'])->exists()) {
+            throw RegistrationException::emailAlreadyTaken();
+        }
 
-            $user = $this->userRepository->create([
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
-                'email' => $validated['email'],
-                'password' => $validated['password'],
-                'tenant_id' => $tenant->id,
-                'role' => Role::BusinessOwner,
-            ]);
+        $tenant = $this->tenantRepository->create([
+            'business_name' => "{$validated['first_name']}'s business",
+            'business_type' => $validated['business_type'],
+        ]);
 
-            return $user->load('tenant');
-        });
+        $user = $this->userRepository->create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+            'tenant_id' => $tenant->id,
+            'role' => Role::BusinessOwner,
+        ]);
+
+        return $user->load('tenant');
     }
 }

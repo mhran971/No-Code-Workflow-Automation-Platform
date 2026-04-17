@@ -3,6 +3,7 @@
 namespace Modules\Auth\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Modules\Auth\Rules\PasswordStrengthRule;
 
 class LoginRequest extends FormRequest
 {
@@ -25,7 +26,7 @@ class LoginRequest extends FormRequest
                 'required',
                 'string',
                 'min:8',
-                'regex:/^(?=.*\d)(?=.*[@$!%*?&])[\w@$!%*?&]+$/',
+                new PasswordStrengthRule,
             ],
         ];
     }
@@ -38,7 +39,6 @@ class LoginRequest extends FormRequest
         return [
             'email.email' => 'Please enter a valid email address.',
             'password.min' => 'The password must be at least 8 characters.',
-            'password.regex' => 'The password must include at least one number and one special character.',
         ];
     }
 }
