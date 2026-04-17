@@ -3,7 +3,7 @@
     "ports": [
         {
             "expose": true,
-            "number": 8000
+            "number": 9000
         }
     ],
     "publicAccess": {
@@ -11,5 +11,5 @@
         "domain": "auto"
     },
     "resourceTier": "t1",
-    "dockerFileName": "Dockerfile.ghaymah"
+    "dockerFileName": "Dockerfile"
 }
