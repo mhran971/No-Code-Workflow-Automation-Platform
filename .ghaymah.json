@@ -1,15 +1,15 @@
 {
-  "name": "no-code-workflow-automation-platform",
-  "ports": [
-    {
-      "expose": true,
-      "number": 8000
-    }
-  ],
-  "publicAccess": {
-    "enabled": true,
-    "domain": "auto"
-  },
-  "resourceTier": "t1",
-  "dockerFileName": "Dockerfile"
+    "name": "no-code-workflow-automation-platform",
+    "ports": [
+        {
+            "expose": true,
+            "number": 8000
+        }
+    ],
+    "publicAccess": {
+        "enabled": true,
+        "domain": "auto"
+    },
+    "resourceTier": "t1",
+    "dockerFileName": "Dockerfile.ghaymah"
 }
