@@ -39,15 +39,15 @@ set_env APP_ENV "${APP_ENV}"
 set_env APP_DEBUG "${APP_DEBUG}"
 set_env APP_URL "${APP_URL}"
 
-php artisan migrate --force || true
 
+if [ "${DB_CONNECTION}" = "sqlite" ]; then
   sqlite_path="${DB_DATABASE:-/var/www/storage/app/database.sqlite}"
   mkdir -p "$(dirname "${sqlite_path}")"
   touch "${sqlite_path}"
   set_env DB_DATABASE "${sqlite_path}"
 fi
 
-if [ "${DB_CONNECTION}" = "sqlite" ]; then
+php artisan migrate --force || true
 
 php artisan config:clear || true
 if ! grep -q "^APP_KEY=base64:" .env && [ -z "${APP_KEY}" ]; then
