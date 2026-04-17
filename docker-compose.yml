@@ -12,15 +12,8 @@ services:
       APP_DEBUG: "false"
       APP_URL: ${APP_URL:-http://127.0.0.1:8000}
       RUN_MIGRATIONS: "true"
-      DB_CONNECTION: pgsql
-      DB_HOST: db
-      DB_PORT: "5432"
-      DB_DATABASE: ${DB_DATABASE:-workflow_automation}
-      DB_USERNAME: ${DB_USERNAME:-workflow_user}
-      DB_PASSWORD: ${DB_PASSWORD:-workflow_password}
-    depends_on:
-      db:
-        condition: service_healthy
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/storage/app/database.sqlite
     expose:
       - "8000"
     healthcheck:
@@ -31,23 +24,6 @@ services:
       start_period: 10s
     volumes:
       - storage_data:/var/www/storage
-
-  db:
-    image: postgres:16-alpine
-    container_name: workflow_automation_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
 
   nginx:
     image: nginx:1.27-alpine
@@ -64,4 +40,3 @@ services:
 
 volumes:
   storage_data:
-  postgres_data:
