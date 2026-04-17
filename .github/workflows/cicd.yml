@@ -42,7 +42,7 @@ jobs:
               "APP_URL": env.APP_URL_PROD,
               "APP_KEY": env.APP_KEY_PROD,
               "JWT_SECRET": env.JWT_SECRET_PROD,
-              "DB_CONNECTION": "pgsql",
+              "DB_CONNECTION": "sqlite",
               "DB_HOST": env.DB_HOST_PROD,
               "DB_PORT": env.DB_PORT_PROD,
               "DB_DATABASE": env.DB_DATABASE_PROD,
