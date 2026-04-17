@@ -1,4 +1,4 @@
-FROM php:8.2-fpm
+FROM php:8.2-cli
 
 RUN apt-get update && apt-get install -y \
     git curl unzip zip \
@@ -23,5 +23,5 @@ RUN composer install --no-interaction --no-dev --optimize-autoloader \
     && chmod -R 775 storage bootstrap/cache
 
 ENTRYPOINT ["/var/www/docker/entrypoint.sh"]
-EXPOSE 9000
-CMD ["php-fpm", "-F"]
+EXPOSE 8000
+CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]

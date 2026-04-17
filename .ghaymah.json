@@ -3,7 +3,7 @@
     "ports": [
         {
             "expose": true,
-            "number": 9000
+            "number": 8000
         }
     ],
     "publicAccess": {
