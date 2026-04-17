@@ -38,6 +38,7 @@ set_env APP_KEY "${APP_KEY}"
 set_env APP_ENV "${APP_ENV}"
 set_env APP_DEBUG "${APP_DEBUG}"
 set_env APP_URL "${APP_URL}"
+set_env JWT_SECRET "${JWT_SECRET}"
 
 
 if [ "${DB_CONNECTION}" = "sqlite" ]; then
