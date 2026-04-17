@@ -7,14 +7,14 @@ use Illuminate\Routing\Controller;
 use Modules\Auth\Http\Requests\LoginRequest;
 use Modules\Auth\Http\Resources\LoginSuccessResource;
 
-class LoginController extends Controller
+class SessionController extends Controller
 {
     /**
      * Authenticate the user and return a JWT (with tenant in claims).
      *
      * @unauthenticated
      */
-    public function __invoke(LoginRequest $request): JsonResponse|LoginSuccessResource
+    public function store(LoginRequest $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
 
@@ -31,5 +31,17 @@ class LoginController extends Controller
             ->additional(['token' => $token])
             ->response()
             ->setStatusCode(200);
+    }
+
+    /**
+     * Invalidate the current JWT and log the user out.
+     */
+    public function destroy(): JsonResponse
+    {
+        auth('api')->logout();
+
+        return response()->json([
+            'message' => 'Logged out successfully.',
+        ]);
     }
 }

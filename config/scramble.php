@@ -1,7 +1,5 @@
 <?php
 
-use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
-
 return [
     /*
      * Your API path. By default, all routes starting with this path will be added to the docs.
@@ -128,6 +126,12 @@ return [
      *  `{"name":"foo", "schema": {"type":"object", "properties":{"bar":{"type": "int"}}, "required": ["bar"]}, "required":true}`.
      */
     'flatten_deep_query_parameters' => true,
+
+    /*
+     * Optional token to protect docs access. When set, visitors must append ?token=<value> to the URL.
+     * When empty/null, docs are accessible to everyone.
+     */
+    'docs_token' => env('DOCS_TOKEN'),
 
     'middleware' => [
         'web',

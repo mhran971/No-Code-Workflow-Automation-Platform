@@ -2,7 +2,9 @@
 
 namespace $CLASS_NAMESPACE$;
 
-class $CLASS$
+use App\Services\BaseService;
+
+class $CLASS$ extends BaseService
 {
     public function handle() {}
 }

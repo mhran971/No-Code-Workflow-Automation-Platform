@@ -1,0 +1,15 @@
+---
+description: Conventions for the Auth module
+globs: "Modules/Auth/**/*.php"
+alwaysApply: false
+---
+
+# Auth Module Conventions
+
+- **Namespace**: `Modules\Auth\` (Enums, Exceptions, Http, Models, Repositories, Rules, Services).
+- **Enums**: Backed string enums in `app/Enums/` (Role, BusinessType). Validate with `Rule::enum()`.
+- **Exceptions**: In `app/Exceptions/`. Static factory methods with user-facing messages. Caught in controllers.
+- **Rules**: Complex validation logic in `app/Rules/` (e.g. `PasswordStrengthRule`). Used in Form Requests.
+- **Registration flow**: Controller begins transaction -> Service checks business rules (throws RegistrationException on failure) -> Repositories persist data -> Controller commits or rolls back.
+- **Login flow**: LoginController validates via LoginRequest, calls `auth('api')->attempt()`, returns JWT with tenant in claims.
+- **Protected routes**: Use `auth:api` middleware. Mark public endpoints with `@unauthenticated` in docblock.
