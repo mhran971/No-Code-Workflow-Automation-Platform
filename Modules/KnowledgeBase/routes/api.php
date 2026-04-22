@@ -5,7 +5,7 @@ use Modules\KnowledgeBase\Http\Controllers\DocumentController;
 use Modules\KnowledgeBase\Http\Controllers\DocumentTypeController;
 use Modules\KnowledgeBase\Http\Controllers\TagController;
 
-Route::prefix('v1')->middleware('auth:api')->group(function () {
+Route::prefix('v1')->middleware(['auth:api', 'active.user'])->group(function () {
     Route::get('document-types', [DocumentTypeController::class, 'index'])->name('document-types.index');
     Route::get('tags', [TagController::class, 'index'])->name('tags.index');
     Route::post('tags', [TagController::class, 'store'])->name('tags.store');
