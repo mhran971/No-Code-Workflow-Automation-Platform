@@ -4,8 +4,11 @@ namespace Modules\Auth\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Schema;
+use Modules\Auth\Models\User;
 use Modules\Auth\Http\Requests\LoginRequest;
 use Modules\Auth\Http\Resources\LoginSuccessResource;
+use Tymon\JWTAuth\JWTGuard;
 
 class SessionController extends Controller
 {
@@ -18,16 +21,32 @@ class SessionController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        if (! $token = auth('api')->attempt($credentials)) {
+        $user = User::query()->where('email', $credentials['email'])->first();
+
+        if ($user !== null && array_key_exists('is_active', $user->getAttributes()) && ! (bool) $user->is_active) {
+            return response()->json([
+                'message' => 'Your account is disabled. Please contact your business owner.',
+            ], 403);
+        }
+
+        if (Schema::hasColumn('users', 'is_active')) {
+            $credentials['is_active'] = true;
+        }
+
+        /** @var JWTGuard $guard */
+        $guard = auth('api');
+
+        if (! $token = $guard->attempt($credentials)) {
             return response()->json([
                 'message' => 'Invalid email or password.',
             ], 401);
         }
 
-        $user = auth('api')->user();
-        $user->load('tenant');
+        /** @var User $authenticatedUser */
+        $authenticatedUser = $guard->user();
+        $authenticatedUser->load('tenant');
 
-        return (new LoginSuccessResource($user))
+        return (new LoginSuccessResource($authenticatedUser))
             ->additional(['token' => $token])
             ->response()
             ->setStatusCode(200);
@@ -38,7 +57,9 @@ class SessionController extends Controller
      */
     public function destroy(): JsonResponse
     {
-        auth('api')->logout();
+        /** @var JWTGuard $guard */
+        $guard = auth('api');
+        $guard->logout();
 
         return response()->json([
             'message' => 'Logged out successfully.',
