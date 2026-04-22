@@ -1,60 +1,60 @@
-name: Deploy Production
+# name: Deploy Production
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v5.0.0
-      - name: install ghaymah cli
-        run: curl -sSl https://cli.ghaymah.systems/install.sh | bash
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: checkout code
+#         uses: actions/checkout@v5.0.0
+#       - name: install ghaymah cli
+#         run: curl -sSl https://cli.ghaymah.systems/install.sh | bash
 
-      - name: login to ghaymah
-        run: $HOME/ghaymah/bin/gy auth login --email "${{secrets.GHAYMAH_EMAIL}}" --password "${{secrets.GHAYMAH_PW}}"
+#       - name: login to ghaymah
+#         run: $HOME/ghaymah/bin/gy auth login --email "${{secrets.GHAYMAH_EMAIL}}" --password "${{secrets.GHAYMAH_PW}}"
 
-      - name: inject app env vars into ghaymah config
-        env:
-          GHAYMAH_APP_ID_PROD: ${{ secrets.GHAYMAH_APP_ID_PROD }}
-          GHAYMAH_PROJECT_ID: ${{ secrets.GHAYMAH_PROJECT_ID }}
-          APP_NAME: "Workflow Automation Platform"
-          APP_URL_PROD: ${{ secrets.APP_URL_PROD }}
-          APP_KEY_PROD: ${{ secrets.APP_KEY_PROD }}
-          APP_DEBUG_PROD: "true"
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          DB_HOST_PROD: ${{ secrets.DB_HOST_PROD }}
-          DB_PORT_PROD: "5432"
-          DB_DATABASE_PROD: ${{ secrets.DB_DATABASE_PROD }}
-          DB_USERNAME_PROD: ${{ secrets.DB_USERNAME_PROD }}
-          DB_PASSWORD_PROD: ${{ secrets.DB_PASSWORD_PROD }}
-        run: |
-          jq '
-            .id = env.GHAYMAH_APP_ID_PROD |
-            .projectId = env.GHAYMAH_PROJECT_ID |
-            .env = {
-              "APP_NAME": env.APP_NAME,
-              "APP_ENV": "production",
-              "APP_DEBUG": env.APP_DEBUG_PROD,
-              "APP_URL": env.APP_URL_PROD,
-              "APP_KEY": env.APP_KEY_PROD,
-              "JWT_SECRET": env.JWT_SECRET,
-              "DB_CONNECTION": "pgsql",
-              "DB_HOST": env.DB_HOST_PROD,
-              "DB_PORT": env.DB_PORT_PROD,
-              "DB_DATABASE": env.DB_DATABASE_PROD,
-              "DB_USERNAME": env.DB_USERNAME_PROD,
-              "DB_PASSWORD": env.DB_PASSWORD_PROD,
-              "DB_SSLMODE": "disable",
-              "SESSION_DRIVER": "database",
-              "CACHE_STORE": "database",
-              "QUEUE_CONNECTION": "database",
-              "BUILD_SHA": env.GITHUB_SHA
-            }
-          ' .ghaymah.json > /tmp/ghaymah.json && mv /tmp/ghaymah.json .ghaymah.json
+#       - name: inject app env vars into ghaymah config
+#         env:
+#           GHAYMAH_APP_ID_PROD: ${{ secrets.GHAYMAH_APP_ID_PROD }}
+#           GHAYMAH_PROJECT_ID: ${{ secrets.GHAYMAH_PROJECT_ID }}
+#           APP_NAME: "Workflow Automation Platform"
+#           APP_URL_PROD: ${{ secrets.APP_URL_PROD }}
+#           APP_KEY_PROD: ${{ secrets.APP_KEY_PROD }}
+#           APP_DEBUG_PROD: "true"
+#           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+#           DB_HOST_PROD: ${{ secrets.DB_HOST_PROD }}
+#           DB_PORT_PROD: "5432"
+#           DB_DATABASE_PROD: ${{ secrets.DB_DATABASE_PROD }}
+#           DB_USERNAME_PROD: ${{ secrets.DB_USERNAME_PROD }}
+#           DB_PASSWORD_PROD: ${{ secrets.DB_PASSWORD_PROD }}
+#         run: |
+#           jq '
+#             .id = env.GHAYMAH_APP_ID_PROD |
+#             .projectId = env.GHAYMAH_PROJECT_ID |
+#             .env = {
+#               "APP_NAME": env.APP_NAME,
+#               "APP_ENV": "production",
+#               "APP_DEBUG": env.APP_DEBUG_PROD,
+#               "APP_URL": env.APP_URL_PROD,
+#               "APP_KEY": env.APP_KEY_PROD,
+#               "JWT_SECRET": env.JWT_SECRET,
+#               "DB_CONNECTION": "pgsql",
+#               "DB_HOST": env.DB_HOST_PROD,
+#               "DB_PORT": env.DB_PORT_PROD,
+#               "DB_DATABASE": env.DB_DATABASE_PROD,
+#               "DB_USERNAME": env.DB_USERNAME_PROD,
+#               "DB_PASSWORD": env.DB_PASSWORD_PROD,
+#               "DB_SSLMODE": "disable",
+#               "SESSION_DRIVER": "database",
+#               "CACHE_STORE": "database",
+#               "QUEUE_CONNECTION": "database",
+#               "BUILD_SHA": env.GITHUB_SHA
+#             }
+#           ' .ghaymah.json > /tmp/ghaymah.json && mv /tmp/ghaymah.json .ghaymah.json
 
-      - name: deploy
-        run: $HOME/ghaymah/bin/gy resource app launch
+#       - name: deploy
+#         run: $HOME/ghaymah/bin/gy resource app launch
