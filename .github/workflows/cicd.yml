@@ -26,7 +26,7 @@ jobs:
           APP_KEY_PROD: ${{ secrets.APP_KEY_PROD }}
           APP_DEBUG_PROD: "true"
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          DB_HOST_PROD: db
+          DB_HOST_PROD: ${{ secrets.DB_HOST_PROD }}
           DB_PORT_PROD: "5432"
           DB_DATABASE_PROD: ${{ secrets.DB_DATABASE_PROD }}
           DB_USERNAME_PROD: ${{ secrets.DB_USERNAME_PROD }}
@@ -42,7 +42,7 @@ jobs:
               "APP_URL": env.APP_URL_PROD,
               "APP_KEY": env.APP_KEY_PROD,
               "JWT_SECRET": env.JWT_SECRET,
-              "DB_CONNECTION": "sqlite",
+              "DB_CONNECTION": "pgsql",
               "DB_HOST": env.DB_HOST_PROD,
               "DB_PORT": env.DB_PORT_PROD,
               "DB_DATABASE": env.DB_DATABASE_PROD,

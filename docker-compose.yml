@@ -12,8 +12,6 @@ services:
       APP_DEBUG: "false"
       APP_URL: ${APP_URL:-http://127.0.0.1:8000}
       RUN_MIGRATIONS: "true"
-      DB_CONNECTION: sqlite
-      DB_DATABASE: /var/www/storage/app/database.sqlite
     expose:
       - "8000"
     healthcheck:
