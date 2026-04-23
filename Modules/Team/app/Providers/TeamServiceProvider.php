@@ -6,9 +6,12 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Team\Repositories\AuditTrailRepository;
 use Modules\Team\Repositories\TeamMembershipRepository;
+use Modules\Team\Repositories\TeamRepository;
 use Modules\Team\Repositories\UserRepository;
 use Modules\Team\Services\ActiveTaskReassignmentService;
 use Modules\Team\Services\HistoricalDataGuardService;
+use Modules\Team\Services\TeamManagementService;
+use Modules\Team\Services\TeamMemberManagementService;
 use Modules\Team\Services\TenantUserManagementService;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
@@ -46,9 +49,12 @@ class TeamServiceProvider extends ServiceProvider
         $this->app->singleton(UserRepository::class);
         $this->app->singleton(AuditTrailRepository::class);
         $this->app->singleton(TeamMembershipRepository::class);
+        $this->app->singleton(TeamRepository::class);
         $this->app->singleton(ActiveTaskReassignmentService::class);
         $this->app->singleton(HistoricalDataGuardService::class);
         $this->app->singleton(TenantUserManagementService::class);
+        $this->app->singleton(TeamManagementService::class);
+        $this->app->singleton(TeamMemberManagementService::class);
     }
 
     /**
