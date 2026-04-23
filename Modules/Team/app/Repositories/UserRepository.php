@@ -3,6 +3,7 @@
 namespace Modules\Team\Repositories;
 
 use Illuminate\Support\Facades\Hash;
+use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\User;
 
 class UserRepository
@@ -36,6 +37,14 @@ class UserRepository
     public function updateActive(User $user, bool $isActive): void
     {
         $user->forceFill(['is_active' => $isActive])->save();
+    }
+
+    /**
+     * Update user role.
+     */
+    public function updateRole(User $user, Role $role): void
+    {
+        $user->forceFill(['role' => $role])->save();
     }
 
     /**

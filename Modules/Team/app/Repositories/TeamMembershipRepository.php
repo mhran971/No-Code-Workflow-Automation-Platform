@@ -13,8 +13,45 @@ class TeamMembershipRepository
     {
         return TeamMembership::query()->firstOrCreate(
             ['tenant_id' => $tenantId, 'user_id' => $userId],
-            ['status' => 'active']
+            ['status' => 'active', 'team_id' => null]
         );
+    }
+
+    /**
+     * Find membership for tenant user.
+     */
+    public function findForUser(int $tenantId, int $userId): ?TeamMembership
+    {
+        return TeamMembership::query()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->first();
+    }
+
+    /**
+     * Assign a user to a specific team.
+     */
+    public function assignToTeam(int $tenantId, int $userId, int $teamId): TeamMembership
+    {
+        $membership = $this->ensureMember($tenantId, $userId);
+
+        $membership->forceFill([
+            'team_id' => $teamId,
+        ])->save();
+
+        return $membership;
+    }
+
+    /**
+     * Remove a user from the given team.
+     */
+    public function removeFromTeam(int $tenantId, int $userId, int $teamId): void
+    {
+        TeamMembership::query()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->where('team_id', $teamId)
+            ->update(['team_id' => null]);
     }
 
     /**
