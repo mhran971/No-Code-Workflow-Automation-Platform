@@ -2,8 +2,10 @@
 
 namespace Modules\Team\Http\Controllers;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\User;
 use Modules\Team\Http\Requests\CreateUserRequest;
 use Modules\Team\Http\Requests\DisableUserRequest;
@@ -14,6 +16,42 @@ class MemberMangementController extends Controller
     public function __construct(
         protected TenantUserManagementService $tenantUserManagementService
     ) {}
+
+    /**
+     * List existing tenant users.
+     * @throws AuthorizationException
+     */
+    public function index(): JsonResponse
+    {
+        $actor = $this->resolveTenantActor();
+        $users = $this->serializeUsers($this->baseTenantUsersQuery($actor)->get());
+
+        return response()->json([
+            'data' => $users,
+        ]);
+    }
+
+    /**
+     * List eligible manager candidates in same tenant.
+     *
+     * @throws AuthorizationException
+     */
+    public function managerCandidates(): JsonResponse
+    {
+        $actor = $this->resolveTenantActor();
+
+        $users = $this->serializeUsers(
+            $this->baseTenantUsersQuery($actor)
+                ->where('users.is_active', true)
+                ->where('users.role', '!=', Role::BusinessOwner->value)
+                ->whereNull('tm.team_id')
+                ->get()
+        );
+
+        return response()->json([
+            'data' => $users,
+        ]);
+    }
 
     /**
      * Create a new employee user in the current business owner's tenant.
@@ -95,5 +133,64 @@ class MemberMangementController extends Controller
         return response()->json([
             'message' => 'User deleted successfully.',
         ]);
+    }
+
+    /**
+     * Ensure current actor can view tenant users.
+     *
+     * @throws AuthorizationException
+     */
+    protected function resolveTenantActor(): User
+    {
+        /** @var User $actor */
+        $actor = auth('api')->user();
+
+        if (! in_array($actor->role, [Role::BusinessOwner, Role::Manager], true)) {
+            throw new AuthorizationException('Only business owners or managers can view tenant users.');
+        }
+
+        return $actor;
+    }
+
+    /**
+     * Base query for tenant users with membership context.
+     */
+    protected function baseTenantUsersQuery(User $actor)
+    {
+        return User::query()
+            ->leftJoin('team_memberships as tm', function ($join) use ($actor): void {
+                $join->on('tm.user_id', '=', 'users.id')
+                    ->where('tm.tenant_id', '=', (int) $actor->tenant_id);
+            })
+            ->where('users.tenant_id', (int) $actor->tenant_id)
+            ->select([
+                'users.id',
+                'users.first_name',
+                'users.last_name',
+                'users.email',
+                'users.role',
+                'users.is_active',
+                'tm.team_id',
+            ])
+            ->orderBy('users.first_name')
+            ->orderBy('users.last_name');
+    }
+
+    /**
+     * Transform users list to API payload.
+     */
+    protected function serializeUsers($users)
+    {
+        return $users->map(static function ($user) {
+            return [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'is_active' => (bool) $user->is_active,
+                'team_id' => $user->team_id,
+            ];
+        })->values();
     }
 }
