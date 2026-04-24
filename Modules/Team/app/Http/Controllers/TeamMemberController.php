@@ -24,21 +24,34 @@ class TeamMemberController extends Controller
         $actor = auth('api')->user();
         $validated = $request->validated();
 
-        $user = $this->teamMemberManagementService->addMember(
+        $userIds = collect($validated['members'] ?? [])
+            ->push($validated['user_id'] ?? null)
+            ->filter(static fn ($id) => $id !== null)
+            ->map(static fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $users = $this->teamMemberManagementService->addMembers(
             $actor,
             $team,
-            (int) $validated['user_id']
+            $userIds
         );
 
+        $serializedMembers = $users->map(fn (User $user) => [
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'role' => $user->role?->value,
+        ])->values();
+
+        $isBulk = $serializedMembers->count() > 1;
+
         return response()->json([
-            'message' => 'Team member added successfully.',
-            'member' => [
-                'id' => $user->id,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'email' => $user->email,
-                'role' => $user->role?->value,
-            ],
+            'message' => $isBulk ? 'Team members added successfully.' : 'Team member added successfully.',
+            'member' => $isBulk ? null : $serializedMembers->first(),
+            'members' => $serializedMembers,
         ]);
     }
 
@@ -57,4 +70,3 @@ class TeamMemberController extends Controller
         ]);
     }
 }
-

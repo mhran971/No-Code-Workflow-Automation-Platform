@@ -27,11 +27,22 @@ class AddTeamMemberRequest extends FormRequest
 
         return [
             'user_id' => [
-                'required',
+                'nullable',
                 'integer',
+                'required_without:members',
+                Rule::exists('users', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+            ],
+            'members' => [
+                'nullable',
+                'array',
+                'min:1',
+                'required_without:user_id',
+            ],
+            'members.*' => [
+                'integer',
+                'distinct',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
             ],
         ];
     }
 }
-

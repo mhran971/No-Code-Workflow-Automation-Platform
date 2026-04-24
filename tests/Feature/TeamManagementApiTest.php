@@ -299,6 +299,50 @@ class TeamManagementApiTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_business_owner_can_add_many_members_in_one_request(): void
+    {
+        $ownerAuth = $this->registerAndLoginOwner();
+        $owner = $ownerAuth['owner'];
+
+        $manager = $this->createTenantUser((int) $owner->tenant_id, 'bulk-manager-'.uniqid().'@example.test');
+        $memberOne = $this->createTenantUser((int) $owner->tenant_id, 'bulk-member-1-'.uniqid().'@example.test');
+        $memberTwo = $this->createTenantUser((int) $owner->tenant_id, 'bulk-member-2-'.uniqid().'@example.test');
+
+        $teamId = $this->createTeam($ownerAuth['token'], 'Bulk Team', $manager->id);
+
+        $response = $this->postJson("/api/v1/team/teams/{$teamId}/members", [
+            'members' => [$memberOne->id, $memberTwo->id],
+        ], $this->authHeaders($ownerAuth['token']));
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'Team members added successfully.')
+            ->assertJsonCount(2, 'members');
+
+        $ids = collect($response->json('members'))->pluck('id')->all();
+        $this->assertContains($memberOne->id, $ids);
+        $this->assertContains($memberTwo->id, $ids);
+
+        $this->assertDatabaseHas('team_memberships', [
+            'tenant_id' => $owner->tenant_id,
+            'user_id' => $memberOne->id,
+            'team_id' => $teamId,
+        ]);
+
+        $this->assertDatabaseHas('team_memberships', [
+            'tenant_id' => $owner->tenant_id,
+            'user_id' => $memberTwo->id,
+            'team_id' => $teamId,
+        ]);
+
+        $this->assertDatabaseHas('audit_trails', [
+            'tenant_id' => $owner->tenant_id,
+            'actor_user_id' => $owner->id,
+            'action' => 'team_member_added',
+            'subject_type' => Team::class,
+            'subject_id' => $teamId,
+        ]);
+    }
+
     public function test_business_owner_can_list_same_tenant_manager_candidates_only(): void
     {
         $ownerAuth = $this->registerAndLoginOwner();

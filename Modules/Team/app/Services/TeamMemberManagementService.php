@@ -3,6 +3,8 @@
 namespace Modules\Team\Services;
 
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection;
+use RuntimeException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Enums\Role;
@@ -28,45 +30,77 @@ class TeamMemberManagementService
      */
     public function addMember(User $actor, Team $team, int $userId): User
     {
+        $member = $this->addMembers($actor, $team, [$userId])->first();
+
+        if (! $member instanceof User) {
+            throw new RuntimeException('No member was added to the team.');
+        }
+
+        return $member;
+    }
+
+    /**
+     * Add many tenant users to team in one operation.
+     *
+     * @throws AuthorizationException
+     * @throws ValidationException
+     */
+    public function addMembers(User $actor, Team $team, array $userIds): Collection
+    {
         $this->assertCanManageTeamMembers($actor, $team);
 
-        $targetUser = $this->resolveTenantUser($actor, $userId);
-        $membership = $this->teamMembershipRepository->findForUser((int) $actor->tenant_id, (int) $targetUser->id);
+        $userIds = array_values(array_unique(array_map('intval', $userIds)));
 
-        if (
-            $membership !== null
-            && $membership->team_id !== null
-            && (int) $membership->team_id !== (int) $team->id
-        ) {
+        if ($userIds === []) {
             throw ValidationException::withMessages([
-                'user_id' => 'This user already belongs to another team.',
+                'members' => 'At least one member must be provided.',
             ]);
         }
 
-        DB::transaction(function () use ($actor, $team, $targetUser) {
-            $this->teamMembershipRepository->assignToTeam(
-                (int) $actor->tenant_id,
-                (int) $targetUser->id,
-                (int) $team->id
-            );
+        $targetUsers = collect($userIds)->map(fn (int $userId) => $this->resolveTenantUser($actor, $userId));
 
-            $this->auditTrailRepository->create([
-                'tenant_id' => $actor->tenant_id,
-                'actor_user_id' => $actor->id,
-                'actor_name' => $actor->name,
-                'actor_email' => $actor->email,
-                'action' => 'team_member_added',
-                'subject_type' => Team::class,
-                'subject_id' => $team->id,
-                'metadata' => [
-                    'team_name' => $team->name,
-                    'member_user_id' => $targetUser->id,
-                    'member_email' => $targetUser->email,
-                ],
-            ]);
+        foreach ($targetUsers as $targetUser) {
+            $membership = $this->teamMembershipRepository->findForUser((int) $actor->tenant_id, (int) $targetUser->id);
+
+            if (
+                $membership !== null
+                && $membership->team_id !== null
+                && (int) $membership->team_id !== (int) $team->id
+            ) {
+                throw ValidationException::withMessages([
+                    'user_id' => "User {$targetUser->id} already belongs to another team.",
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($actor, $team, $targetUsers) {
+            foreach ($targetUsers as $targetUser) {
+                $this->teamMembershipRepository->assignToTeam(
+                    (int) $actor->tenant_id,
+                    (int) $targetUser->id,
+                    (int) $team->id
+                );
+
+                $this->auditTrailRepository->create([
+                    'tenant_id' => $actor->tenant_id,
+                    'actor_user_id' => $actor->id,
+                    'actor_name' => $actor->name,
+                    'actor_email' => $actor->email,
+                    'action' => 'team_member_added',
+                    'subject_type' => Team::class,
+                    'subject_id' => $team->id,
+                    'metadata' => [
+                        'team_name' => $team->name,
+                        'member_user_id' => $targetUser->id,
+                        'member_email' => $targetUser->email,
+                    ],
+                ]);
+            }
         });
 
-        return $targetUser->refresh();
+        return new Collection(
+            $targetUsers->map(fn (User $user) => $user->refresh())->all()
+        );
     }
 
     /**
@@ -161,4 +195,3 @@ class TeamMemberManagementService
         return $targetUser;
     }
 }
-
