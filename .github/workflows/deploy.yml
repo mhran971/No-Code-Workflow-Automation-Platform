@@ -53,7 +53,6 @@ jobs:
           echo "${{ secrets.SERV00_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p ${{ secrets.SERV00_PORT }} ${{ secrets.SERV00_HOST }} >> ~/.ssh/known_hosts
-
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
@@ -66,7 +65,6 @@ jobs:
             -e "ssh -p ${{ secrets.SERV00_PORT }} -i ~/.ssh/id_ed25519" \
             ./ \
             ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:${{ secrets.SERV00_PATH }}/
-
       - name: Run post-deploy commands
         run: |
           ssh -p ${{ secrets.SERV00_PORT }} \
