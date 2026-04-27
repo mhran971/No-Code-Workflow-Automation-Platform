@@ -53,6 +53,15 @@ jobs:
           echo "${{ secrets.SERV00_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p ${{ secrets.SERV00_PORT }} ${{ secrets.SERV00_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Check variables
+        run: |
+          if [ -z "${{ secrets.SERV00_PATH_PRODUCTION }}" ]; then
+            echo "Error: GitHub Secret 'SERV00_PATH_PRODUCTION' is empty or not set correctly!"
+            echo "Please go to Settings > Secrets and variables > Actions > Secrets and add 'SERV00_PATH_PRODUCTION'."
+            exit 1
+          fi
+
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
@@ -64,9 +73,9 @@ jobs:
             --exclude='storage/framework/cache/*' \
             -e "ssh -p ${{ secrets.SERV00_PORT }} -i ~/.ssh/id_ed25519" \
             ./ \
-            ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:${{ secrets.SERV00_PATH }}/
+            ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:${{ secrets.SERV00_PATH_PRODUCTION }}/
       - name: Run post-deploy commands
         run: |
           ssh -p ${{ secrets.SERV00_PORT }} \
               -i ~/.ssh/id_ed25519 \
-              ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} 'bash -s' < scripts/deploy.sh
+              ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }} 'bash -s' "${{ secrets.SERV00_PATH_PRODUCTION }}" < scripts/deploy.sh
