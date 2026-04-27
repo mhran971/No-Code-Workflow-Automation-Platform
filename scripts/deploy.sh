@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-# APP_PATH="${1:-$secrets.SERV00_PATH_PRODUCTION}"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
-
 APP_PATH="/home/hudashakir/domains/workflow-api.hudashakir.serv00.net/public_html"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
 
 if [ -z "$APP_PATH" ]; then
