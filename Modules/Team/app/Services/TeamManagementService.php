@@ -31,8 +31,8 @@ class TeamManagementService
     public function listVisibleTeams(User $actor): Collection
     {
         $relations = [
-            'manager:id,first_name,last_name,name,email,role',
-            'members:id,first_name,last_name,name,email,role',
+            'manager:id,first_name,last_name,position,name,email,role',
+            'members:id,first_name,last_name,position,name,email,role',
         ];
 
         $query = Team::query()
@@ -61,8 +61,8 @@ class TeamManagementService
         $this->assertCanAccessTeam($actor, $team);
 
         return $team->load([
-            'manager:id,first_name,last_name,name,email,role',
-            'members:id,first_name,last_name,name,email,role',
+            'manager:id,first_name,last_name,position,name,email,role',
+            'members:id,first_name,last_name,position,name,email,role',
         ]);
     }
 
@@ -78,13 +78,16 @@ class TeamManagementService
 
         $manager = $this->resolveEligibleManager($businessOwner, (int) $validated['manager_id']);
         $teamName = trim((string) $validated['name']);
+        $teamDescription = isset($validated['description']) ? trim((string) $validated['description']) : null;
+        $teamDescription = $teamDescription === '' ? null : $teamDescription;
 
         $this->assertUserCanJoinTeam((int) $businessOwner->tenant_id, (int) $manager->id, null);
 
-        return DB::transaction(function () use ($businessOwner, $manager, $teamName) {
+        return DB::transaction(function () use ($businessOwner, $manager, $teamName, $teamDescription) {
             $team = $this->teamRepository->create([
                 'tenant_id' => (int) $businessOwner->tenant_id,
                 'name' => $teamName,
+                'description' => $teamDescription,
                 'manager_id' => (int) $manager->id,
             ]);
 
@@ -105,14 +108,59 @@ class TeamManagementService
                 'subject_id' => $team->id,
                 'metadata' => [
                     'team_name' => $team->name,
+                    'team_description' => $team->description,
                     'manager_id' => $manager->id,
                     'manager_email' => $manager->email,
                 ],
             ]);
 
             return $team->load([
-                'manager:id,first_name,last_name,name,email,role',
-                'members:id,first_name,last_name,name,email,role',
+                'manager:id,first_name,last_name,position,name,email,role',
+                'members:id,first_name,last_name,position,name,email,role',
+            ]);
+        });
+    }
+
+    /**
+     * Update team name and description.
+     *
+     * @throws AuthorizationException
+     */
+    public function updateByBusinessOwner(User $businessOwner, Team $team, array $validated): Team
+    {
+        $this->assertBusinessOwner($businessOwner);
+        $this->assertTeamInTenant($businessOwner, $team);
+
+        $oldName = $team->name;
+        $oldDescription = $team->description;
+        $newName = trim((string) $validated['name']);
+        $newDescription = isset($validated['description']) ? trim((string) $validated['description']) : null;
+        $newDescription = $newDescription === '' ? null : $newDescription;
+
+        return DB::transaction(function () use ($businessOwner, $team, $oldName, $oldDescription, $newName, $newDescription) {
+            $team->name = $newName;
+            $team->description = $newDescription;
+            $this->teamRepository->save($team);
+
+            $this->auditTrailRepository->create([
+                'tenant_id' => $businessOwner->tenant_id,
+                'actor_user_id' => $businessOwner->id,
+                'actor_name' => $businessOwner->name,
+                'actor_email' => $businessOwner->email,
+                'action' => 'team_updated',
+                'subject_type' => Team::class,
+                'subject_id' => $team->id,
+                'metadata' => [
+                    'old_name' => $oldName,
+                    'new_name' => $team->name,
+                    'old_description' => $oldDescription,
+                    'new_description' => $team->description,
+                ],
+            ]);
+
+            return $team->refresh()->load([
+                'manager:id,first_name,last_name,position,name,email,role',
+                'members:id,first_name,last_name,position,name,email,role',
             ]);
         });
     }
@@ -174,8 +222,8 @@ class TeamManagementService
             ]);
 
             return $team->refresh()->load([
-                'manager:id,first_name,last_name,name,email,role',
-                'members:id,first_name,last_name,name,email,role',
+                'manager:id,first_name,last_name,position,name,email,role',
+                'members:id,first_name,last_name,position,name,email,role',
             ]);
         });
     }

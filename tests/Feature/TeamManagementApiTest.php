@@ -101,6 +101,54 @@ class TeamManagementApiTest extends TestCase
         $duplicateResponse->assertStatus(422)->assertJsonValidationErrors(['name']);
     }
 
+    public function test_business_owner_can_update_team_name_and_description(): void
+    {
+        $ownerAuth = $this->registerAndLoginOwner();
+        $owner = $ownerAuth['owner'];
+
+        $manager = $this->createTenantUser(
+            (int) $owner->tenant_id,
+            'update-team-manager-'.uniqid().'@example.test'
+        );
+
+        $createResponse = $this->postJson('/api/v1/team/teams', [
+            'name' => 'Delivery',
+            'description' => 'Initial team description.',
+            'manager_id' => $manager->id,
+        ], $this->authHeaders($ownerAuth['token']));
+
+        $createResponse->assertCreated()
+            ->assertJsonPath('team.name', 'Delivery')
+            ->assertJsonPath('team.description', 'Initial team description.');
+
+        $teamId = (int) $createResponse->json('team.id');
+
+        $updateResponse = $this->patchJson("/api/v1/team/teams/{$teamId}", [
+            'name' => 'Delivery Ops',
+            'description' => 'Updated operations-focused description.',
+        ], $this->authHeaders($ownerAuth['token']));
+
+        $updateResponse->assertOk()
+            ->assertJsonPath('message', 'Team updated successfully.')
+            ->assertJsonPath('team.id', $teamId)
+            ->assertJsonPath('team.name', 'Delivery Ops')
+            ->assertJsonPath('team.description', 'Updated operations-focused description.');
+
+        $this->assertDatabaseHas('teams', [
+            'id' => $teamId,
+            'name' => 'Delivery Ops',
+            'description' => 'Updated operations-focused description.',
+        ]);
+
+        $this->assertDatabaseHas('audit_trails', [
+            'tenant_id' => $owner->tenant_id,
+            'actor_user_id' => $owner->id,
+            'action' => 'team_updated',
+            'subject_type' => Team::class,
+            'subject_id' => $teamId,
+        ]);
+    }
+
     public function test_business_owner_can_replace_manager_and_previous_manager_is_demoted(): void
     {
         $ownerAuth = $this->registerAndLoginOwner();

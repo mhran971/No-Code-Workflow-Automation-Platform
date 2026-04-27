@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Auth\Enums\Role;
 
-class CreateTeamRequest extends FormRequest
+class UpdateTeamRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,21 +24,18 @@ class CreateTeamRequest extends FormRequest
     public function rules(): array
     {
         $tenantId = (int) auth('api')->user()?->tenant_id;
+        $teamId = (int) $this->route('team')?->id;
 
         return [
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('teams', 'name')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+                Rule::unique('teams', 'name')
+                    ->where(fn ($query) => $query->where('tenant_id', $tenantId))
+                    ->ignore($teamId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
-            'manager_id' => [
-                'required',
-                'integer',
-                Rule::exists('users', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
-            ],
         ];
     }
 }
-

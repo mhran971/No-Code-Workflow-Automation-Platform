@@ -14,6 +14,7 @@ class Team extends Model
     protected $fillable = [
         'tenant_id',
         'name',
+        'description',
         'manager_id',
     ];
 

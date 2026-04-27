@@ -11,6 +11,7 @@ Route::prefix('v1/team')->middleware(['auth:api', 'active.user'])->group(functio
     Route::get('teams', [TeamManagementController::class, 'index'])->name('team.teams.index');
     Route::post('teams', [TeamManagementController::class, 'store'])->name('team.teams.create');
     Route::get('teams/{team}', [TeamManagementController::class, 'show'])->name('team.teams.show');
+    Route::patch('teams/{team}', [TeamManagementController::class, 'update'])->name('team.teams.update');
     Route::patch('teams/{team}/manager', [TeamManagementController::class, 'updateManager'])->name('team.teams.manager.update');
 
     Route::post('teams/{team}/members', [TeamMemberController::class, 'store'])->name('team.teams.members.add');

@@ -105,6 +105,38 @@ class TeamApiTest extends TestCase
         ]);
     }
 
+    public function test_business_owner_can_create_employee_with_position(): void
+    {
+        Mail::fake();
+
+        $owner = $this->registerAndLoginOwner();
+
+        $createResponse = $this->postJson('/api/v1/team/users', [
+            'first_name' => 'Nora',
+            'last_name' => 'Analyst',
+            'position' => 'Data Analyst',
+            'email' => 'nora.analyst@example.test',
+        ], $this->authHeaders($owner['token']));
+
+        $createResponse->assertCreated()
+            ->assertJsonPath('user.email', 'nora.analyst@example.test')
+            ->assertJsonPath('user.position', 'Data Analyst');
+
+        $employeeId = $createResponse->json('user.id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $employeeId,
+            'position' => 'Data Analyst',
+        ]);
+
+        $listResponse = $this->getJson('/api/v1/team/users', $this->authHeaders($owner['token']));
+
+        $listResponse->assertOk()->assertJsonFragment([
+            'id' => $employeeId,
+            'position' => 'Data Analyst',
+        ]);
+    }
+
     private function registerAndLoginOwner(): array
     {
         $email = 'owner-'.uniqid(). '@example.test';

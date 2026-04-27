@@ -41,6 +41,7 @@ class TenantUserManagementService
             $createdUser = $this->userRepository->create([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
+                'position' => $validated['position'] ?? null,
                 'email' => $validated['email'],
                 'password' => $temporaryPassword,
                 'tenant_id' => $businessOwner->tenant_id,
@@ -58,6 +59,7 @@ class TenantUserManagementService
                 'metadata' => [
                     'created_user_email' => $createdUser->email,
                     'created_user_role' => Role::Employee->value,
+                    'created_user_position' => $createdUser->position,
                 ],
             ]);
 
