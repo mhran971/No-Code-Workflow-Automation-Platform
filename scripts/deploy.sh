@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-APP_PATH="$SERV00_PATH_PRODUCTION"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
+APP_PATH="${1:-$SERV00_PATH_PRODUCTION}"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
 # مثال: APP_PATH="/home/USERNAME/domains/yourdomain.com/public_html"
 
 # APP_PATH="/home/hudashakir/domains/workflow-api.hudashakir.serv00.net/public_html"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
