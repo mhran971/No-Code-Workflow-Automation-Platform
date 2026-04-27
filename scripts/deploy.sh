@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 
+# APP_PATH="/home/USERNAME/domains/yourdomain.com/public_html"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
 APP_PATH="/home/hudashakir/domains/workflow-api.hudashakir.serv00.net/public_html"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
 
 if [ -z "$APP_PATH" ]; then
-    echo "Error: APP_PATH is not set. Please provide it as an argument or set SERV00_PATH."
-    exit 1
+echo "Error: APP_PATH is not set. Please provide it as an argument or set SERV00_PATH."
+exit 1
 fi
 
 cd "$APP_PATH"
@@ -26,6 +27,3 @@ echo "🔗 Setting storage link..."
 php artisan storage:link || true
 
 echo "🔐 Setting permissions..."
-chmod -R 775 storage bootstrap/cache
-
-echo "✅ Deploy finished successfully!"
