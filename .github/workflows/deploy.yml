@@ -64,7 +64,7 @@ jobs:
             --exclude='storage/framework/cache/*' \
             -e "ssh -p ${{ secrets.SERV00_PORT }} -i ~/.ssh/id_ed25519" \
             ./ \
-            ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:${{ secrets.SERV00_PATH }}/
+            ${{ secrets.SERV00_USER }}@${{ secrets.SERV00_HOST }}:/home/hudashakir/domains/workflow-api.hudashakir.serv00.net/public_html/
       - name: Run post-deploy commands
         run: |
           ssh -p ${{ secrets.SERV00_PORT }} \
