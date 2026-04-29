@@ -12,4 +12,3 @@ Route::prefix('v1')->group(function () {
         Route::post('logout', [SessionController::class, 'destroy'])->name('logout');
     });
 });
-// test for ci/cd
