@@ -3,6 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Integrations\Http\Controllers\IntegrationsController;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('integrations', IntegrationsController::class)->names('integrations');
+Route::prefix('v1/integrations')->name("integrations")->group(function () {
+    Route::get('/clickup/connect/{id}', [IntegrationsController::class, 'clickupConnect'])
+        ->name('.clickup.connect');
+
+    Route::get('/clickup/callback', [IntegrationsController::class, 'clickupCallback'])
+        ->name('.clickup.callback');
+    Route::get('/connections', [IntegrationsController::class, 'connections']);
 });

@@ -4,53 +4,55 @@ namespace Modules\Integrations\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Modules\Integrations\Models\IntegrationProvider;
+use Modules\Integrations\Models\IntegrationConnection;
+use Illuminate\Support\Facades\Crypt;
 
 class IntegrationsController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function clickupConnect($id)
     {
-        return view('integrations::index');
+        $state = base64_encode($id . ':' . bin2hex(random_bytes(16)));
+        
+        $authUrl = 'https://app.clickup.com/api?' . http_build_query([
+            'client_id' => env("CLICKUP_CLIENT_ID"),
+            'redirect_uri' => route('api.integrations.clickup.callback'),
+            'state' => $state,
+        ]);
+        
+        return redirect($authUrl);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+     public function clickupCallback(Request $request)
     {
-        return view('integrations::create');
+        // Validate state
+        [$tenantId, $nonce] = explode(':', base64_decode($request->state));
+        
+        // Exchange code
+        $response = Http::post('https://api.clickup.com/api/v2/oauth/token', [
+            'client_id' => env("CLICKUP_CLIENT_ID"),
+            'client_secret' => env("CLICKUP_CLIENT_SECRET"),
+            'code' => $request->code,
+            ]);
+
+        $provider = IntegrationProvider::where('id', 'clickup')->firstOrFail();
+        
+        IntegrationConnection::create([
+            'integration_provider_id' => $provider->id,
+            'tenant_id' => $tenantId,
+            'auth_config' => ['access_token' => Crypt::encrypt($response['access_token'])],
+            'config' => ['teams' => $this->getClickupTeams($response['access_token'])],
+            ]);
+            
+        return "sucess";
+        return redirect("/integrations?success=clickup");
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
+    private function getClickupTeams($token)
     {
-        return view('integrations::show');
+        $response = Http::withToken($token)->get('https://api.clickup.com/api/v2/team');
+
+        return $response->json('teams') ?? [];
     }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('integrations::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
 }

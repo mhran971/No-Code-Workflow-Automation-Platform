@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('integration_connections', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('integration_provider_id')->constrained('integration_providers')->onDelete('cascade');
+            $table->string('integration_provider_id');
             $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
             $table->json('auth_config'); // Store provider-specific auth config (e.g., tokens)
             $table->json('config'); // Store provider-specific config (e.g., workspace ID)
