@@ -19,6 +19,7 @@ class MemberMangementController extends Controller
 
     /**
      * List existing tenant users.
+     *
      * @throws AuthorizationException
      */
     public function index(): JsonResponse
