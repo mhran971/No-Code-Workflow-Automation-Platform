@@ -3,11 +3,16 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Integrations\Http\Controllers\IntegrationsController;
 
-Route::prefix('v1/integrations')->name("integrations")->group(function () {
-    Route::get('/clickup/connect/{id}', [IntegrationsController::class, 'clickupConnect'])
-        ->name('.clickup.connect');
+Route::prefix('v1/integrations')->name('integrations.')->group(function () {
+    Route::middleware('auth:api')->group(function () {
+        Route::post('/{provider}/connect', [IntegrationsController::class, 'connect'])
+            ->name('connect');
+        Route::delete('/{provider}/disconnect', [IntegrationsController::class, 'disconnect'])
+            ->name('disconnect');
+        Route::get('/', [IntegrationsController::class, 'index'])
+            ->name('index');
+    });
 
-    Route::get('/clickup/callback', [IntegrationsController::class, 'clickupCallback'])
-        ->name('.clickup.callback');
-    Route::get('/connections', [IntegrationsController::class, 'connections']);
+    Route::get('/{provider}/callback', [IntegrationsController::class, 'callback'])
+        ->name('callback');
 });

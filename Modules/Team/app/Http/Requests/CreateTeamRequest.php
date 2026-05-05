@@ -41,4 +41,3 @@ class CreateTeamRequest extends FormRequest
         ];
     }
 }
-

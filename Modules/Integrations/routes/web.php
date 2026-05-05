@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Integrations\Http\Controllers\IntegrationsController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('integrations', IntegrationsController::class)->names('integrations');
+    Route::get('integrations', fn () => view('integrations::index'))->name('integrations.index');
 });

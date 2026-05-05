@@ -3,56 +3,69 @@
 namespace Modules\Integrations\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
+use Modules\Integrations\Exceptions\IntegrationException;
 use Modules\Integrations\Models\IntegrationProvider;
-use Modules\Integrations\Models\IntegrationConnection;
-use Illuminate\Support\Facades\Crypt;
+use Modules\Integrations\Services\IntegrationManager;
+use Modules\Integrations\Transformers\IntegrationProviderResource;
 
 class IntegrationsController extends Controller
 {
-    public function clickupConnect($id)
+    public function connect(IntegrationProvider $provider, Request $request, IntegrationManager $manager): RedirectResponse|JsonResponse
     {
-        $state = base64_encode($id . ':' . bin2hex(random_bytes(16)));
-        
-        $authUrl = 'https://app.clickup.com/api?' . http_build_query([
-            'client_id' => env("CLICKUP_CLIENT_ID"),
-            'redirect_uri' => route('api.integrations.clickup.callback'),
-            'state' => $state,
+        try {
+            $tenant = auth('api')->user()?->tenant;
+
+            if ($tenant === null) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            $authUrl = $manager->connect($provider, $tenant);
+
+            return redirect()->away($authUrl);
+        } catch (IntegrationException $exception) {
+            return response()->json(['message' => $exception->getMessage()], $exception->status());
+        }
+    }
+
+    public function callback(Request $request, IntegrationManager $manager): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string'],
+            'state' => ['required', 'string'],
         ]);
-        
-        return redirect($authUrl);
+
+        try {
+            $connection = $manager->callback($validated['state'], $validated['code']);
+
+            return redirect()->away(route('api.integrations.index'));
+        } catch (IntegrationException $exception) {
+            return response()->json(['message' => $exception->getMessage()], $exception->status());
+        }
     }
 
-     public function clickupCallback(Request $request)
+    public function disconnect(IntegrationProvider $provider, Request $request, IntegrationManager $manager): JsonResponse
     {
-        // Validate state
-        [$tenantId, $nonce] = explode(':', base64_decode($request->state));
-        
-        // Exchange code
-        $response = Http::post('https://api.clickup.com/api/v2/oauth/token', [
-            'client_id' => env("CLICKUP_CLIENT_ID"),
-            'client_secret' => env("CLICKUP_CLIENT_SECRET"),
-            'code' => $request->code,
-            ]);
+        $tenant = auth('api')->user()?->tenant;
 
-        $provider = IntegrationProvider::where('id', 'clickup')->firstOrFail();
-        
-        IntegrationConnection::create([
-            'integration_provider_id' => $provider->id,
-            'tenant_id' => $tenantId,
-            'auth_config' => ['access_token' => Crypt::encrypt($response['access_token'])],
-            'config' => ['teams' => $this->getClickupTeams($response['access_token'])],
-            ]);
-            
-        return "sucess";
-        return redirect("/integrations?success=clickup");
+        if ($tenant === null) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        DB::transaction(function () use ($provider, $tenant) {
+            $provider->connections()->where('tenant_id', $tenant->id)->delete();
+        });
+
+        return response()->json(['message' => 'Integration disconnected successfully.']);
     }
 
-    private function getClickupTeams($token)
+    public function index()
     {
-        $response = Http::withToken($token)->get('https://api.clickup.com/api/v2/team');
+        $providers = IntegrationProvider::where('is_active', true)->get();
 
-        return $response->json('teams') ?? [];
+        return response()->json(IntegrationProviderResource::collection($providers));
     }
 }

@@ -12,33 +12,71 @@ class IntegrationsDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        IntegrationProvider::create([
+        IntegrationProvider::updateOrCreate(['id' => 'clickup'], [
             'id' => 'clickup',
             'name' => 'ClickUp',
             'auth_type' => 'oauth2',
-            'config_schema' => json_encode([
-                "teams"=> ["type"=> "array"]
-            ]),
-            'auth_schema' => json_encode([
+            'config_schema' => [
+                'teams' => [
+                    'type' => 'array',
+                    'required' => true,
+                ],
+            ],
+            'auth_schema' => [
                 'access_token' => [
                     'type' => 'string',
+                    'required' => true,
                 ],
-            ]),
+            ],
             'is_active' => true,
         ]);
 
-        IntegrationProvider::create([
+        IntegrationProvider::updateOrCreate(['id' => 'hubspot'], [
             'id' => 'hubspot',
             'name' => 'HubSpot',
             'auth_type' => 'oauth2',
-            'config_schema' => json_encode([
-                'portal_id' => ['type' => 'string'],
-            ]),
-            'auth_schema' => json_encode([
-                'access_token' => ['type' => 'string'],
-                'refresh_token' => ['type' => 'string'],
-                'expires_at' => ['type' => 'string'],
-            ]),
+            'config_schema' => [
+                'portal_id' => [
+                    'type' => 'string',
+                    'required' => false,
+                ],
+            ],
+            'auth_schema' => [
+                'access_token' => [
+                    'type' => 'string',
+                    'required' => true,
+                ],
+                'refresh_token' => [
+                    'type' => 'string',
+                    'required' => false,
+                ],
+                'expires_at' => [
+                    'type' => 'string',
+                    'required' => false,
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        IntegrationProvider::updateOrCreate(['id' => 'google'], [
+            'id' => 'google',
+            'name' => 'Google',
+            'auth_type' => 'oauth2',
+            'config_schema' => [],
+            'auth_schema' => [
+                'access_token' => [
+                    'type' => 'string',
+                    'required' => true,
+                ],
+                'refresh_token' => [
+                    'type' => 'string',
+                    'required' => false,
+                ],
+                'expires_at' => [
+                    'type' => 'string',
+                    'required' => false,
+                ],
+            ],
             'is_active' => true,
         ]);
     }

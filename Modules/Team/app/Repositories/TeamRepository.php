@@ -47,4 +47,3 @@ class TeamRepository
         return $team;
     }
 }
-
