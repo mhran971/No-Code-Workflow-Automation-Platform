@@ -2,5 +2,6 @@
     "Auth": true,
     "KnowledgeBase": true,
     "Team": true,
-    "Integrations": true
+    "Integrations": true,
+    "Workflows": true
 }

@@ -1,0 +1,327 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Modules\Auth\Enums\BusinessType;
+use Modules\Auth\Enums\Role;
+use Modules\Auth\Models\Tenant;
+use Modules\Auth\Models\User;
+use Modules\Team\Models\Team;
+use Modules\Team\Models\TeamMembership;
+use Modules\Workflows\Enums\WorkflowStatus;
+use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Models\WorkflowTemplate;
+use Tests\TestCase;
+
+class WorkflowManagementApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_manager_creates_workflow_and_team_employee_can_view_it(): void
+    {
+        $tenant = $this->createTenant();
+        $owner = $this->createUser($tenant, Role::BusinessOwner, 'owner-create');
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-create');
+        $employee = $this->createUser($tenant, Role::Employee, 'employee-create');
+        $team = $this->createTeam($tenant, $manager, 'HR Team');
+        $this->assignToTeam($tenant, $manager, $team);
+        $this->assignToTeam($tenant, $employee, $team);
+
+        $createResponse = $this->actingAs($manager, 'api')->postJson('/api/v1/workflows', [
+            'method' => 'blank',
+            'name' => 'Employee Onboarding',
+            'description' => 'Automated sequence for provisioning access',
+        ]);
+
+        $createResponse->assertCreated()
+            ->assertJsonPath('workflow.name', 'Employee Onboarding')
+            ->assertJsonPath('workflow.status', WorkflowStatus::Disabled->value)
+            ->assertJsonPath('workflow.team.id', $team->id)
+            ->assertJsonPath('workflow.created_by.id', $manager->id)
+            ->assertJsonPath('workflow.version_number', 0)
+            ->assertJsonPath('workflow.total_runs', 0)
+            ->assertJsonPath('workflow.active_instances', 0);
+
+        $workflowId = (int) $createResponse->json('workflow.id');
+
+        $this->assertDatabaseHas('workflows', [
+            'id' => $workflowId,
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+        ]);
+
+        $this->assertDatabaseHas('workflow_access_grants', [
+            'workflow_id' => $workflowId,
+            'user_id' => $employee->id,
+            'access_level' => 'view',
+        ]);
+
+        $this->actingAs($employee, 'api')
+            ->getJson('/api/v1/workflows')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $workflowId)
+            ->assertJsonPath('data.0.actions.0', 'view');
+
+        $this->actingAs($owner, 'api')
+            ->getJson('/api/v1/workflows')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $workflowId);
+    }
+
+    public function test_workflow_can_be_created_from_template_and_usage_count_is_incremented(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-template');
+        $team = $this->createTeam($tenant, $manager, 'Operations');
+        $this->assignToTeam($tenant, $manager, $team);
+
+        $template = WorkflowTemplate::query()->create([
+            'tenant_id' => null,
+            'name' => 'Onboarding Template',
+            'description' => 'Pre-built onboarding flow',
+            'category' => 'HR',
+            'definition' => $this->validDefinition(),
+            'is_active' => true,
+            'usage_count' => 0,
+        ]);
+
+        $this->actingAs($manager, 'api')
+            ->postJson('/api/v1/workflows', [
+                'method' => 'template',
+                'name' => 'Template Based Workflow',
+                'template_id' => $template->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('workflow.name', 'Template Based Workflow');
+
+        $this->assertDatabaseHas('workflows', [
+            'template_id' => $template->id,
+            'name' => 'Template Based Workflow',
+        ]);
+
+        $this->assertSame(1, (int) $template->refresh()->usage_count);
+    }
+
+    public function test_ai_proposal_is_not_persisted_until_manager_confirms_creation(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-ai');
+
+        $response = $this->actingAs($manager, 'api')->postJson('/api/v1/workflows/proposals/ai', [
+            'goal' => 'When a new employee joins, create tasks and notify the HR team.',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonStructure(['proposal_definition', 'proposal_checksum', 'warnings', 'confidence', 'generated_at']);
+
+        $this->assertDatabaseCount('workflows', 0);
+        $this->assertDatabaseCount('workflow_versions', 0);
+    }
+
+    public function test_draft_publish_activate_and_trigger_update_version_and_counters(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-publish');
+        $team = $this->createTeam($tenant, $manager, 'Automation');
+        $this->assignToTeam($tenant, $manager, $team);
+        $workflow = $this->createWorkflow($tenant, $team, $manager);
+
+        $draftResponse = $this->actingAs($manager, 'api')->patchJson("/api/v1/workflows/{$workflow->id}/draft", [
+            'definition' => $this->validDefinition(),
+            'expected_draft_revision' => 1,
+        ]);
+
+        $draftResponse->assertOk()
+            ->assertJsonPath('draft_revision', 2)
+            ->assertJsonPath('saved', true)
+            ->assertJsonPath('validation.is_publishable', true);
+
+        $publishResponse = $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish", [
+            'expected_draft_revision' => 2,
+            'version_label' => 'v2.1.0',
+            'release_note' => 'Initial published workflow',
+        ]);
+
+        $publishResponse->assertCreated()
+            ->assertJsonPath('published_version.version_number', 1)
+            ->assertJsonPath('published_version.version_label', 'v2.1.0')
+            ->assertJsonPath('workflow_status', WorkflowStatus::Disabled->value);
+
+        $this->actingAs($manager, 'api')
+            ->patchJson("/api/v1/workflows/{$workflow->id}/status", ['status' => WorkflowStatus::Active->value])
+            ->assertOk()
+            ->assertJsonPath('status', WorkflowStatus::Active->value);
+
+        $triggerResponse = $this->actingAs($manager, 'api')
+            ->postJson("/api/v1/workflows/{$workflow->id}/trigger/webhook", ['source' => 'test']);
+
+        $triggerResponse->assertCreated()
+            ->assertJsonPath('workflow_id', $workflow->id)
+            ->assertJsonPath('version_number', 1)
+            ->assertJsonPath('status', 'running');
+
+        $workflow->refresh();
+
+        $this->assertSame('v2.1.0', $workflow->current_version_label);
+        $this->assertSame(1, (int) $workflow->total_runs);
+        $this->assertSame(1, (int) $workflow->active_instances);
+    }
+
+    public function test_disabled_workflow_returns_gone_without_stopping_active_instances(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-disable');
+        $team = $this->createTeam($tenant, $manager, 'Support');
+        $this->assignToTeam($tenant, $manager, $team);
+        $workflow = $this->createPublishedWorkflow($tenant, $team, $manager);
+
+        $this->actingAs($manager, 'api')
+            ->patchJson("/api/v1/workflows/{$workflow->id}/status", ['status' => WorkflowStatus::Active->value])
+            ->assertOk();
+
+        $this->actingAs($manager, 'api')
+            ->postJson("/api/v1/workflows/{$workflow->id}/trigger/webhook", ['source' => 'first'])
+            ->assertCreated();
+
+        $this->actingAs($manager, 'api')
+            ->patchJson("/api/v1/workflows/{$workflow->id}/status", ['status' => WorkflowStatus::Disabled->value])
+            ->assertOk();
+
+        $this->actingAs($manager, 'api')
+            ->postJson("/api/v1/workflows/{$workflow->id}/trigger/webhook", ['source' => 'blocked'])
+            ->assertStatus(410);
+
+        $workflow->refresh();
+
+        $this->assertSame(1, (int) $workflow->total_runs);
+        $this->assertSame(1, (int) $workflow->active_instances);
+    }
+
+    public function test_business_owner_can_purge_deleted_workflow_when_no_active_instances_exist(): void
+    {
+        $tenant = $this->createTenant();
+        $owner = $this->createUser($tenant, Role::BusinessOwner, 'owner-purge');
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-purge');
+        $team = $this->createTeam($tenant, $manager, 'Finance');
+        $this->assignToTeam($tenant, $manager, $team);
+        $workflow = $this->createWorkflow($tenant, $team, $manager);
+
+        $this->actingAs($manager, 'api')
+            ->deleteJson("/api/v1/workflows/{$workflow->id}")
+            ->assertOk()
+            ->assertJsonPath('status', WorkflowStatus::Deleted->value);
+
+        $this->actingAs($owner, 'api')
+            ->deleteJson("/api/v1/workflows/{$workflow->id}/purge")
+            ->assertOk()
+            ->assertJsonPath('message', 'Workflow permanently deleted.');
+
+        $this->assertDatabaseMissing('workflows', [
+            'id' => $workflow->id,
+        ]);
+    }
+
+    private function createTenant(): Tenant
+    {
+        return Tenant::query()->create([
+            'business_name' => 'Acme Inc',
+            'business_type' => BusinessType::SaaS->value,
+        ]);
+    }
+
+    private function createUser(Tenant $tenant, Role $role, string $prefix): User
+    {
+        return User::query()->create([
+            'first_name' => ucfirst($prefix),
+            'last_name' => 'User',
+            'name' => ucfirst($prefix).' User',
+            'email' => $prefix.'-'.uniqid().'@example.test',
+            'password' => Hash::make('Pass1234!'),
+            'tenant_id' => $tenant->id,
+            'role' => $role,
+            'is_active' => true,
+        ]);
+    }
+
+    private function createTeam(Tenant $tenant, User $manager, string $name): Team
+    {
+        return Team::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => $name,
+            'manager_id' => $manager->id,
+        ]);
+    }
+
+    private function assignToTeam(Tenant $tenant, User $user, Team $team): void
+    {
+        TeamMembership::query()->create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->id,
+            'team_id' => $team->id,
+            'status' => 'active',
+        ]);
+    }
+
+    private function createWorkflow(Tenant $tenant, Team $team, User $manager): Workflow
+    {
+        return Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+            'name' => 'Employee Onboarding',
+            'description' => 'Automated sequence for provisioning access',
+            'status' => WorkflowStatus::Disabled,
+            'draft_definition' => [
+                'trigger' => null,
+                'nodes' => [],
+                'edges' => [],
+                'settings' => [],
+            ],
+            'draft_revision' => 1,
+        ]);
+    }
+
+    private function createPublishedWorkflow(Tenant $tenant, Team $team, User $manager): Workflow
+    {
+        $workflow = $this->createWorkflow($tenant, $team, $manager);
+
+        $this->actingAs($manager, 'api')->patchJson("/api/v1/workflows/{$workflow->id}/draft", [
+            'definition' => $this->validDefinition(),
+            'expected_draft_revision' => 1,
+        ])->assertOk();
+
+        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish", [
+            'expected_draft_revision' => 2,
+            'version_label' => 'v1.0.0',
+        ])->assertCreated();
+
+        return $workflow->refresh();
+    }
+
+    private function validDefinition(): array
+    {
+        return [
+            'trigger' => [
+                'type' => 'webhook',
+                'config' => [
+                    'path' => 'employee-onboarding',
+                ],
+            ],
+            'nodes' => [
+                [
+                    'id' => 'send-email',
+                    'type' => 'send_email',
+                    'config' => [
+                        'subject' => 'Welcome',
+                    ],
+                ],
+            ],
+            'edges' => [],
+            'settings' => [],
+        ];
+    }
+}

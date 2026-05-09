@@ -1,708 +1,1399 @@
-﻿{
-    "info":  {
-                 "_postman_id":  "9cf27e86-7ddd-4f41-b7e1-9af71754c8d8",
-                 "name":  "No-Code Workflow Automation Platform - Team Management",
-                 "description":  "Collection for team workflow where manager is selected from existing tenant users during team creation (no standalone manager-create API). Uses only {{base_url}} and {{token}} variables.",
-                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-             },
-    "item":  [
-                 {
-                     "name":  "Auth",
-                     "item":  [
-                                  {
-                                      "name":  "Register Business Owner",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"first_name\": \"Omar\",\n  \"last_name\": \"Owner\",\n  \"email\": \"owner@example.test\",\n  \"business_type\": \"saas\",\n  \"password\": \"Pass1234!\",\n  \"password_confirmation\": \"Pass1234!\",\n  \"captcha_token\": \"test-token\"\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/register",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "register"
-                                                                           ]
-                                                              },
-                                                      "description":  "Creates a tenant and business owner account."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Login",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"email\": \"owner@example.test\",\n  \"password\": \"Pass1234!\"\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/login",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "login"
-                                                                           ]
-                                                              },
-                                                      "description":  "Authenticates user. Copy returned token value and set it in your active Postman Environment variable `token`."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Logout",
-                                      "request":  {
-                                                      "auth":  {
-                                                                   "type":  "bearer",
-                                                                   "bearer":  [
-                                                                                  {
-                                                                                      "key":  "token",
-                                                                                      "value":  "{{token}}",
-                                                                                      "type":  "string"
-                                                                                  }
-                                                                              ]
-                                                               },
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/logout",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "logout"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  }
-                              ]
-                 },
-                 {
-                     "name":  "Team User Management",
-                     "auth":  {
-                                  "type":  "bearer",
-                                  "bearer":  [
-                                                 {
-                                                     "key":  "token",
-                                                     "value":  "{{token}}",
-                                                     "type":  "string"
-                                                 }
-                                             ]
-                              },
-                     "item":  [
-                                  {
-                                      "name":  "List Manager Candidates (Same Tenant)",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/manager-candidates",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "manager-candidates"
-                                                                           ]
-                                                              },
-                                                      "description":  "Use this before team creation/update. Returns only eligible manager candidates from the same tenant (active, non-owner, and not assigned to another team)."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Create Employee User (Candidate A)",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"first_name\": \"Candidate\",\n  \"last_name\": \"Alpha\",\n  \"email\": \"candidate.alpha@example.test\"\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/users",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "users"
-                                                                           ]
-                                                              },
-                                                      "description":  "Creates a regular employee user in the same tenant. This is not a manager-specific API."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Create Employee User (Candidate B)",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"first_name\": \"Candidate\",\n  \"last_name\": \"Beta\",\n  \"email\": \"candidate.beta@example.test\"\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/users",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "users"
-                                                                           ]
-                                                              },
-                                                      "description":  "Creates another regular employee user in the same tenant for manager reassignment tests."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Create Team Member User",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"first_name\": \"Team\",\n  \"last_name\": \"Member\",\n  \"email\": \"member@example.test\"\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/users",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "users"
-                                                                           ]
-                                                              },
-                                                      "description":  "Creates a regular employee user that can be added as a team member."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Disable User",
-                                      "request":  {
-                                                      "method":  "PATCH",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"reassign_to_user_id\": 1\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/users/3/disable",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "users",
-                                                                               "3",
-                                                                               "disable"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Enable User",
-                                      "request":  {
-                                                      "method":  "PATCH",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/users/3/enable",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "users",
-                                                                               "3",
-                                                                               "enable"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Delete User",
-                                      "request":  {
-                                                      "method":  "DELETE",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/users/3",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "users",
-                                                                               "3"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  }
-                              ]
-                 },
-                 {
-                     "name":  "Team Management",
-                     "auth":  {
-                                  "type":  "bearer",
-                                  "bearer":  [
-                                                 {
-                                                     "key":  "token",
-                                                     "value":  "{{token}}",
-                                                     "type":  "string"
-                                                 }
-                                             ]
-                              },
-                     "item":  [
-                                  {
-                                      "name":  "Create Team",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"name\": \"Operations\",\n  \"manager_id\": 2\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/teams",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "teams"
-                                                                           ]
-                                                              },
-                                                      "description":  "Manager assignment is mandatory. Set manager_id to a user id returned by `List Manager Candidates (Same Tenant)`."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "List Teams",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/teams",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "teams"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Get Team By Id",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/teams/1",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "teams",
-                                                                               "1"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Update Team Manager",
-                                      "request":  {
-                                                      "method":  "PATCH",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"manager_id\": 4\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/teams/1/manager",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "teams",
-                                                                               "1",
-                                                                               "manager"
-                                                                           ]
-                                                              },
-                                                      "description":  "Replaces current team manager. Set manager_id to an eligible user id from the same tenant."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Add Team Member",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"user_id\": 3\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/teams/1/members",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "teams",
-                                                                               "1",
-                                                                               "members"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Add Team Members (Bulk)",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"members\": [2, 3]\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/teams/1/members",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "teams",
-                                                                               "1",
-                                                                               "members"
-                                                                           ]
-                                                              },
-                                                      "description":  "Bulk add team members using an array of user ids. You can still send single `user_id` for one member."
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  },
-                                  {
-                                      "name":  "Remove Team Member",
-                                      "request":  {
-                                                      "method":  "DELETE",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Accept",
-                                                                         "value":  "application/json",
-                                                                         "type":  "text"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/api/v1/team/teams/1/members/3",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "api",
-                                                                               "v1",
-                                                                               "team",
-                                                                               "teams",
-                                                                               "1",
-                                                                               "members",
-                                                                               "3"
-                                                                           ]
-                                                              }
-                                                  },
-                                      "response":  [
-
-                                                   ]
-                                  }
-                              ]
-                 }
-             ],
-    "event":  [
-                  {
-                      "listen":  "test",
-                      "script":  {
-                                     "type":  "text/javascript",
-                                     "exec":  [
-                                                  "if (pm.response.code === 200) {",
-                                                  "    const response = pm.response.json();",
-                                                  "    if (response.success) {",
-                                                  "        console.log(\u0027OTP sent successfully\u0027);",
-                                                  "    }",
-                                                  "}"
-                                              ]
-                                 }
-                  }
+{
+  "info": {
+    "_postman_id": "9cf27e86-7ddd-4f41-b7e1-9af71754c8d8",
+    "name": "No-Code Workflow Automation Platform - Team Management",
+    "description": "Collection for team workflow where manager is selected from existing tenant users during team creation (no standalone manager-create API). Uses only {{base_url}} and {{token}} variables.\nتتضمن أيضًا توثيق Workflow Management APIs باللغة العربية لفريق الواجهة.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Business Owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Omar\",\n  \"last_name\": \"Owner\",\n  \"email\": \"owner@example.test\",\n  \"business_type\": \"saas\",\n  \"password\": \"Pass1234!\",\n  \"password_confirmation\": \"Pass1234!\",\n  \"captcha_token\": \"test-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "register"
               ]
+            },
+            "description": "Creates a tenant and business owner account."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.test\",\n  \"password\": \"Pass1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "login"
+              ]
+            },
+            "description": "Authenticates user. Copy returned token value and set it in your active Postman Environment variable `token`."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Team User Management",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "List Manager Candidates (Same Tenant)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/manager-candidates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "manager-candidates"
+              ]
+            },
+            "description": "Use this before team creation/update. Returns only eligible manager candidates from the same tenant (active, non-owner, and not assigned to another team)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Employee User (Candidate A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Candidate\",\n  \"last_name\": \"Alpha\",\n  \"email\": \"candidate.alpha@example.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "users"
+              ]
+            },
+            "description": "Creates a regular employee user in the same tenant. This is not a manager-specific API."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Employee User (Candidate B)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Candidate\",\n  \"last_name\": \"Beta\",\n  \"email\": \"candidate.beta@example.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "users"
+              ]
+            },
+            "description": "Creates another regular employee user in the same tenant for manager reassignment tests."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Team Member User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Team\",\n  \"last_name\": \"Member\",\n  \"email\": \"member@example.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "users"
+              ]
+            },
+            "description": "Creates a regular employee user that can be added as a team member."
+          },
+          "response": []
+        },
+        {
+          "name": "Disable User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reassign_to_user_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/users/3/disable",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "users",
+                "3",
+                "disable"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enable User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/users/3/enable",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "users",
+                "3",
+                "enable"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/users/3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "users",
+                "3"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Team Management",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Create Team",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Operations\",\n  \"manager_id\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/teams",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "teams"
+              ]
+            },
+            "description": "Manager assignment is mandatory. Set manager_id to a user id returned by `List Manager Candidates (Same Tenant)`."
+          },
+          "response": []
+        },
+        {
+          "name": "List Teams",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/teams",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "teams"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Team By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/teams/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "teams",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Team Manager",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"manager_id\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/teams/1/manager",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "teams",
+                "1",
+                "manager"
+              ]
+            },
+            "description": "Replaces current team manager. Set manager_id to an eligible user id from the same tenant."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Team Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/teams/1/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "teams",
+                "1",
+                "members"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Team Members (Bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"members\": [2, 3]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/teams/1/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "teams",
+                "1",
+                "members"
+              ]
+            },
+            "description": "Bulk add team members using an array of user ids. You can still send single `user_id` for one member."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Team Member",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/team/teams/1/members/3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "team",
+                "teams",
+                "1",
+                "members",
+                "3"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Workflow Management",
+      "description": "توثيق عربي لواجهات إدارة الـ Workflows لمساعدة فريق الواجهة في الربط مع الباكند.\n\nالسيناريو الأساسي:\n1. المدير يفتح شاشة Workflows Management ويستدعي قائمة الـ workflows.\n2. عند الضغط على New Workflow يختار: From Scratch أو From Template أو AI Generated.\n3. الإنشاء يحفظ workflow مع created_by و team و status=disabled و counters بقيمة صفرية.\n4. Builder يحفظ التعريف عبر Update Draft ولا ينشره مباشرة.\n5. Publish ينشئ نسخة immutable في workflow_versions ويحدّث version_label مثل v2.1.0.\n6. Enable يسمح بالتشغيل، و Disable يجعل أي trigger جديد يرجع 410 مع استمرار الـ active instances الحالية.\n\nحقول مهمة للواجهة في الكروت والتفاصيل: name, description, status, team, created_by, version_label, created_at, updated_at, total_runs, active_instances, actions.",
+      "item": [
+        {
+          "name": "Browse & Search Workflows",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows?q=onboarding&status=active&team_id=1&created_from=2026-05-01&created_to=2026-05-10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "onboarding",
+                  "description": "بحث عام في الاسم والوصف",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "active أو disabled أو deleted",
+                  "disabled": true
+                },
+                {
+                  "key": "team_id",
+                  "value": "1",
+                  "description": "فلترة حسب الفريق",
+                  "disabled": true
+                },
+                {
+                  "key": "created_from",
+                  "value": "2026-05-01",
+                  "description": "تاريخ البداية",
+                  "disabled": true
+                },
+                {
+                  "key": "created_to",
+                  "value": "2026-05-10",
+                  "description": "تاريخ النهاية",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "يعرض قائمة الـ workflows حسب صلاحية المستخدم الحالي.\nManager يرى Workflows فريقه فقط. Business Owner يرى كل Workflows داخل الـ tenant. Employee يرى ما لديه view access عليه فقط.\nاستخدم actions لتحديد الأزرار التي تظهر في الواجهة: view, edit_draft, publish, enable, disable, delete, purge.\nالحقول المعروضة في الكرت: name, status, team, version_label, created_by, total_runs, active_instances."
+          },
+          "response": []
+        },
+        {
+          "name": "List Workflow Templates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/templates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "templates"
+              ]
+            },
+            "description": "يعرض القوالب المتاحة عند اختيار From Template. النتيجة تشمل القوالب العامة global وقوالب نفس tenant فقط. استخدم template_id الناتج في Create Workflow From Template."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Workflow - From Scratch",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows"
+              ]
+            },
+            "description": "ينشئ Workflow فارغ من شاشة From Scratch.\nيجب أن يكون المستخدم Manager ولديه Team. النظام يربط workflow تلقائيًا بفريق المدير ويضع created_by_id للمستخدم الحالي.\nالحالة الابتدائية disabled، و version_number=0، و total_runs=0، و active_instances=0.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"blank\",\n  \"name\": \"Employee Onboarding\",\n  \"description\": \"Automated sequence for provisioning access and sending welcome communications.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Workflow - From Template",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows"
+              ]
+            },
+            "description": "ينشئ Workflow من قالب جاهز بعد اختيار From Template.\ntemplate_id يأتي من List Workflow Templates. المثال يستخدم 1 كقيمة تجريبية ويمكن لفريق الواجهة استبدالها بالقيمة القادمة من API.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"template\",\n  \"name\": \"Employee Onboarding From Template\",\n  \"description\": \"Workflow created from a reusable HR template.\",\n  \"template_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Generate AI Workflow Proposal",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/proposals/ai",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "proposals",
+                "ai"
+              ]
+            },
+            "description": "يولد اقتراح AI فقط ولا يخزن أي Workflow أو Version في قاعدة البيانات.\nالواجهة تعرض proposal_definition للمدير للمراجعة. عند التأكيد يتم إرسال نفس definition إلى Create Workflow - AI Confirmed.\nمهم: لا يتم التنفيذ ولا التخزين قبل تأكيد المدير.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goal\": \"When a new employee joins, create onboarding tasks and notify the HR team.\",\n  \"constraints\": {\n    \"allowed_triggers\": [\n      \"webhook\",\n      \"schedule\"\n    ],\n    \"allowed_actions\": [\n      \"send_email\",\n      \"create_task\"\n    ]\n  },\n  \"context\": {\n    \"language\": \"ar\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Workflow - AI Confirmed",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows"
+              ]
+            },
+            "description": "يستخدم بعد موافقة المدير على اقتراح AI.\nهنا فقط يتم إنشاء workflow فعلي. definition هو proposal_definition القادم من Generate AI Workflow Proposal.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"ai_confirmed\",\n  \"name\": \"AI Employee Onboarding\",\n  \"description\": \"Workflow confirmed from AI proposal.\",\n  \"definition\": {\n    \"trigger\": {\n      \"type\": \"webhook\",\n      \"config\": {\n        \"name\": \"employee-onboarding\"\n      }\n    },\n    \"nodes\": [\n      {\n        \"id\": \"send-welcome-email\",\n        \"type\": \"send_email\",\n        \"config\": {\n          \"subject\": \"Welcome\"\n        }\n      }\n    ],\n    \"edges\": [],\n    \"settings\": {\n      \"source\": \"ai_confirmed\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1"
+              ]
+            },
+            "description": "يعرض بيانات نافذة التفاصيل كما في التصميم.\nحقول مهمة: team, version_number, version_label, created_by, created_at, updated_at, total_runs, active_instances, draft_revision, current_version, actions.\nاستخدم status لتشغيل/إطفاء toggle في الواجهة."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Workflow Draft",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1/draft",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1",
+                "draft"
+              ]
+            },
+            "description": "يحفظ تعديلات الـ Builder في draft_definition فقط ولا ينشئ نسخة منشورة.\nexpected_draft_revision يمنع الكتابة فوق تعديل أحدث. إذا كان الرقم قديمًا يرجع 409.\nإذا validate_only=true فالخادم يتحقق من التعريف بدون حفظ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"definition\": {\n    \"trigger\": {\n      \"type\": \"webhook\",\n      \"config\": {\n        \"path\": \"employee-onboarding\"\n      }\n    },\n    \"nodes\": [\n      {\n        \"id\": \"send-welcome-email\",\n        \"type\": \"send_email\",\n        \"config\": {\n          \"subject\": \"Welcome\"\n        }\n      }\n    ],\n    \"edges\": [],\n    \"settings\": {}\n  },\n  \"expected_draft_revision\": 1,\n  \"change_note\": \"Added welcome email step\",\n  \"validate_only\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Publish Workflow Version",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1",
+                "publish"
+              ]
+            },
+            "description": "ينشئ نسخة منشورة جديدة داخل workflow_versions من الـ draft الحالي.\nversion_label يظهر في الكرت والتفاصيل مثل v2.1.0. إذا لم ترسله الواجهة، الخادم يولد label تلقائيًا.\nالنشر لا يفعّل workflow تلقائيًا؛ استخدم Update Workflow Status لتفعيله.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_draft_revision\": 2,\n  \"version_label\": \"v2.1.0\",\n  \"release_note\": \"Initial published workflow for employee onboarding.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Workflow Versions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1/versions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1",
+                "versions"
+              ]
+            },
+            "description": "يعرض سجل الإصدارات المنشورة للـ workflow. يستخدم في شاشة history أو version selector. كل version يحتوي version_number, version_label, published_by, published_at, release_note."
+          },
+          "response": []
+        },
+        {
+          "name": "Enable Workflow",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1",
+                "status"
+              ]
+            },
+            "description": "يفعّل workflow بعد وجود نسخة منشورة.\nإذا لم يتم نشر workflow بعد، يرجع 422 لأن التشغيل يحتاج current_version_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Disable Workflow",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1",
+                "status"
+              ]
+            },
+            "description": "يعطّل workflow ويمنع أي trigger جديد.\nالتشغيلات الحالية لا تتوقف، لذلك active_instances لا تنقص بمجرد التعطيل.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"disabled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Trigger Workflow Webhook",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1/trigger/webhook",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1",
+                "trigger",
+                "webhook"
+              ]
+            },
+            "description": "يشغل workflow باستخدام آخر نسخة منشورة فقط.\nعند النجاح يزيد total_runs و active_instances.\nإذا كان workflow disabled أو deleted يرجع 410 Gone.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"frontend-test\",\n  \"payload\": {\n    \"employee_id\": 123,\n    \"employee_name\": \"Test Employee\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Workflow",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1"
+              ]
+            },
+            "description": "حذف منطقي: يحول status إلى deleted ويحفظ السجل والإصدارات.\nبعد الحذف لا يظهر في القائمة العادية ولا يقبل التشغيل."
+          },
+          "response": []
+        },
+        {
+          "name": "Purge Workflow Permanently",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/workflows/1/purge",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "workflows",
+                "1",
+                "purge"
+              ]
+            },
+            "description": "حذف نهائي بعد Soft Delete. مخصص للـ Business Owner.\nيرجع 422 إذا كان workflow ليس deleted أو إذا active_instances أكبر من صفر."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.response.code === 200) {",
+          "    const response = pm.response.json();",
+          "    if (response.success) {",
+          "        console.log('OTP sent successfully');",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": []
 }
