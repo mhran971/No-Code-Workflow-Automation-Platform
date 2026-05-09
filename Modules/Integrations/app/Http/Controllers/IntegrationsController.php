@@ -25,7 +25,7 @@ class IntegrationsController extends Controller
 
             $authUrl = $manager->connect($provider, $tenant);
 
-            return redirect()->away($authUrl);
+            return response()->json(['auth_url' => $authUrl], 200);
         } catch (IntegrationException $exception) {
             return response()->json(['message' => $exception->getMessage()], $exception->status());
         }
