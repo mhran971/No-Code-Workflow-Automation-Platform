@@ -20,6 +20,7 @@ class IntegrationProvider extends Model
     protected $fillable = [
         'id',
         'name',
+        'description',
         'auth_type',
         'config_schema',
         'auth_schema',

@@ -16,6 +16,7 @@ class IntegrationsDatabaseSeeder extends Seeder
             'id' => 'clickup',
             'name' => 'ClickUp',
             'auth_type' => 'oauth2',
+            'description' => 'ClickUp is a productivity platform that provides tools for project management, document collaboration, spreadsheets, goal tracking, and more. It helps teams organize their work and collaborate effectively.',
             'config_schema' => [
                 'teams' => [
                     'type' => 'array',
@@ -35,6 +36,7 @@ class IntegrationsDatabaseSeeder extends Seeder
             'id' => 'hubspot',
             'name' => 'HubSpot',
             'auth_type' => 'oauth2',
+            'description' => 'HubSpot is a leading CRM platform that offers a suite of tools for marketing, sales, customer service, and content management. It helps businesses attract, engage, and delight customers by providing a unified platform for managing customer relationships and automating marketing and sales processes.',
             'config_schema' => [
                 'portal_id' => [
                     'type' => 'string',
@@ -62,6 +64,7 @@ class IntegrationsDatabaseSeeder extends Seeder
             'id' => 'google',
             'name' => 'Google',
             'auth_type' => 'oauth2',
+            'description' => 'Google offers a wide range of services and APIs that allow developers to integrate with their ecosystem. This includes services like Google Drive, Google Calendar, Gmail, and more. Integrating with Google can help automate workflows and enhance productivity by leveraging the power of Google\'s services.',
             'config_schema' => [],
             'auth_schema' => [
                 'access_token' => [

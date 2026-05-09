@@ -15,6 +15,7 @@ class IntegrationProviderResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'description' => $this->description,
             'status' => $this->connectionStatus(auth('api')->user()?->tenant),
         ];
     }
