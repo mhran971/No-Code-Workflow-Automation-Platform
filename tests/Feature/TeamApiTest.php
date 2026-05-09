@@ -139,7 +139,7 @@ class TeamApiTest extends TestCase
 
     private function registerAndLoginOwner(): array
     {
-        $email = 'owner-'.uniqid(). '@example.test';
+        $email = 'owner-'.uniqid().'@example.test';
         $password = 'Pass1234!';
 
         $this->postJson('/api/v1/register', [

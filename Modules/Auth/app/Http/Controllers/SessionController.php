@@ -5,9 +5,9 @@ namespace Modules\Auth\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Schema;
-use Modules\Auth\Models\User;
 use Modules\Auth\Http\Requests\LoginRequest;
 use Modules\Auth\Http\Resources\LoginSuccessResource;
+use Modules\Auth\Models\User;
 use Tymon\JWTAuth\JWTGuard;
 
 class SessionController extends Controller

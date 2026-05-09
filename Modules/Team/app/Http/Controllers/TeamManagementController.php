@@ -6,8 +6,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
 use Modules\Team\Http\Requests\CreateTeamRequest;
-use Modules\Team\Http\Requests\UpdateTeamRequest;
 use Modules\Team\Http\Requests\UpdateTeamManagerRequest;
+use Modules\Team\Http\Requests\UpdateTeamRequest;
 use Modules\Team\Models\Team;
 use Modules\Team\Services\TeamManagementService;
 
@@ -138,4 +138,3 @@ class TeamManagementController extends Controller
         ];
     }
 }
-

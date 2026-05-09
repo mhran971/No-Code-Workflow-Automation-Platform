@@ -4,7 +4,6 @@ namespace Modules\Team\Services;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
-use RuntimeException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Enums\Role;
@@ -13,6 +12,7 @@ use Modules\Team\Models\Team;
 use Modules\Team\Repositories\AuditTrailRepository;
 use Modules\Team\Repositories\TeamMembershipRepository;
 use Modules\Team\Repositories\UserRepository;
+use RuntimeException;
 
 class TeamMemberManagementService
 {

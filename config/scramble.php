@@ -88,7 +88,7 @@ return [
      * ```
      */
     'servers' => [
-        'API' => "api",
+        'API' => 'api',
     ],
 
     /**
