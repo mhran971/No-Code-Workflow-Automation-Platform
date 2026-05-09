@@ -3,7 +3,7 @@ set -e
 
 # APP_PATH="/home/USERNAME/domains/yourdomain.com/public_html"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
 APP_PATH="/home/hudashakir/domains/workflow-api.hudashakir.serv00.net/public_html"   # يُحدَّد من المتغيرات أو اكتبه مباشرة
-
+            
 cd "$APP_PATH"
 
 echo "📦 Installing dependencies..."

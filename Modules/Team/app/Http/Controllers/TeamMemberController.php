@@ -44,6 +44,8 @@ class TeamMemberController extends Controller
             'last_name' => $user->last_name,
             'email' => $user->email,
             'role' => $user->role?->value,
+            'position' => $user->position,
+            'created_at' => $user->created_at?->toDateTimeString(),
         ])->values();
 
         $isBulk = $serializedMembers->count() > 1;
