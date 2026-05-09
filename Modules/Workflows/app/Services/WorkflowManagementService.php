@@ -95,11 +95,14 @@ class WorkflowManagementService
                 'status' => WorkflowStatus::Disabled,
                 'draft_definition' => $definition,
                 'draft_revision' => 1,
+                'current_version_number' => 0,
+                'total_runs' => 0,
+                'active_instances' => 0,
             ]);
 
             $this->grantTeamEmployeesViewAccess($workflow, $actor);
 
-            return $workflow->load(['team:id,name', 'createdBy:id,first_name,last_name,name,email']);
+            return $workflow->refresh()->load(['team:id,name', 'createdBy:id,first_name,last_name,name,email']);
         });
     }
 
