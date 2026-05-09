@@ -67,8 +67,29 @@ class WorkflowManagementService
 
     public function createWorkflow(User $actor, array $data): Workflow
     {
-        $this->assertManager($actor);
-        $team = $this->resolveManagedTeam($actor);
+        if (! in_array($actor->role, [Role::Manager, Role::BusinessOwner], true)) {
+            throw new AuthorizationException('Only managers and business owners can create workflows.');
+        }
+
+        if ($actor->role === Role::Manager) {
+            $team = $this->resolveManagedTeam($actor);
+        } else {
+            $teamQuery = Team::query()->where('tenant_id', (int) $actor->tenant_id);
+            if (! empty($data['team_id'])) {
+                $teamQuery->where('id', (int) $data['team_id']);
+            }
+            $team = $teamQuery->first();
+            
+            if ($team === null) {
+                if (! empty($data['team_id'])) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'team_id' => 'The selected team is invalid or does not belong to your tenant.',
+                    ]);
+                }
+                throw new AuthorizationException('Tenant must have at least one team before creating workflows.');
+            }
+        }
+
         $method = $data['method'];
 
         return DB::transaction(function () use ($actor, $team, $method, $data): Workflow {
@@ -508,13 +529,6 @@ class WorkflowManagementService
             ->first();
 
         return $team !== null && (int) $workflow->team_id === (int) $team->id;
-    }
-
-    protected function assertManager(User $actor): void
-    {
-        if ($actor->role !== Role::Manager) {
-            throw new AuthorizationException('Only managers can create workflows.');
-        }
     }
 
     protected function assertBusinessOwner(User $actor): void
