@@ -74,19 +74,21 @@ class WorkflowManagementService
         if ($actor->role === Role::Manager) {
             $team = $this->resolveManagedTeam($actor);
         } else {
-            $teamQuery = Team::query()->where('tenant_id', (int) $actor->tenant_id);
-            if (! empty($data['team_id'])) {
-                $teamQuery->where('id', (int) $data['team_id']);
+            if (empty($data['team_id'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'team_id' => 'The team id is required to assign workflow to cause you are a Business Owners.',
+                ]);
             }
-            $team = $teamQuery->first();
-            
+
+            $team = Team::query()
+                ->where('tenant_id', (int) $actor->tenant_id)
+                ->where('id', (int) $data['team_id'])
+                ->first();
+
             if ($team === null) {
-                if (! empty($data['team_id'])) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'team_id' => 'The selected team is invalid or does not belong to your tenant.',
-                    ]);
-                }
-                throw new AuthorizationException('Tenant must have at least one team before creating workflows.');
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'team_id' => 'The selected team is invalid or does not belong to your tenant.',
+                ]);
             }
         }
 
