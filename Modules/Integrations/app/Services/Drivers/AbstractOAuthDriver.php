@@ -49,7 +49,6 @@ abstract class AbstractOAuthDriver implements IntegrationDriver
 
     protected function clientId(IntegrationProvider $provider): string
     {
-        return "integrations.providers.{$provider->id}.client_id";
         return (string) config("integrations.providers.{$provider->id}.client_id");
     }
 
