@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->unsignedInteger('version_number');
             $table->string('version_label');
-            $table->json('definition');
+            $table->json('definition'); // TODO: remove the difinition and make a seperate table instead
             $table->text('release_note')->nullable();
             $table->foreignId('published_by_id')->constrained('users')->restrictOnDelete();
             $table->timestamp('published_at');

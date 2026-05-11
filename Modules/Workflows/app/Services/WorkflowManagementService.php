@@ -131,6 +131,8 @@ class WorkflowManagementService
 
     public function generateAiProposal(User $actor, array $data): array
     {
+        // TODO: This is a placeholder implementation, the actual implementation will depend on the AI service
+        // that we will use, and the format of the definition that we will adopt.
         if (! in_array($actor->role, [Role::Manager, Role::BusinessOwner], true)) {
             throw new AuthorizationException('Only managers or business owners can generate workflow proposals.');
         }
@@ -314,7 +316,8 @@ class WorkflowManagementService
             $workflow->delete();
         });
     }
-
+    
+    // TODO: this methods should be in another service and will defenetly need refactor
     public function triggerWebhook(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
     {
         $this->assertCanView($actor, $workflow);

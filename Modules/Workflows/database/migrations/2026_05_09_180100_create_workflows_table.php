@@ -17,13 +17,17 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('status')->default('disabled')->index();
+            // TODO: Consider making an inactive workflow version instead of having separate
+            // draft definition to simplify the data model, this might require more complex
+            // logic when activating a workflow for the first time, But It will simplify the
+            // workflow excution when in draft mode, and the sata will be consistant
             $table->json('draft_definition');
             $table->unsignedInteger('draft_revision')->default(1);
             $table->unsignedBigInteger('current_version_id')->nullable();
-            $table->unsignedInteger('current_version_number')->default(0);
-            $table->string('current_version_label')->nullable();
-            $table->unsignedInteger('total_runs')->default(0);
-            $table->unsignedInteger('active_instances')->default(0);
+            $table->unsignedInteger('current_version_number')->default(0);  //TODO: This can be derived from the versions table, consider removing it to avoid redundancy
+            $table->string('current_version_label')->nullable(); // TODO: This can be derived from the versions table, consider removing it to avoid redundancy
+            $table->unsignedInteger('total_runs')->default(0); // TODO: This can be derived from the workflow_runs table, consider removing it to avoid redundancy
+            $table->unsignedInteger('active_instances')->default(0); //TODO: This can be derived from the workflow_runs table, consider removing it to avoid redundancy
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
 

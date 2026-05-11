@@ -9,6 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('workflow_access_grants', function (Blueprint $table) {
+            // TODO: still table is unneccary to add, we can just programaticaly check
+            // the access level for the user based on the team that the workflow belongs to,
+            // and the user role in that team.
             $table->id();
             $table->foreignId('workflow_id')->constrained('workflows')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
