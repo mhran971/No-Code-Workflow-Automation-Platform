@@ -19,7 +19,11 @@ class StoreWorkflowRequest extends FormRequest
             'method' => ['required', Rule::in(['blank', 'template', 'ai_confirmed'])],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'team_id' => ['nullable', 'integer'],
+            'team_id' => [
+                Rule::requiredIf(auth('api')->user()?->role === Role::BusinessOwner),
+                'nullable',
+                'integer',
+            ],
             'template_id' => ['required_if:method,template', 'nullable', 'integer'],
             'definition' => ['required_if:method,ai_confirmed', 'nullable', 'array'],
         ];
