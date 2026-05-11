@@ -22,3 +22,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+.specify
+.github/copilot-instructions.md
+.github/agents
+.github/prompts
