@@ -4,6 +4,7 @@ namespace Modules\Integrations\Services;
 
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
+use Log;
 use Modules\Auth\Models\Tenant;
 use Modules\Integrations\Contracts\IntegrationAction;
 use Modules\Integrations\Contracts\IntegrationDriver;
@@ -32,19 +33,23 @@ class IntegrationManager
     public function callback(string $state, string $code): IntegrationConnection
     {
         $payload = $this->decodeState($state);
+        Log::debug('Decoded integration callback state for provider ID: '.$payload['provider'].' and tenant ID: '.$payload['tenant_id']);
         $provider = IntegrationProvider::query()->whereKey($payload['provider'])->first();
 
         if ($provider === null) {
             throw IntegrationException::unknownProvider((string) $payload['provider']);
-        }
+            }
 
-        if (! $provider->is_active) {
-            throw IntegrationException::inactiveProvider($provider->id);
-        }
+            if (! $provider->is_active) {
+                throw IntegrationException::inactiveProvider($provider->id);
+                }
+        Log::debug('fetched provider: ', ['id' => $provider->id, 'name' => $provider->name]);
 
+        Log::debug('Fetching driver for provider ID: '.$payload['provider']);
         $driver = $this->driverFor($provider);
+        Log::debug('Fetched driver: ', ['driver' => $driver]);
         $connectionData = $driver->callback($provider, $payload, $code);
-
+        Log::debug('Received connection data from driver: ', ['auth_config' => $connectionData['auth_config'] ?? [], 'config' => $connectionData['config'] ?? []]);
         $this->schemaValidator->validateForProvider(
             $provider,
             $connectionData['auth_config'] ?? [],
@@ -52,13 +57,15 @@ class IntegrationManager
         );
 
         $tenant = Tenant::query()->findOrFail((int) $payload['tenant_id']);
-
-        return $driver->hydrateConnection(
+        Log::debug('Fetched tenant for integration connection: ', ['id' => $tenant->id, 'name' => $tenant->name]);
+        $connection = $driver->hydrateConnection(
             $provider,
             $tenant,
             $connectionData['auth_config'] ?? [],
             $connectionData['config'] ?? []
         );
+        Log::debug('Hydrated integration connection: ', ['id' => $connection->id]);
+        return $connection;
     }
 
     public function runAction(string $action, array $payload, ?IntegrationConnection $connection = null): mixed

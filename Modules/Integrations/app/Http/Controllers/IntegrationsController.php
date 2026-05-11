@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Modules\Integrations\Exceptions\IntegrationException;
 use Modules\Integrations\Models\IntegrationProvider;
 use Modules\Integrations\Services\IntegrationManager;
@@ -37,12 +38,13 @@ class IntegrationsController extends Controller
             'code' => ['required', 'string'],
             'state' => ['required', 'string'],
         ]);
-
+        Log::debug('Received integration callback with state: '.$validated['state']);
         try {
             $connection = $manager->callback($validated['state'], $validated['code']);
-
+        Log::debug('Integration connection established: '.json_encode($connection)));
             return response()->json(['message' => 'Integration connected successfully.', 'connection' => $connection], 200);
         } catch (IntegrationException $exception) {
+                Log::error('Integration callback error: '.$exception->getMessage());
             return response()->json(['message' => $exception->getMessage()], $exception->status());
         }
     }
