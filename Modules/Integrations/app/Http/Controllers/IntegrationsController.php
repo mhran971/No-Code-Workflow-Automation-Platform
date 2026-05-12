@@ -40,6 +40,7 @@ class IntegrationsController extends Controller
         ]);
         try {
             $connection = $manager->callback($validated['state'], $validated['code']);
+
             return response()->json(['message' => 'Integration connected successfully.', 'connection' => $connection], 200);
         } catch (IntegrationException $exception) {
             return response()->json(['message' => $exception->getMessage()], $exception->status());

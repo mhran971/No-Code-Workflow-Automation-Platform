@@ -14,9 +14,7 @@ use Modules\Integrations\Models\IntegrationProvider;
 
 class IntegrationManager
 {
-    public function __construct(
-        protected SchemaValidator $schemaValidator
-    ) {}
+    public function __construct() {}
 
     public function connect(IntegrationProvider $provider, Tenant $tenant): string
     {
@@ -50,11 +48,6 @@ class IntegrationManager
         Log::debug('Fetched driver: ', ['driver' => $driver]);
         $connectionData = $driver->callback($provider, $payload, $code);
         Log::debug('Received connection data from driver: ', ['auth_config' => $connectionData['auth_config'] ?? [], 'config' => $connectionData['config'] ?? []]);
-        $this->schemaValidator->validateForProvider(
-            $provider,
-            $connectionData['auth_config'] ?? [],
-            $connectionData['config'] ?? []
-        );
 
         $tenant = Tenant::query()->findOrFail((int) $payload['tenant_id']);
         Log::debug('Fetched tenant for integration connection: ', ['id' => $tenant->id, 'name' => $tenant->name]);
