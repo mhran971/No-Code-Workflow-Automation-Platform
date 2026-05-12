@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\Integrations\Exceptions\IntegrationException;
@@ -32,7 +33,7 @@ class IntegrationsController extends Controller
         }
     }
 
-    public function callback(Request $request, IntegrationManager $manager): RedirectResponse|JsonResponse
+    public function callback(Request $request, IntegrationManager $manager): RedirectResponse|JsonResponse|View
     {
         $validated = $request->validate([
             'code' => ['required', 'string'],
@@ -41,7 +42,10 @@ class IntegrationsController extends Controller
         try {
             $connection = $manager->callback($validated['state'], $validated['code']);
 
-            return response()->json(['message' => 'Integration connected successfully.', 'connection' => $connection], 200);
+            return view('integrations::callback-success', [
+                'appName' => config('app.name', 'Laravel'),
+                'connection' => $connection,
+            ]);
         } catch (IntegrationException $exception) {
             return response()->json(['message' => $exception->getMessage()], $exception->status());
         }
