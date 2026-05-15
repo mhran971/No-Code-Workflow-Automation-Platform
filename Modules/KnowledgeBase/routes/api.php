@@ -15,4 +15,6 @@ Route::prefix('v1')->middleware(['auth:api', 'active.user'])->group(function () 
     Route::get('documents/{id}', [DocumentController::class, 'show'])->name('documents.show');
     Route::put('documents/{id}', [DocumentController::class, 'update'])->name('documents.update');
     Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
+    Route::patch('documents/{id}/activity/{is_active}', [DocumentController::class, 'setActive'])->name('documents.setActive');
+    Route::delete('documents/{id}', [DocumentController::class, 'destroy'])->name('documents.destroy');
 });

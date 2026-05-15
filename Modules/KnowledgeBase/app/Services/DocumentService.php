@@ -7,9 +7,11 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Log;
 use Modules\KnowledgeBase\Models\Document;
 use Modules\KnowledgeBase\Repositories\DocumentRepository;
 use Modules\KnowledgeBase\Repositories\TagRepository;
+use PhpParser\Comment\Doc;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentService extends BaseService
@@ -107,6 +109,22 @@ class DocumentService extends BaseService
                     : 'attachment; filename="'.$filename.'"',
             ]
         );
+    }
+
+    public function setActiveStatus(Document $document, bool $isActive): Document
+    {
+        // TODO: check if there are active workflows using this document before deactivating
+        $document->update(['is_active' => (bool)$isActive]);
+        Log::debug("Document active status updated", ["is_active" => $isActive, 'document' => $document]);
+
+        return $document;
+    }
+
+    public function delete(Document $document): bool
+    {
+        // TODO: Check if there is historical data before deletion. If there is, we can only set is_active to false and keep the file for audit purposes.
+        $document->delete();
+        return true;
     }
 
     private function storeFile(string $tmpPath, int $tenantId): string
