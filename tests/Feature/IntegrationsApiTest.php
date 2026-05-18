@@ -32,27 +32,40 @@ class IntegrationsApiTest extends TestCase
 
     public function test_connect_redirects_to_provider_with_encrypted_state(): void
     {
-        $auth = $this->makeAuthenticatedUser();
+        foreach ([Role::BusinessOwner, Role::Manager] as $role) {
+            $auth = $this->makeAuthenticatedUser($role);
+
+            $response = $this->actingAs($auth['user'], 'api')
+                ->post('/api/v1/integrations/clickup/connect');
+
+            $response->assertRedirect();
+
+            $location = $response->headers->get('Location');
+            $this->assertNotNull($location);
+
+            $query = [];
+            parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+
+            $this->assertSame('clickup-client-id', $query['client_id'] ?? null);
+            $this->assertArrayHasKey('state', $query);
+
+            $state = json_decode(Crypt::decryptString($query['state']), true, 512, JSON_THROW_ON_ERROR);
+
+            $this->assertSame('clickup', $state['provider']);
+            $this->assertSame((int) $auth['tenant']->id, (int) $state['tenant_id']);
+            $this->assertArrayNotHasKey('user_id', $state);
+        }
+    }
+
+    public function test_connect_rejects_unauthorized_roles(): void
+    {
+        $auth = $this->makeAuthenticatedUser(Role::Employee);
 
         $response = $this->actingAs($auth['user'], 'api')
             ->post('/api/v1/integrations/clickup/connect');
 
-        $response->assertRedirect();
-
-        $location = $response->headers->get('Location');
-        $this->assertNotNull($location);
-
-        $query = [];
-        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
-
-        $this->assertSame('clickup-client-id', $query['client_id'] ?? null);
-        $this->assertArrayHasKey('state', $query);
-
-        $state = json_decode(Crypt::decryptString($query['state']), true, 512, JSON_THROW_ON_ERROR);
-
-        $this->assertSame('clickup', $state['provider']);
-        $this->assertSame((int) $auth['tenant']->id, (int) $state['tenant_id']);
-        $this->assertArrayNotHasKey('user_id', $state);
+        $response->assertForbidden()
+            ->assertJsonPath('message', 'You do not have the required role to access this resource.');
     }
 
     public function test_callback_stores_connection_and_redirects_back_to_integrations_page(): void
@@ -97,7 +110,7 @@ class IntegrationsApiTest extends TestCase
             ->assertJsonPath('message', 'The integration state is invalid or expired.');
     }
 
-    protected function makeAuthenticatedUser(): array
+    protected function makeAuthenticatedUser(Role $role = Role::BusinessOwner): array
     {
         $tenant = Tenant::query()->create([
             'business_name' => 'Acme Inc',
@@ -111,7 +124,7 @@ class IntegrationsApiTest extends TestCase
             'email' => 'ava-owner-'.uniqid().'@example.test',
             'password' => 'Password123!',
             'tenant_id' => $tenant->id,
-            'role' => Role::BusinessOwner,
+            'role' => $role,
             'is_active' => true,
         ]);
 
