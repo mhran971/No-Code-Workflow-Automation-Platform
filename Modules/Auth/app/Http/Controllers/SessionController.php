@@ -44,7 +44,7 @@ class SessionController extends Controller
 
         /** @var User $authenticatedUser */
         $authenticatedUser = $guard->user();
-        $authenticatedUser->load('tenant');
+        $authenticatedUser->load('tenant', 'roles');
 
         return (new LoginSuccessResource($authenticatedUser))
             ->additional(['token' => $token])
