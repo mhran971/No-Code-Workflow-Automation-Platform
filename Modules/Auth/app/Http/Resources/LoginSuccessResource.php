@@ -32,7 +32,7 @@ class LoginSuccessResource extends JsonResource
                     'id' => $this->tenant->id,
                     'business_name' => $this->tenant->business_name,
                 ]),
-                'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),
+                'role' => $this->role,
             ],
         ];
     }
