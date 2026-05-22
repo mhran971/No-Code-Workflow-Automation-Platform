@@ -35,7 +35,18 @@ class TenantUserManagementService
             throw new AuthorizationException('Only business owners can create users.');
         }
 
-        $temporaryPassword = (string) Str::password(12, true, true, true, false);
+//        $temporaryPassword = (string) Str::password(12, true, true, true, false);
+            $special = '!@#$%^&*';
+
+            $password =
+                Str::upper(Str::random(1)) .
+                Str::lower(Str::random(5)) .
+                rand(0, 9) .
+                $special[rand(0, strlen($special) - 1)] .
+                Str::random(4);
+
+            $temporaryPassword = str_shuffle($password);
+
 
         return DB::transaction(function () use ($businessOwner, $validated, $temporaryPassword) {
             $createdUser = $this->userRepository->create([
