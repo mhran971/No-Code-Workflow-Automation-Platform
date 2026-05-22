@@ -6,6 +6,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log as FacadesLog;
+use Log;
 use Modules\KnowledgeBase\Http\Requests\StoreDocumentRequest;
 use Modules\KnowledgeBase\Http\Requests\UpdateDocumentRequest;
 use Modules\KnowledgeBase\Http\Resources\DocumentResource;
@@ -98,5 +100,33 @@ class DocumentController extends Controller
         }
 
         return $this->documentService->getFileResponse($document, false);
+    }
+
+    public function setActive(int $id,  $is_active)
+    {
+        FacadesLog::debug("activity",[ $is_active]);
+        $document = $this->documentService->getForCurrentUser($id);
+
+        if (! $document) {
+            return response()->json(['message' => 'Document not found or access denied.'], 404);
+        }
+
+        $document = $this->documentService->setActiveStatus($document, $is_active);
+
+        return new DocumentResource($document);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $document = $this->documentService->getForCurrentUser($id);
+
+        if (! $document) {
+            return response()->json(['message' => 'Document not found or access denied.'], 404);
+        }
+
+        $this->documentService->delete($document);
+
+        return response()->json(['message' => 'Document deleted successfully.']);
+
     }
 }

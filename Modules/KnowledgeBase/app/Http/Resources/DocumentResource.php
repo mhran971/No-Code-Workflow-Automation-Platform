@@ -23,6 +23,7 @@ class DocumentResource extends JsonResource
             'title' => $this->title,
             'document_type' => new DocumentTypeResource($this->whenLoaded('documentType')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
+            'is_active' => $this->is_active,
             'uploaded_at' => $this->created_at?->toIso8601String(),
         ];
     }

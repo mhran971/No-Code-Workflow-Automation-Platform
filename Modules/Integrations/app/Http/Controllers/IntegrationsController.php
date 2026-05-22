@@ -42,10 +42,11 @@ class IntegrationsController extends Controller
         try {
             $connection = $manager->callback($validated['state'], $validated['code']);
 
-            return view('integrations::callback-success', [
-                'appName' => config('app.name', 'Laravel'),
-                'connection' => $connection,
-            ]);
+            return redirect("http://localhost:5173/dashboard/integrations");
+            // return view('integrations::callback-success', [
+            //     'appName' => config('app.name', 'Laravel'),
+            //     'connection' => $connection,
+            // ]);
         } catch (IntegrationException $exception) {
             return response()->json(['message' => $exception->getMessage()], $exception->status());
         }

@@ -12,6 +12,11 @@ class Document extends Model
         'title',
         'document_type_id',
         'file_path',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'bool',
     ];
 
     public function tenant()
