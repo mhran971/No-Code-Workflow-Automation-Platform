@@ -26,7 +26,7 @@ class LoginRequest extends FormRequest
                 'required',
                 'string',
                 'min:8',
-                new PasswordStrengthRule,
+                // new PasswordStrengthRule,
             ],
         ];
     }
