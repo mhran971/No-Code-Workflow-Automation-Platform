@@ -194,12 +194,12 @@ export function WorkflowCanvas({ onNodeSelect, nodeStatuses, onNodesEdgesChange 
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1}
-          color="hsl(217 33% 17% / 0.4)"
+          color="hsl(220 13% 80% / 0.6)"
         />
         <Controls showInteractive={false} />
         <MiniMap
-          nodeColor={() => 'hsl(217 91% 60%)'}
-          maskColor="hsl(222 47% 4% / 0.8)"
+          nodeColor={() => 'hsl(217 91% 55%)'}
+          maskColor="hsl(220 20% 92% / 0.7)"
           style={{ border: 'none' }}
         />
       </ReactFlow>
