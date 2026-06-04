@@ -113,6 +113,20 @@ const defaultNodes: Node[] = [
       executionStatus: 'idle',
     },
   },
+  // ─── Sample Workflow 2: Employee Onboarding ────────────────────────────
+  { id: 'onb-form', type: 'workflowNode', position: { x: 100, y: 620 }, data: { label: 'New Hire Form Submitted', icon: 'ClipboardList', color: 'amber', nodeType: 'form-trigger', description: 'HR submits new employee form', inputs: 0, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-extract', type: 'workflowNode', position: { x: 380, y: 620 }, data: { label: 'Extract Employee Data', icon: 'FileSearch', color: 'violet', nodeType: 'ai-extractor', description: 'Parse name, role, dept, start date', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-vars', type: 'workflowNode', position: { x: 660, y: 620 }, data: { label: 'Set Onboarding Vars', icon: 'Variable', color: 'cyan', nodeType: 'set-variables', description: 'employee_id, team, manager_email', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-if', type: 'workflowNode', position: { x: 940, y: 620 }, data: { label: 'If: Full-Time?', icon: 'GitBranch', color: 'indigo', nodeType: 'if-node', description: 'employment_type === "full_time"', inputs: 1, outputs: 2, executionStatus: 'idle' } },
+  { id: 'onb-split', type: 'workflowNode', position: { x: 1220, y: 540 }, data: { label: 'Provision in Parallel', icon: 'Split', color: 'indigo', nodeType: 'parallel-split', description: 'IT + CRM + Tasks', inputs: 1, outputs: 3, executionStatus: 'idle' } },
+  { id: 'onb-http', type: 'workflowNode', position: { x: 1500, y: 420 }, data: { label: 'Create IT Accounts', icon: 'Globe', color: 'emerald', nodeType: 'http-request', description: 'POST /api/iam/provision', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-hubspot', type: 'workflowNode', position: { x: 1500, y: 560 }, data: { label: 'Add to HRIS', icon: 'UserPlus', color: 'blue', nodeType: 'hubspot-contact', description: 'Register employee record', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-clickup', type: 'workflowNode', position: { x: 1500, y: 700 }, data: { label: 'Onboarding Checklist', icon: 'CheckSquare', color: 'rose', nodeType: 'clickup-task', description: 'Create 30/60/90 day tasks', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-join', type: 'workflowNode', position: { x: 1800, y: 560 }, data: { label: 'Wait for Provisioning', icon: 'Merge', color: 'indigo', nodeType: 'parallel-join', description: 'All branches must complete', inputs: 3, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-gen', type: 'workflowNode', position: { x: 2080, y: 560 }, data: { label: 'Draft Welcome Email', icon: 'Sparkles', color: 'violet', nodeType: 'ai-generator', description: 'Personalized welcome content', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-email', type: 'workflowNode', position: { x: 2360, y: 560 }, data: { label: 'Send Welcome Email', icon: 'Send', color: 'rose', nodeType: 'send-email', description: 'To new hire + manager CC', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-review', type: 'workflowNode', position: { x: 2640, y: 560 }, data: { label: 'Manager Day-1 Review', icon: 'UserCheck', color: 'rose', nodeType: 'task-node', description: 'Manager confirms setup complete', inputs: 1, outputs: 1, executionStatus: 'idle' } },
+  { id: 'onb-contractor', type: 'workflowNode', position: { x: 1220, y: 820 }, data: { label: 'Contractor: Send NDA', icon: 'Send', color: 'rose', nodeType: 'gmail-send', description: 'Email NDA + W-9 forms', inputs: 1, outputs: 1, executionStatus: 'idle' } },
 ];
 
 const defaultEdges: Edge[] = [
@@ -121,6 +135,21 @@ const defaultEdges: Edge[] = [
   { id: 'e3-4', source: 'if-1', target: 'hubspot-1', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(217 91% 60%)' } },
   { id: 'e4-5', source: 'hubspot-1', target: 'email-1', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(350 60% 60%)' } },
   { id: 'e3-6', source: 'if-1', target: 'task-1', sourceHandle: 'output-1', targetHandle: 'input-0', style: { stroke: 'hsl(215 20% 35%)', strokeDasharray: '5 5' } },
+  // Onboarding edges
+  { id: 'onb-e1', source: 'onb-form', target: 'onb-extract', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(270 60% 60%)' } },
+  { id: 'onb-e2', source: 'onb-extract', target: 'onb-vars', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(190 70% 55%)' } },
+  { id: 'onb-e3', source: 'onb-vars', target: 'onb-if', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(240 60% 60%)' } },
+  { id: 'onb-e4', source: 'onb-if', target: 'onb-split', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(240 60% 60%)' } },
+  { id: 'onb-e5', source: 'onb-split', target: 'onb-http', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(150 70% 50%)' } },
+  { id: 'onb-e6', source: 'onb-split', target: 'onb-hubspot', sourceHandle: 'output-1', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(217 91% 60%)' } },
+  { id: 'onb-e7', source: 'onb-split', target: 'onb-clickup', sourceHandle: 'output-2', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(350 60% 60%)' } },
+  { id: 'onb-e8', source: 'onb-http', target: 'onb-join', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(150 70% 50%)' } },
+  { id: 'onb-e9', source: 'onb-hubspot', target: 'onb-join', sourceHandle: 'output-0', targetHandle: 'input-1', animated: true, style: { stroke: 'hsl(217 91% 60%)' } },
+  { id: 'onb-e10', source: 'onb-clickup', target: 'onb-join', sourceHandle: 'output-0', targetHandle: 'input-2', animated: true, style: { stroke: 'hsl(350 60% 60%)' } },
+  { id: 'onb-e11', source: 'onb-join', target: 'onb-gen', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(270 60% 60%)' } },
+  { id: 'onb-e12', source: 'onb-gen', target: 'onb-email', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(350 60% 60%)' } },
+  { id: 'onb-e13', source: 'onb-email', target: 'onb-review', sourceHandle: 'output-0', targetHandle: 'input-0', animated: true, style: { stroke: 'hsl(350 60% 60%)' } },
+  { id: 'onb-e14', source: 'onb-if', target: 'onb-contractor', sourceHandle: 'output-1', targetHandle: 'input-0', style: { stroke: 'hsl(215 20% 35%)', strokeDasharray: '5 5' } },
 ];
 
 interface WorkflowCanvasProps {
