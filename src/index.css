@@ -129,7 +129,7 @@
 /* Canvas dot grid */
 .workflow-canvas {
   background-color: hsl(var(--canvas));
-  background-image: radial-gradient(circle, hsl(217 33% 17% / 0.4) 1px, transparent 1px);
+  background-image: radial-gradient(circle, hsl(220 13% 80% / 0.5) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
