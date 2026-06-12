@@ -154,8 +154,6 @@ class WorkflowManagementService
                 [
                     'id' => 'draft-human-task',
                     'type' => 'human-task',
-                    'is_entry_point' => true,
-                    'is_terminal' => true,
                     'config' => [
                         'taskName' => 'Review proposed workflow',
                         'outcomes' => ['approved', 'needs_changes'],

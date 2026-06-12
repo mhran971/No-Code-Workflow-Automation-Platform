@@ -55,6 +55,27 @@ class WorkflowDefinitionGraph
         return $this->definition['trigger'] ?? null;
     }
 
+    /**
+     * Returns the node id of the trigger node (the canvas node whose type
+     * matches definition.trigger.type), or null if none is present.
+     */
+    public function triggerNodeId(): ?string
+    {
+        $triggerType = $this->definition['trigger']['type'] ?? null;
+
+        if (! is_string($triggerType) || $triggerType === '') {
+            return null;
+        }
+
+        foreach ($this->nodesById as $id => $node) {
+            if (($node['type'] ?? null) === $triggerType) {
+                return $id;
+            }
+        }
+
+        return null;
+    }
+
     public function nodes(): array
     {
         return $this->definition['nodes'] ?? [];
@@ -105,36 +126,32 @@ class WorkflowDefinitionGraph
     }
 
     /**
+     * Returns nodes with no incoming edges, excluding the trigger node.
+     * These are the structural entry points into the main flow.
+     *
      * @return list<string>
      */
-    public function explicitEntryNodeIds(): array
+    public function entryNodeIds(): array
     {
+        $triggerNodeId = $this->triggerNodeId();
+
         return array_values(array_filter(
             $this->nodeIds(),
-            fn (string $nodeId): bool => (bool) ($this->nodesById[$nodeId]['is_entry_point'] ?? false)
+            fn (string $nodeId): bool => $nodeId !== $triggerNodeId
+                && $this->incoming($nodeId) === []
         ));
     }
 
     /**
-     * @return list<string>
-     */
-    public function inferredEntryNodeIds(): array
-    {
-        return array_values(array_filter(
-            $this->nodeIds(),
-            fn (string $nodeId): bool => $this->incoming($nodeId) === []
-        ));
-    }
-
-    /**
+     * Returns nodes with no outgoing edges — structural terminals.
+     *
      * @return list<string>
      */
     public function terminalNodeIds(): array
     {
         return array_values(array_filter(
             $this->nodeIds(),
-            fn (string $nodeId): bool => (bool) ($this->nodesById[$nodeId]['is_terminal'] ?? false)
-                || $this->outgoing($nodeId) === []
+            fn (string $nodeId): bool => $this->outgoing($nodeId) === []
         ));
     }
 

@@ -20,63 +20,55 @@ class GraphControlFlowVerificationRule implements VerificationRule
             return;
         }
 
-        $entryNodeId = $this->resolveEntryNodeId($graph, $result);
+        $triggerNodeId = $graph->triggerNodeId();
         $terminalNodeIds = $graph->terminalNodeIds();
+
+        $this->verifyTriggerConnected($graph, $triggerNodeId, $result);
 
         if ($terminalNodeIds === []) {
             $result->addError('graph.terminal_missing', 'Workflow must contain at least one terminal node.', 'nodes');
         }
 
-        if ($entryNodeId !== null) {
-            $this->verifyNodeDegrees($graph, $entryNodeId, $terminalNodeIds, $result);
-            $this->verifyReachability($graph, $entryNodeId, $terminalNodeIds, $result);
+        if ($triggerNodeId !== null) {
+            $this->verifyNodeDegrees($graph, $triggerNodeId, $terminalNodeIds, $result);
+            $this->verifyReachability($graph, $triggerNodeId, $terminalNodeIds, $result);
         }
 
         $this->verifyCycles($graph, $result);
         $this->verifyParallelJoinMetadata($graph, $result);
     }
 
-    protected function resolveEntryNodeId(WorkflowDefinitionGraph $graph, WorkflowVerificationResult $result): ?string
-    {
-        $explicitEntries = $graph->explicitEntryNodeIds();
+    protected function verifyTriggerConnected(
+        WorkflowDefinitionGraph $graph,
+        ?string $triggerNodeId,
+        WorkflowVerificationResult $result,
+    ): void {
+        if ($triggerNodeId === null) {
+            $result->addError('graph.trigger_missing', 'Workflow must have a trigger node.', 'nodes');
 
-        if (count($explicitEntries) === 1) {
-            return $explicitEntries[0];
+            return;
         }
 
-        if (count($explicitEntries) > 1) {
-            $result->addError('graph.entry_multiple', 'Workflow must have exactly one entry node.', 'nodes');
-
-            return null;
+        if ($graph->outgoing($triggerNodeId) === []) {
+            $result->addError('graph.trigger_disconnected', 'Trigger node must be connected to at least one other node.', null, $triggerNodeId);
         }
-
-        $inferredEntries = $graph->inferredEntryNodeIds();
-
-        if (count($inferredEntries) === 1) {
-            return $inferredEntries[0];
-        }
-
-        $result->addError(
-            count($inferredEntries) === 0 ? 'graph.entry_missing' : 'graph.entry_ambiguous',
-            count($inferredEntries) === 0
-                ? 'Workflow must have exactly one entry node.'
-                : 'Workflow has multiple nodes without incoming edges; mark one as the entry point.',
-            'nodes'
-        );
-
-        return null;
     }
 
     protected function verifyNodeDegrees(
         WorkflowDefinitionGraph $graph,
-        string $entryNodeId,
+        string $triggerNodeId,
         array $terminalNodeIds,
         WorkflowVerificationResult $result,
     ): void {
         $terminalLookup = array_fill_keys($terminalNodeIds, true);
 
         foreach ($graph->nodeIds() as $nodeId) {
-            if ($nodeId !== $entryNodeId && $graph->incoming($nodeId) === []) {
+            // Trigger node has no incoming edges and is not required to be a terminal.
+            if ($nodeId === $triggerNodeId) {
+                continue;
+            }
+
+            if ($graph->incoming($nodeId) === []) {
                 $result->addError('graph.incoming_missing', "Node '{$nodeId}' must have at least one incoming edge.", null, $nodeId);
             }
 
@@ -88,15 +80,20 @@ class GraphControlFlowVerificationRule implements VerificationRule
 
     protected function verifyReachability(
         WorkflowDefinitionGraph $graph,
-        string $entryNodeId,
+        string $triggerNodeId,
         array $terminalNodeIds,
         WorkflowVerificationResult $result,
     ): void {
-        $reachable = array_fill_keys($graph->reachableFrom($entryNodeId), true);
+        $reachable = array_fill_keys($graph->reachableFrom($triggerNodeId), true);
 
         foreach ($graph->nodeIds() as $nodeId) {
+            // The trigger itself is always the start — skip self-check.
+            if ($nodeId === $triggerNodeId) {
+                continue;
+            }
+
             if (! isset($reachable[$nodeId])) {
-                $result->addError('graph.unreachable', "Node '{$nodeId}' is not reachable from the entry node.", null, $nodeId);
+                $result->addError('graph.unreachable', "Node '{$nodeId}' is not reachable from the trigger.", null, $nodeId);
             }
         }
 
@@ -107,6 +104,10 @@ class GraphControlFlowVerificationRule implements VerificationRule
         $canReachTerminal = array_fill_keys($graph->nodesThatCanReachAny($terminalNodeIds), true);
 
         foreach ($graph->nodeIds() as $nodeId) {
+            if ($nodeId === $triggerNodeId) {
+                continue;
+            }
+
             if (! isset($canReachTerminal[$nodeId])) {
                 $result->addError('graph.dead_end', "Node '{$nodeId}' is not on a path to a terminal node.", null, $nodeId);
             }

@@ -20,18 +20,14 @@ class WorkflowNode extends Model
         'position_x',
         'position_y',
         'config',
-        'is_entry_point',
-        'is_terminal',
     ];
 
     protected function casts(): array
     {
         return [
-            'config'         => 'array',
-            'position_x'     => 'float',
-            'position_y'     => 'float',
-            'is_entry_point' => 'boolean',
-            'is_terminal'    => 'boolean',
+            'config'     => 'array',
+            'position_x' => 'float',
+            'position_y' => 'float',
         ];
     }
 

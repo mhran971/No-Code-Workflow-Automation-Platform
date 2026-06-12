@@ -24,8 +24,6 @@ class ValidateWorkflowDefinitionRequest extends FormRequest
             'definition.nodes.*.type' => ['required', 'string'],
             'definition.nodes.*.label' => ['sometimes', 'nullable', 'string'],
             'definition.nodes.*.config' => ['present', 'array'],
-            'definition.nodes.*.is_entry_point' => ['sometimes', 'boolean'],
-            'definition.nodes.*.is_terminal' => ['sometimes', 'boolean'],
             'definition.edges' => ['present', 'array'],
             'definition.edges.*.id' => ['sometimes', 'nullable', 'string'],
             'definition.edges.*.source_node_key' => ['required', 'string'],
@@ -87,14 +85,6 @@ class ValidateWorkflowDefinitionRequest extends FormRequest
                             'config' => [
                                 'type' => 'object',
                                 'description' => 'Type-specific config object defined by the node catalog.',
-                            ],
-                            'is_entry_point' => [
-                                'type' => 'boolean',
-                                'description' => 'Marks the workflow entry node.',
-                            ],
-                            'is_terminal' => [
-                                'type' => 'boolean',
-                                'description' => 'Marks the workflow terminal node.',
                             ],
                         ],
                     ],
@@ -189,8 +179,6 @@ class ValidateWorkflowDefinitionRequest extends FormRequest
                         'to' => 'employee@example.test',
                         'subject' => 'Welcome aboard',
                     ],
-                    'is_entry_point' => true,
-                    'is_terminal' => true,
                 ],
             ],
             'edges' => [],
