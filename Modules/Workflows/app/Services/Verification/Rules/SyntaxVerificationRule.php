@@ -237,12 +237,14 @@ class SyntaxVerificationRule implements VerificationRule
         return match ($this->fieldType($field)) {
             NodeConfigFieldType::TEXT,
             NodeConfigFieldType::TEXTAREA,
-            NodeConfigFieldType::SELECT => is_string($value) || is_numeric($value),
+            NodeConfigFieldType::SELECT,
+            NodeConfigFieldType::READONLY => is_string($value) || is_numeric($value),
             NodeConfigFieldType::EMAIL => is_string($value) && filter_var($value, FILTER_VALIDATE_EMAIL) !== false,
             NodeConfigFieldType::NUMBER => is_numeric($value),
             NodeConfigFieldType::TOGGLE => is_bool($value),
             NodeConfigFieldType::TAGS,
             NodeConfigFieldType::JSON => is_array($value),
+            NodeConfigFieldType::BRANCHES => is_array($value),
         };
     }
 

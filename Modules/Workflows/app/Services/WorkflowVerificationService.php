@@ -6,7 +6,9 @@ use Modules\Auth\Models\User;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
+use Modules\Workflows\Services\Verification\Rules\FormTriggerVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SendEmailNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SwitchNodeTypeRule;
@@ -26,12 +28,15 @@ class WorkflowVerificationService
         protected ExpressionVerificationRule $expressionRule,
         protected ContextualVerificationRule $contextualRule,
         protected NodeTypeVerificationRule $nodeTypeRule,
+        protected FormTriggerVerificationRule $formTriggerRule,
         protected IfNodeTypeRule $ifNodeTypeRule,
+        protected ForkNodeTypeRule $forkNodeTypeRule,
         protected SwitchNodeTypeRule $switchNodeTypeRule,
         protected TaskNodeTypeRule $taskNodeTypeRule,
         protected SendEmailNodeTypeRule $sendEmailNodeTypeRule,
     ) {
         $this->nodeTypeRule->register($this->ifNodeTypeRule);
+        $this->nodeTypeRule->register($this->forkNodeTypeRule);
         $this->nodeTypeRule->register($this->switchNodeTypeRule);
         $this->nodeTypeRule->register($this->taskNodeTypeRule);
         $this->nodeTypeRule->register($this->sendEmailNodeTypeRule);
@@ -58,6 +63,7 @@ class WorkflowVerificationService
             $this->expressionRule,
             $this->contextualRule,
             $this->nodeTypeRule,
+            $this->formTriggerRule,
         ];
     }
 }
