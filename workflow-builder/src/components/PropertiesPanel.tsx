@@ -1,4 +1,4 @@
-import type { CanvasNode, NodeDefinition } from '../types';
+import type { CanvasNode, NodeDefinition, ValidationResult } from '../types';
 import { ConfigFieldsForm } from './ConfigFieldsForm';
 
 interface PropertiesPanelProps {
@@ -9,6 +9,30 @@ interface PropertiesPanelProps {
   selectedNode: CanvasNode | null;
   triggerSelected: boolean;
   onNodeChange: (canvasId: string, patch: Partial<CanvasNode>) => void;
+  validationResult: ValidationResult | null;
+}
+
+function buildFieldErrors(
+  validationResult: ValidationResult | null,
+  nodeId: string | null,
+): Record<string, string[]> {
+  if (!validationResult || !nodeId) return {};
+
+  const errors: Record<string, string[]> = {};
+
+  for (const issue of validationResult.issues) {
+    const issueNodeId = issue.location?.node_id ?? issue.node_id;
+    if (issueNodeId !== nodeId) continue;
+
+    const path = issue.location?.path ?? issue.path ?? '';
+    const match = path.match(/\.config\.([^.[]+)/);
+    if (match) {
+      const key = match[1];
+      errors[key] = [...(errors[key] ?? []), issue.message];
+    }
+  }
+
+  return errors;
 }
 
 export function PropertiesPanel({
@@ -19,6 +43,7 @@ export function PropertiesPanel({
   selectedNode,
   triggerSelected,
   onNodeChange,
+  validationResult,
 }: PropertiesPanelProps) {
   const triggerDefinition = nodeDefinitions.find((node) => node.type === triggerType) ?? null;
 
@@ -98,6 +123,7 @@ export function PropertiesPanel({
           fields={nodeDefinition.config_fields}
           values={selectedNode.config}
           onChange={(config) => onNodeChange(selectedNode.canvasId, { config })}
+          fieldErrors={buildFieldErrors(validationResult, selectedNode.id)}
         />
       ) : (
         <p className="hint">Unknown node type: {selectedNode.type}</p>

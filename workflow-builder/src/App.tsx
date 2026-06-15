@@ -358,6 +358,7 @@ export default function App() {
               selectedNode={selectedNode}
               triggerSelected={triggerSelected}
               onNodeChange={handleNodeChange}
+              validationResult={validationResult}
             />
 
             <EdgesPanel

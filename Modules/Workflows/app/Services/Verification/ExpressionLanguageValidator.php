@@ -29,13 +29,13 @@ class ExpressionLanguageValidator
                 return new ExpressionValidationResult(false, false, $this->variables, 'Unexpected token near "'.$this->currentValue().'".');
             }
 
-            $isBoolean = in_array($type, ['boolean', 'variable'], true);
+            $isBoolean = $type === 'boolean';
 
             return new ExpressionValidationResult(
                 $isBoolean,
                 $isBoolean,
                 array_values(array_unique($this->variables)),
-                $isBoolean ? null : 'Expression must evaluate to a boolean value.'
+                $isBoolean ? null : 'Expression must use a comparison or logical operator (e.g. context.age > 18). A bare variable reference is not a valid condition.'
             );
         } catch (\RuntimeException $exception) {
             return new ExpressionValidationResult(false, false, array_values(array_unique($this->variables)), $exception->getMessage());

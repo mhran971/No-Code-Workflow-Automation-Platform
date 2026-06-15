@@ -185,6 +185,19 @@ class WorkflowDefinitionGraph
     }
 
     /**
+     * Returns all nodes that are upstream of the given node (can reach it), excluding itself.
+     *
+     * @return list<string>
+     */
+    public function ancestorNodeIds(string $nodeId): array
+    {
+        return array_values(array_filter(
+            $this->nodesThatCanReachAny([$nodeId]),
+            fn (string $id): bool => $id !== $nodeId,
+        ));
+    }
+
+    /**
      * @param list<string> $terminalNodeIds
      * @return list<string>
      */

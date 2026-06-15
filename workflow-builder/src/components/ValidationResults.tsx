@@ -24,28 +24,6 @@ export function ValidationResults({ definition, result, error, loading }: Valida
         </div>
       ) : null}
 
-      {result?.errors.length ? (
-        <div className="issue-group">
-          <h3>Errors</h3>
-          <ul>
-            {result.errors.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {result?.warnings.length ? (
-        <div className="issue-group">
-          <h3>Warnings</h3>
-          <ul>
-            {result.warnings.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
       {result?.issues.length ? (
         <div className="issue-group">
           <h3>Issues</h3>

@@ -7,6 +7,11 @@ use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SendEmailNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SwitchNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\TaskNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeTypeVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\SyntaxVerificationRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
@@ -20,7 +25,17 @@ class WorkflowVerificationService
         protected GraphControlFlowVerificationRule $graphRule,
         protected ExpressionVerificationRule $expressionRule,
         protected ContextualVerificationRule $contextualRule,
-    ) {}
+        protected NodeTypeVerificationRule $nodeTypeRule,
+        protected IfNodeTypeRule $ifNodeTypeRule,
+        protected SwitchNodeTypeRule $switchNodeTypeRule,
+        protected TaskNodeTypeRule $taskNodeTypeRule,
+        protected SendEmailNodeTypeRule $sendEmailNodeTypeRule,
+    ) {
+        $this->nodeTypeRule->register($this->ifNodeTypeRule);
+        $this->nodeTypeRule->register($this->switchNodeTypeRule);
+        $this->nodeTypeRule->register($this->taskNodeTypeRule);
+        $this->nodeTypeRule->register($this->sendEmailNodeTypeRule);
+    }
 
     public function verify(array $definition, ?Workflow $workflow = null, ?User $actor = null): WorkflowVerificationResult
     {
@@ -42,6 +57,7 @@ class WorkflowVerificationService
             $this->graphRule,
             $this->expressionRule,
             $this->contextualRule,
+            $this->nodeTypeRule,
         ];
     }
 }

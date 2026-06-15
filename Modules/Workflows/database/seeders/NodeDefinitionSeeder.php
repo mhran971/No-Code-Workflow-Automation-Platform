@@ -57,7 +57,7 @@ class NodeDefinitionSeeder extends Seeder
                 'color' => 'node-logic',
                 'icon' => 'GitBranch',
                 'configFields' => [
-                    ['key' => 'conditions', 'label' => 'Conditions (JSON array)', 'type' => 'json', 'placeholder' => '[{"field":"status","op":"eq","value":"active"}]'],
+                    ['key' => 'conditionExpression', 'label' => 'Condition Expression', 'type' => 'text', 'required' => true, 'placeholder' => 'context.age > 18'],
                 ],
             ],
             [
@@ -99,9 +99,8 @@ class NodeDefinitionSeeder extends Seeder
                 'color' => 'node-logic',
                 'icon' => 'Route',
                 'configFields' => [
-                    ['key' => 'expression', 'label' => 'Expression', 'type' => 'text', 'required' => true],
-                    ['key' => 'cases', 'label' => 'Cases (JSON)', 'type' => 'json', 'placeholder' => '[{"label":"Case 1","value":"value1"}]'],
-                    ['key' => 'hasDefault', 'label' => 'Has Default Case', 'type' => 'toggle', 'defaultValue' => true],
+                    ['key' => 'variable', 'label' => 'Variable', 'type' => 'text', 'required' => true, 'placeholder' => 'context.status'],
+                    ['key' => 'options', 'label' => 'Options', 'type' => 'tags', 'required' => true],
                 ],
             ],
 
@@ -162,16 +161,25 @@ class NodeDefinitionSeeder extends Seeder
                 'type' => 'send-email',
                 'label' => 'Send Email',
                 'category' => 'action',
-                'description' => 'Send an email message',
+                'description' => 'Send an email via the connected Gmail workspace',
                 'color' => 'node-action',
-                'icon' => 'Send',
+                'icon' => 'Gmail',
                 'configFields' => [
-                    ['key' => 'from', 'label' => 'From', 'type' => 'email', 'required' => true],
-                    ['key' => 'to', 'label' => 'To', 'type' => 'email', 'required' => true],
-                    ['key' => 'cc', 'label' => 'CC', 'type' => 'email'],
-                    ['key' => 'subject', 'label' => 'Subject', 'type' => 'text', 'required' => true],
-                    ['key' => 'body', 'label' => 'Body', 'type' => 'textarea'],
-                    ['key' => 'isHtml', 'label' => 'HTML Body', 'type' => 'toggle', 'defaultValue' => false],
+                    ['key' => 'to', 'label' => 'To', 'type' => 'text', 'required' => true],
+                    ['key' => 'cc', 'label' => 'CC', 'type' => 'text'],
+                    ['key' => 'bcc', 'label' => 'BCC', 'type' => 'text'],
+                    ['key' => 'subject', 'label' => 'Subject', 'type' => 'text', 'required' => true, 'placeholder' => 'Hello {{context.firstName}}'],
+                    [
+                        'key' => 'bodyType',
+                        'label' => 'Body Type',
+                        'type' => 'select',
+                        'defaultValue' => 'text',
+                        'options' => [
+                            ['label' => 'Plain Text', 'value' => 'text'],
+                            ['label' => 'HTML', 'value' => 'html'],
+                        ],
+                    ],
+                    ['key' => 'body', 'label' => 'Body', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Dear {{context.firstName}},'],
                 ],
             ],
             [
@@ -182,22 +190,11 @@ class NodeDefinitionSeeder extends Seeder
                 'color' => 'node-action',
                 'icon' => 'UserCheck',
                 'configFields' => [
-                    ['key' => 'taskName', 'label' => 'Task Name', 'type' => 'text', 'required' => true],
-                    [
-                        'key' => 'taskType',
-                        'label' => 'Task Type',
-                        'type' => 'select',
-                        'options' => [
-                            ['label' => 'Review', 'value' => 'review'],
-                            ['label' => 'Approval', 'value' => 'approval'],
-                            ['label' => 'Data Collection', 'value' => 'data'],
-                        ],
-                    ],
+                    ['key' => 'title', 'label' => 'Title', 'type' => 'text', 'required' => true],
                     ['key' => 'description', 'label' => 'Description', 'type' => 'textarea'],
-                    ['key' => 'outcomes', 'label' => 'Outcomes', 'type' => 'tags', 'required' => true],
-                    ['key' => 'assignee', 'label' => 'Assignee', 'type' => 'text'],
-                    ['key' => 'slaDuration', 'label' => 'SLA Duration (hours)', 'type' => 'number'],
-                    ['key' => 'enableReminders', 'label' => 'Enable Reminders', 'type' => 'toggle', 'defaultValue' => true],
+                    ['key' => 'assignTo', 'label' => 'Assign To', 'type' => 'text', 'required' => true],
+                    ['key' => 'inputFields', 'label' => 'Input Fields', 'type' => 'json', 'required' => true],
+                    ['key' => 'dueWithin', 'label' => 'Due Within (hours)', 'type' => 'number', 'defaultValue' => 24],
                 ],
             ],
         ];

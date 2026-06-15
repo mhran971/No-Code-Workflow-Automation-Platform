@@ -391,6 +391,33 @@ button:disabled {
   margin-left: 0.2rem;
 }
 
+.field-group {
+  margin-bottom: 0.75rem;
+}
+
+.field-group > label {
+  margin-bottom: 0;
+}
+
+input.field-error-input,
+textarea.field-error-input,
+select.field-error-input {
+  border-color: #b91c1c;
+  background: #fff8f8;
+}
+
+.field-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+}
+
+.field-error-msg {
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
 .edge-card {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
