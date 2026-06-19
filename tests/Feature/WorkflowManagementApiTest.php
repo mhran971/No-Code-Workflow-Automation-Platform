@@ -10,6 +10,7 @@ use Modules\Auth\Models\Tenant;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
 use Modules\Team\Models\TeamMembership;
+use Modules\Workflows\Database\Seeders\NodeDefinitionSeeder;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowTemplate;
@@ -18,6 +19,13 @@ use Tests\TestCase;
 class WorkflowManagementApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(NodeDefinitionSeeder::class);
+    }
 
     public function test_manager_creates_workflow_and_team_employee_can_view_it(): void
     {
@@ -122,6 +130,30 @@ class WorkflowManagementApiTest extends TestCase
         $this->assertDatabaseCount('workflow_versions', 0);
     }
 
+    public function test_validation_endpoint_returns_detailed_request_and_response_schema(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-validate-schema');
+
+        $definition = $this->validDefinition();
+        $definition['nodes'][0]['type'] = 'missing-node-type';
+
+        $response = $this->actingAs($manager, 'api')->postJson('/api/v1/workflows/validate', [
+            'definition' => $definition,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'request_schema' => ['type', 'required', 'properties'],
+                'response_schema' => ['type', 'properties'],
+                'issues' => [
+                    '*' => ['severity', 'code', 'message', 'location' => ['path', 'field', 'scope', 'node_id', 'edge_id']],
+                ],
+            ])
+            ->assertJsonPath('issues.0.location.path', 'nodes[0].type')
+            ->assertJsonPath('issues.0.location.node_id', 'send-welcome-email');
+    }
+
     public function test_draft_publish_activate_and_trigger_update_version_and_counters(): void
     {
         $tenant = $this->createTenant();
@@ -169,6 +201,58 @@ class WorkflowManagementApiTest extends TestCase
         $this->assertSame('v2.1.0', $workflow->current_version_label);
         $this->assertSame(1, (int) $workflow->total_runs);
         $this->assertSame(1, (int) $workflow->active_instances);
+    }
+
+    public function test_validate_only_verifies_without_saving_draft(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-validate-only');
+        $team = $this->createTeam($tenant, $manager, 'Automation');
+        $this->assignToTeam($tenant, $manager, $team);
+        $workflow = $this->createWorkflow($tenant, $team, $manager);
+
+        $this->actingAs($manager, 'api')->patchJson("/api/v1/workflows/{$workflow->id}/draft", [
+            'definition' => $this->validDefinition(),
+            'expected_draft_revision' => 1,
+            'validate_only' => true,
+        ])->assertOk()
+            ->assertJsonPath('draft_revision', 1)
+            ->assertJsonPath('saved', false)
+            ->assertJsonPath('validation.is_publishable', true)
+            ->assertJsonPath('validation.summary.errors', 0);
+
+        $workflow->refresh();
+
+        $this->assertSame(1, (int) $workflow->draft_revision);
+        $this->assertSame([], $workflow->draft_definition['nodes']);
+    }
+
+    public function test_invalid_draft_can_be_saved_but_cannot_be_published(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-invalid-draft');
+        $team = $this->createTeam($tenant, $manager, 'Automation');
+        $this->assignToTeam($tenant, $manager, $team);
+        $workflow = $this->createWorkflow($tenant, $team, $manager);
+
+        $invalidDefinition = $this->validDefinition();
+        $invalidDefinition['nodes'][0]['type'] = 'missing-node-type';
+
+        $this->actingAs($manager, 'api')->patchJson("/api/v1/workflows/{$workflow->id}/draft", [
+            'definition' => $invalidDefinition,
+            'expected_draft_revision' => 1,
+        ])->assertOk()
+            ->assertJsonPath('draft_revision', 2)
+            ->assertJsonPath('saved', true)
+            ->assertJsonPath('validation.is_publishable', false);
+
+        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish", [
+            'expected_draft_revision' => 2,
+            'version_label' => 'v1.0.0',
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.definition.0', "Workflow node type 'missing-node-type' is not active or does not exist.");
+
+        $this->assertDatabaseCount('workflow_versions', 0);
     }
 
     public function test_disabled_workflow_returns_gone_without_stopping_active_instances(): void
@@ -306,16 +390,20 @@ class WorkflowManagementApiTest extends TestCase
     {
         return [
             'trigger' => [
-                'type' => 'webhook',
+                'type' => 'webhook-trigger',
                 'config' => [
-                    'path' => 'employee-onboarding',
+                    'webhookUrl' => 'employee-onboarding',
                 ],
             ],
             'nodes' => [
                 [
-                    'id' => 'send-email',
-                    'type' => 'send_email',
+                    'id' => 'send-welcome-email',
+                    'type' => 'send-email',
+                    'is_entry_point' => true,
+                    'is_terminal' => true,
                     'config' => [
+                        'from' => 'hr@example.test',
+                        'to' => 'employee@example.test',
                         'subject' => 'Welcome',
                     ],
                 ],

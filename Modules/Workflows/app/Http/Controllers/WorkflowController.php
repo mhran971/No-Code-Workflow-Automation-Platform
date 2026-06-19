@@ -6,11 +6,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
+use Modules\Workflows\Http\Requests\ValidateWorkflowDefinitionRequest;
 use Modules\Workflows\Http\Requests\AiProposalRequest;
 use Modules\Workflows\Http\Requests\PublishWorkflowRequest;
 use Modules\Workflows\Http\Requests\StoreWorkflowRequest;
 use Modules\Workflows\Http\Requests\UpdateDraftRequest;
 use Modules\Workflows\Http\Requests\UpdateWorkflowStatusRequest;
+use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowTemplate;
 use Modules\Workflows\Models\WorkflowVersion;
@@ -55,6 +57,15 @@ class WorkflowController extends Controller
     {
         return response()->json(
             $this->workflowManagementService->generateAiProposal($this->actor(), $request->validated())
+        );
+    }
+
+    public function validateDefinition(ValidateWorkflowDefinitionRequest $request): JsonResponse
+    {
+        $validation = $this->workflowManagementService->validateDefinition($request->validated()['definition']);
+
+        return response()->json(
+            (new WorkflowValidationResultResource($validation))->resolve($request)
         );
     }
 
@@ -182,6 +193,7 @@ class WorkflowController extends Controller
 
         if ($includeDetails) {
             $payload['draft_revision'] = $workflow->draft_revision;
+            $payload['draft_definition'] = $workflow->draft_definition;
             $payload['template'] = $workflow->template ? [
                 'id' => $workflow->template->id,
                 'name' => $workflow->template->name,

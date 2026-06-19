@@ -6,6 +6,7 @@ use Modules\Workflows\Http\Controllers\WorkflowController;
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
+    Route::post('/validate', [WorkflowController::class, 'validateDefinition'])->name('workflows.definition.validate');
     Route::get('/', [WorkflowController::class, 'index'])->name('workflows.index');
     Route::post('/', [WorkflowController::class, 'store'])->name('workflows.store');
     Route::get('/templates', [WorkflowController::class, 'templates'])->name('workflows.templates.index');

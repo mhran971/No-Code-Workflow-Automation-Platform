@@ -12,4 +12,6 @@ enum NodeConfigFieldType : string
     case TAGS = 'tags';
     case JSON = 'json';
     case EMAIL = 'email';
+    case BRANCHES = 'branches';
+    case READONLY = 'readonly';
 }

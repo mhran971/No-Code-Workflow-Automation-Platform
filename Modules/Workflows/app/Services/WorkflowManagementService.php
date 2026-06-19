@@ -65,6 +65,11 @@ class WorkflowManagementService
             ->get();
     }
 
+    public function validateDefinition(array $definition, ?Workflow $workflow = null, ?User $actor = null): array
+    {
+        return $this->definitionValidator->validate($definition, $workflow, $actor);
+    }
+
     public function createWorkflow(User $actor, array $data): Workflow
     {
         if (! in_array($actor->role, [Role::Manager, Role::BusinessOwner], true)) {
@@ -140,17 +145,19 @@ class WorkflowManagementService
         $goal = trim((string) $data['goal']);
         $definition = [
             'trigger' => [
-                'type' => 'webhook',
+                'type' => 'webhook-trigger',
                 'config' => [
-                    'name' => Str::slug(Str::limit($goal, 40, '')),
+                    'webhookUrl' => Str::slug(Str::limit($goal, 40, '')),
                 ],
             ],
             'nodes' => [
                 [
-                    'id' => 'start',
-                    'type' => 'note',
+                    'id' => 'draft-human-task',
+                    'type' => 'human-task',
                     'config' => [
-                        'summary' => $goal,
+                        'taskName' => 'Review proposed workflow',
+                        'outcomes' => ['approved', 'needs_changes'],
+                        'description' => $goal,
                     ],
                 ],
             ],
@@ -187,7 +194,7 @@ class WorkflowManagementService
         $this->assertNotDeleted($workflow);
         $this->assertDraftRevisionMatches($workflow, (int) $data['expected_draft_revision']);
 
-        $validation = $this->definitionValidator->validate($data['definition']);
+        $validation = $this->definitionValidator->validate($data['definition'], $workflow, $actor);
 
         if ((bool) ($data['validate_only'] ?? false)) {
             return [
@@ -215,7 +222,7 @@ class WorkflowManagementService
         $this->assertNotDeleted($workflow);
         $this->assertDraftRevisionMatches($workflow, (int) $data['expected_draft_revision']);
 
-        $validation = $this->definitionValidator->validate($workflow->draft_definition);
+        $validation = $this->definitionValidator->validate($workflow->draft_definition, $workflow, $actor);
 
         if (! $validation['is_publishable']) {
             throw ValidationException::withMessages([
@@ -316,7 +323,7 @@ class WorkflowManagementService
             $workflow->delete();
         });
     }
-    
+
     // TODO: this methods should be in another service and will defenetly need refactor
     public function triggerWebhook(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
     {
