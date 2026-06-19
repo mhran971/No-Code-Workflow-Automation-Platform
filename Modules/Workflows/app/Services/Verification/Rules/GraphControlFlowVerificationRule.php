@@ -35,7 +35,6 @@ class GraphControlFlowVerificationRule implements VerificationRule
         }
 
         $this->verifyCycles($graph, $result);
-        $this->verifyParallelJoinMetadata($graph, $result);
     }
 
     protected function verifyTriggerConnected(
@@ -127,36 +126,4 @@ class GraphControlFlowVerificationRule implements VerificationRule
         }
     }
 
-    protected function verifyParallelJoinMetadata(WorkflowDefinitionGraph $graph, WorkflowVerificationResult $result): void
-    {
-        foreach ($graph->edges() as $index => $edge) {
-            if (($edge['branch_type'] ?? 'default') !== 'parallel') {
-                continue;
-            }
-
-            $strategy = $edge['parallel_strategy'] ?? 'fork_join';
-
-            if ($strategy === 'fire_and_forget') {
-                continue;
-            }
-
-            $joinNodeKey = trim((string) ($edge['join_node_key'] ?? ''));
-            $edgeId = $edge['id'] ?? null;
-            $path = "edges[{$index}].join_node_key";
-
-            if ($joinNodeKey === '') {
-                $result->addError('parallel.join_missing', 'Parallel fork/join edge must declare join_node_key.', $path, null, $edgeId);
-                continue;
-            }
-
-            if (! $graph->hasNode($joinNodeKey)) {
-                $result->addError('parallel.join_unknown', "Parallel join node '{$joinNodeKey}' does not exist.", $path, $joinNodeKey, $edgeId);
-                continue;
-            }
-
-            if ($graph->nodeType($joinNodeKey) !== 'parallel-join') {
-                $result->addError('parallel.join_type_invalid', "Parallel join node '{$joinNodeKey}' must be a parallel-join node.", $path, $joinNodeKey, $edgeId);
-            }
-        }
-    }
 }

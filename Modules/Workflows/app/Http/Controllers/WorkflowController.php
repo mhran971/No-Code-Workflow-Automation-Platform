@@ -193,6 +193,7 @@ class WorkflowController extends Controller
 
         if ($includeDetails) {
             $payload['draft_revision'] = $workflow->draft_revision;
+            $payload['draft_definition'] = $workflow->draft_definition;
             $payload['template'] = $workflow->template ? [
                 'id' => $workflow->template->id,
                 'name' => $workflow->template->name,

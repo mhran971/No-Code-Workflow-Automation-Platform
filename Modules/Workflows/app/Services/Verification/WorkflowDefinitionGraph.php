@@ -198,7 +198,7 @@ class WorkflowDefinitionGraph
     }
 
     /**
-     * @param list<string> $terminalNodeIds
+     * @param  list<string>  $terminalNodeIds
      * @return list<string>
      */
     public function nodesThatCanReachAny(array $terminalNodeIds): array
@@ -225,6 +225,54 @@ class WorkflowDefinitionGraph
         }
 
         return array_keys($visited);
+    }
+
+    /**
+     * Returns node ids in a topological order (reverse DFS post-order). For a DAG this is a
+     * valid topological sort; cycles (e.g. explicit loops) are tolerated — back edges simply
+     * don't reorder their endpoints, so the result is always a complete, deterministic ordering.
+     *
+     * @return list<string>
+     */
+    public function topologicalOrder(): array
+    {
+        $visited = [];
+        $postorder = [];
+
+        $start = $this->triggerNodeId();
+        $roots = $start !== null ? [$start] : [];
+        foreach ($this->nodeIds() as $nodeId) {
+            $roots[] = $nodeId;
+        }
+
+        foreach ($roots as $root) {
+            $this->visitForTopoOrder($root, $visited, $postorder);
+        }
+
+        return array_reverse($postorder);
+    }
+
+    /**
+     * @param  array<string, bool>  $visited
+     * @param  list<string>  $postorder
+     */
+    protected function visitForTopoOrder(string $nodeId, array &$visited, array &$postorder): void
+    {
+        if (isset($visited[$nodeId]) || ! $this->hasNode($nodeId)) {
+            return;
+        }
+
+        $visited[$nodeId] = true;
+
+        foreach ($this->outgoing($nodeId) as $edge) {
+            $target = $edge['target_node_key'] ?? null;
+
+            if (is_string($target)) {
+                $this->visitForTopoOrder($target, $visited, $postorder);
+            }
+        }
+
+        $postorder[] = $nodeId;
     }
 
     /**

@@ -108,6 +108,42 @@ trait VariableAvailability
         return $keys;
     }
 
+    protected function validateTemplateVariables(
+        string $text,
+        string $path,
+        ?string $nodeId,
+        string $codePrefix,
+        WorkflowDefinitionGraph $graph,
+        WorkflowVerificationResult $result,
+    ): void {
+        preg_match_all('/\{\{([^}]+)\}\}/', $text, $matches);
+
+        if (empty($matches[1])) {
+            return;
+        }
+
+        $available = $nodeId !== null ? $this->collectAvailableContextKeys($nodeId, $graph) : null;
+
+        foreach ($matches[1] as $raw) {
+            $variable = trim($raw);
+
+            if (! preg_match('/^(context|customer)\.[a-zA-Z_][a-zA-Z0-9_]*$/', $variable)) {
+                $result->addError(
+                    "{$codePrefix}.invalid_template_variable",
+                    "Template variable '{{{{{$variable}}}}}' is invalid. Use {{context.<key>}} or {{customer.<key>}} with a single identifier.",
+                    $path,
+                    $nodeId,
+                );
+
+                continue;
+            }
+
+            if (str_starts_with($variable, 'context.') && $available !== null) {
+                $this->validateContextVariableExists($variable, $available, $codePrefix, $path, $nodeId, $result);
+            }
+        }
+    }
+
     protected function hasParallelPaths(string $nodeId, WorkflowDefinitionGraph $graph): bool
     {
         foreach ($graph->ancestorNodeIds($nodeId) as $ancestorId) {

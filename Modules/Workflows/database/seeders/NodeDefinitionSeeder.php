@@ -73,23 +73,26 @@ class NodeDefinitionSeeder extends Seeder
                 ],
             ],
             [
-                'type' => 'merge-or',
-                'label' => 'Merge Or',
+                'type' => 'merge',
+                'label' => 'Merge',
                 'category' => 'logic',
-                'description' => 'Continue when any incoming branch completes',
+                'description' => 'Synchronize incoming branches (parallel or conditional)',
                 'color' => 'node-logic',
                 'icon' => 'GitMerge',
-                'configFields' => [],
-            ],
-            [
-                'type' => 'merge-and',
-                'label' => 'Merge And',
-                'category' => 'logic',
-                'description' => 'Continue when all incoming branches complete',
-                'color' => 'node-logic',
-                'icon' => 'Merge',
                 'configFields' => [
-                    ['key' => 'timeout', 'label' => 'Timeout (seconds)', 'type' => 'number', 'defaultValue' => 300],
+                    [
+                        'key' => 'mergeMode',
+                        'label' => 'Merge Mode',
+                        'type' => 'select',
+                        'required' => true,
+                        'options' => [
+                            ['label' => 'Parallel (wait for all)', 'value' => 'parallel'],
+                            ['label' => 'Conditional (first to arrive)', 'value' => 'conditional'],
+                        ],
+                        'defaultValue' => 'parallel',
+                    ],
+                    ['key' => 'branchCount', 'label' => 'Number of Incoming Branches', 'type' => 'number', 'required' => true, 'defaultValue' => 2],
+                    ['key' => 'outputVariables', 'label' => 'Output Variables', 'type' => 'tags'],
                 ],
             ],
             [
@@ -105,6 +108,16 @@ class NodeDefinitionSeeder extends Seeder
                 ],
             ],
 
+            [
+                'type' => 'termination-node',
+                'label' => 'Terminate',
+                'category' => 'logic',
+                'description' => 'Marks the end of a workflow branch. All branches must terminate for the workflow instance to complete.',
+                'color' => 'node-logic',
+                'icon' => 'OctagonX',
+                'configFields' => [],
+            ],
+
             // ── AI ───────────────────────────────────────────────────────────
             [
                 'type' => 'ai-generator',
@@ -114,19 +127,10 @@ class NodeDefinitionSeeder extends Seeder
                 'color' => 'node-ai',
                 'icon' => 'Wand2',
                 'configFields' => [
-                    [
-                        'key' => 'contentType',
-                        'label' => 'Content Type',
-                        'type' => 'select',
-                        'options' => [
-                            ['label' => 'Email', 'value' => 'email'],
-                            ['label' => 'Proposal', 'value' => 'proposal'],
-                            ['label' => 'Report', 'value' => 'report'],
-                            ['label' => 'Social Post', 'value' => 'social'],
-                        ],
-                    ],
                     ['key' => 'tone', 'label' => 'Tone', 'type' => 'text'],
-                    ['key' => 'template', 'label' => 'Template / Prompt', 'type' => 'textarea', 'required' => true],
+                    ['key' => 'prompt', 'label' => 'Prompt', 'type' => 'textarea', 'required' => true],
+                    ['key' => 'knowledgeBaseDocuments', 'label' => 'Knowledge Base Documents', 'type' => 'tags'],
+                    ['key' => 'outputVariable', 'label' => 'Output Variable Name', 'type' => 'text'],
                 ],
             ],
 

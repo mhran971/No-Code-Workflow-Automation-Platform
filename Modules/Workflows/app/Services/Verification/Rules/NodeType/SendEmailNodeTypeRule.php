@@ -44,14 +44,14 @@ class SendEmailNodeTypeRule implements NodeTypeRule
         if ($subject === '') {
             $result->addError('send_email.subject_missing', 'Send email node must have a subject.', "nodes[{$index}].config.subject", $nodeId);
         } else {
-            $this->validateTemplateVariables($subject, "nodes[{$index}].config.subject", $nodeId, $graph, $result);
+            $this->validateTemplateVariables($subject, "nodes[{$index}].config.subject", $nodeId, self::CODE_PREFIX, $graph, $result);
         }
 
         $body = trim((string) ($config['body'] ?? ''));
         if ($body === '') {
             $result->addError('send_email.body_missing', 'Send email node must have a body.', "nodes[{$index}].config.body", $nodeId);
         } else {
-            $this->validateTemplateVariables($body, "nodes[{$index}].config.body", $nodeId, $graph, $result);
+            $this->validateTemplateVariables($body, "nodes[{$index}].config.body", $nodeId, self::CODE_PREFIX, $graph, $result);
         }
     }
 
@@ -97,37 +97,4 @@ class SendEmailNodeTypeRule implements NodeTypeRule
         }
     }
 
-    private function validateTemplateVariables(
-        string $text,
-        string $path,
-        ?string $nodeId,
-        WorkflowDefinitionGraph $graph,
-        WorkflowVerificationResult $result,
-    ): void {
-        preg_match_all('/\{\{([^}]+)\}\}/', $text, $matches);
-
-        if (empty($matches[1])) {
-            return;
-        }
-
-        $available = $nodeId !== null ? $this->collectAvailableContextKeys($nodeId, $graph) : null;
-
-        foreach ($matches[1] as $raw) {
-            $variable = trim($raw);
-
-            if (! preg_match('/^(context|customer)\.[a-zA-Z_][a-zA-Z0-9_]*$/', $variable)) {
-                $result->addError(
-                    'send_email.invalid_template_variable',
-                    "Template variable '{{{{{$variable}}}}}' is invalid. Use {{context.<key>}} or {{customer.<key>}} with a single identifier.",
-                    $path,
-                    $nodeId,
-                );
-                continue;
-            }
-
-            if (str_starts_with($variable, 'context.') && $available !== null) {
-                $this->validateContextVariableExists($variable, $available, self::CODE_PREFIX, $path, $nodeId, $result);
-            }
-        }
-    }
 }
