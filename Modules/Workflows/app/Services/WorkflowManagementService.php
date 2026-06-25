@@ -12,19 +12,21 @@ use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
 use Modules\Team\Models\TeamMembership;
-use Modules\Workflows\Enums\WorkflowInstanceStatus;
+use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowAccessGrant;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowTemplate;
 use Modules\Workflows\Models\WorkflowVersion;
+use Modules\Workflows\Services\Execution\WorkflowDispatcher;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class WorkflowManagementService
 {
     public function __construct(
-        protected WorkflowDefinitionValidator $definitionValidator
+        protected WorkflowDefinitionValidator $definitionValidator,
+        protected WorkflowDispatcher $dispatcher,
     ) {}
 
     public function listVisibleWorkflows(User $actor, array $filters = []): Collection
@@ -324,7 +326,6 @@ class WorkflowManagementService
         });
     }
 
-    // TODO: this methods should be in another service and will defenetly need refactor
     public function triggerWebhook(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
     {
         $this->assertCanView($actor, $workflow);
@@ -333,27 +334,29 @@ class WorkflowManagementService
             throw new HttpException(410, 'Workflow is not available for triggering.');
         }
 
-        if ($workflow->current_version_id === null) {
-            throw ValidationException::withMessages([
-                'workflow' => 'Workflow must be published before it can be triggered.',
-            ]);
+        return $this->dispatcher->dispatch($workflow, TriggerType::Webhook, $payload);
+    }
+
+    public function triggerManual(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
+    {
+        $this->assertCanView($actor, $workflow);
+
+        if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
+            throw new HttpException(410, 'Workflow is not available for triggering.');
         }
 
-        return DB::transaction(function () use ($workflow, $payload): WorkflowInstance {
-            $instance = WorkflowInstance::query()->create([
-                'workflow_id' => (int) $workflow->id,
-                'workflow_version_id' => (int) $workflow->current_version_id,
-                'tenant_id' => (int) $workflow->tenant_id,
-                'status' => WorkflowInstanceStatus::Running,
-                'payload' => $payload,
-                'started_at' => now(),
-            ]);
+        return $this->dispatcher->dispatch($workflow, TriggerType::Manual, $payload);
+    }
 
-            $workflow->increment('total_runs');
-            $workflow->increment('active_instances');
+    public function triggerForm(User $actor, Workflow $workflow, array $formData = []): WorkflowInstance
+    {
+        $this->assertCanView($actor, $workflow);
 
-            return $instance;
-        });
+        if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
+            throw new HttpException(410, 'Workflow is not available for triggering.');
+        }
+
+        return $this->dispatcher->dispatch($workflow, TriggerType::Form, $formData);
     }
 
     public function availableActions(User $actor, Workflow $workflow): array

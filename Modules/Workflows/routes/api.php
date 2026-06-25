@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Workflows\Http\Controllers\NodeController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
+use Modules\Workflows\Http\Controllers\WorkflowTriggerController;
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
@@ -19,4 +20,6 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::delete('/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
     Route::delete('/{workflow}/purge', [WorkflowController::class, 'purge'])->name('workflows.purge');
     Route::post('/{workflow}/trigger/webhook', [WorkflowController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
+    Route::post('/{workflow}/trigger/manual', [WorkflowTriggerController::class, 'manual'])->name('workflows.trigger.manual');
+    Route::post('/{workflow}/trigger/form', [WorkflowTriggerController::class, 'form'])->name('workflows.trigger.form');
 });
