@@ -2,15 +2,23 @@
 
 namespace Modules\Workflows\Providers;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
+use Modules\Workflows\Console\Commands\AdmitPendingInstancesCommand;
+use Modules\Workflows\Console\Commands\ExpireOverdueInstancesCommand;
+use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
+use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
 use Modules\Workflows\Services\Execution\Executors\AiGeneratorExecutor;
+use Modules\Workflows\Services\Execution\Executors\ForkNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\FormTriggerExecutor;
 use Modules\Workflows\Services\Execution\Executors\IfNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\ManualTriggerExecutor;
+use Modules\Workflows\Services\Execution\Executors\MergeNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\SendEmailExecutor;
 use Modules\Workflows\Services\Execution\Executors\SwitchNodeExecutor;
+use Modules\Workflows\Services\Execution\Executors\TaskNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\TerminationNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\WebhookTriggerExecutor;
 use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
@@ -38,6 +46,17 @@ class WorkflowsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->commands([
+            ScanWorkflowTimersCommand::class,
+            AdmitPendingInstancesCommand::class,
+            ExpireOverdueInstancesCommand::class,
+        ]);
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('workflows:scan-timers')->everyMinute()->withoutOverlapping();
+            $schedule->command('workflows:admit-pending')->everyMinute()->withoutOverlapping();
+            $schedule->command('workflows:expire-overdue')->daily()->withoutOverlapping();
+        });
     }
 
     public function register(): void
@@ -66,11 +85,15 @@ class WorkflowsServiceProvider extends ServiceProvider
         $this->app->singleton(WorkflowRuntime::class);
         $this->app->singleton(WorkflowDispatcher::class);
 
+        // Execution engine — M2: admission control.
+        $this->app->singleton(InstanceAdmissionService::class);
+
         // AI generator contract — swap NullAiContentGenerator for a real provider when available.
         $this->app->bind(AiContentGenerator::class, NullAiContentGenerator::class);
 
-        // Register node executors — order does not matter; registry is keyed by type().
+        // Register node executors keyed by node type.
         $this->app->afterResolving(NodeExecutorRegistry::class, function (NodeExecutorRegistry $registry): void {
+            // M1 executors
             $registry->register($this->app->make(ManualTriggerExecutor::class));
             $registry->register($this->app->make(FormTriggerExecutor::class));
             $registry->register($this->app->make(WebhookTriggerExecutor::class));
@@ -79,6 +102,15 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(TerminationNodeExecutor::class));
             $registry->register($this->app->make(SendEmailExecutor::class));
             $registry->register($this->app->make(AiGeneratorExecutor::class));
+
+            // M2 executors
+            $registry->register($this->app->make(ForkNodeExecutor::class));
+            $registry->register($this->app->make(TaskNodeExecutor::class));
+
+            // MergeNodeExecutor handles both merge-and (its canonical type) and merge-or.
+            $merge = $this->app->make(MergeNodeExecutor::class);
+            $registry->register($merge);
+            $registry->registerAs('merge-or', $merge);
         });
     }
 }

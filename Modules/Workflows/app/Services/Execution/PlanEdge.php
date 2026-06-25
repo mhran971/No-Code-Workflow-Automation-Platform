@@ -44,4 +44,9 @@ final class PlanEdge
     {
         return $this->branchType === 'parallel';
     }
+
+    public function isErrorEdge(): bool
+    {
+        return $this->branchType === 'error';
+    }
 }

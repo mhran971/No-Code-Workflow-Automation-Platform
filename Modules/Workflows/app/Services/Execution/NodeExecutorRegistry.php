@@ -21,6 +21,13 @@ class NodeExecutorRegistry
         return $this;
     }
 
+    public function registerAs(string $type, NodeExecutor $executor): self
+    {
+        $this->executors[$type] = $executor;
+
+        return $this;
+    }
+
     public function has(string $type): bool
     {
         return isset($this->executors[$type]);

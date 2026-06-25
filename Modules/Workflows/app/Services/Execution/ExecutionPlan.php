@@ -148,26 +148,46 @@ class ExecutionPlan
     }
 
     /**
-     * The synchronization spec for a `merge` node, or null for any other node type.
+     * True for any merge node type (merge-or, merge-and, or legacy 'merge').
+     */
+    public function isMergeNode(string $key): bool
+    {
+        return in_array($this->nodeType($key), ['merge', 'merge-or', 'merge-and'], true);
+    }
+
+    /**
+     * The synchronization spec for a merge node, or null for any other node type.
+     *
+     * - `merge-and` → wait-all (parallel); `merge-or` → first-arrival (conditional)
+     * - `branchCount` config overrides the incoming-edge count when the plan graph is partial.
+     * - `timeoutMinutes` config expresses an optional upper bound after which the merge proceeds
+     *   regardless of arrived count (enforced by ScanWorkflowTimersCommand).
      */
     public function joinFor(string $key): ?JoinSpec
     {
-        if ($this->nodeType($key) !== 'merge') {
+        if (! $this->isMergeNode($key)) {
             return null;
         }
 
+        $type = $this->nodeType($key);
         $config = $this->config($key);
-        $mode = ($config['mergeMode'] ?? JoinSpec::MODE_PARALLEL) === JoinSpec::MODE_CONDITIONAL
-            ? JoinSpec::MODE_CONDITIONAL
-            : JoinSpec::MODE_PARALLEL;
+
+        // merge-and = wait-all; merge-or = first-arrival; legacy 'merge' reads config.
+        $isParallel = $type === 'merge-and'
+            || ($type === 'merge' && ($config['mergeMode'] ?? JoinSpec::MODE_PARALLEL) === JoinSpec::MODE_PARALLEL);
+
+        $mode = $isParallel ? JoinSpec::MODE_PARALLEL : JoinSpec::MODE_CONDITIONAL;
 
         $expected = count($this->incoming($key));
-
         if ($expected === 0 && isset($config['branchCount'])) {
             $expected = (int) $config['branchCount'];
         }
 
-        return new JoinSpec($mode, max($expected, 1));
+        $timeoutSeconds = isset($config['timeoutMinutes'])
+            ? (int) $config['timeoutMinutes'] * 60
+            : null;
+
+        return new JoinSpec($mode, max($expected, 1), $timeoutSeconds);
     }
 
     /**

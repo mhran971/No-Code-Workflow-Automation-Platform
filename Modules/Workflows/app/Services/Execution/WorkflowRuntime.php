@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
+use Modules\Workflows\Enums\WaitType;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
 use Modules\Workflows\Events\InstanceCompleted;
 use Modules\Workflows\Events\InstanceFailed;
@@ -43,13 +44,11 @@ class WorkflowRuntime
      */
     public function advance(int $executionId): void
     {
-        // Step 1: Atomically claim the execution (pending/waiting → running).
         $execution = $this->claim($executionId);
         if ($execution === null) {
-            return; // already running, succeeded, or failed — idempotency guard
+            return;
         }
 
-        // Step 2: Compile the plan and build the execution context.
         $instance = WorkflowInstance::query()
             ->with('workflowVersion')
             ->findOrFail($execution->instance_id);
@@ -59,7 +58,6 @@ class WorkflowRuntime
 
         Event::dispatch(new NodeStarted($instance, $execution));
 
-        // Step 3: Run the executor outside the lock (side effects may be slow / network I/O).
         $executor = $this->registry->for($execution->node_type);
 
         try {
@@ -68,11 +66,9 @@ class WorkflowRuntime
             $result = NodeExecutionResult::fail($e, $this->classifier->isRetryable($e));
         }
 
-        // Step 4: Re-lock and commit the result atomically.
         DB::transaction(function () use ($executionId, $instance, $plan, $context, $result): void {
             $execution = WorkflowNodeExecution::query()->lockForUpdate()->findOrFail($executionId);
 
-            // Concurrent-safety guard: if another worker already committed, skip.
             if ($execution->status !== NodeExecutionStatus::Running) {
                 return;
             }
@@ -82,8 +78,70 @@ class WorkflowRuntime
     }
 
     /**
-     * Atomically transition a runnable execution to `running`. Returns null if not claimable.
+     * Manually cancel a running instance: consume all live tokens and mark cancelled.
      */
+    public function cancel(WorkflowInstance $instance): void
+    {
+        DB::transaction(function () use ($instance): void {
+            WorkflowNodeExecution::query()
+                ->where('instance_id', $instance->id)
+                ->whereIn('status', [
+                    NodeExecutionStatus::Pending->value,
+                    NodeExecutionStatus::Running->value,
+                    NodeExecutionStatus::Waiting->value,
+                ])
+                ->update(['status' => NodeExecutionStatus::Consumed->value, 'finished_at' => now()]);
+
+            $instance->update([
+                'status' => WorkflowInstanceStatus::Cancelled,
+                'finished_at' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * Re-activate execution at a given node (operator-triggered recovery after a permanent failure).
+     */
+    public function retryFromNode(WorkflowInstance $instance, string $nodeKey): void
+    {
+        DB::transaction(function () use ($instance, $nodeKey): void {
+            $plan = $this->compiler->compileVersion($instance->workflowVersion);
+            $nodeType = $plan->nodeType($nodeKey) ?? 'unknown';
+
+            $lastExecution = WorkflowNodeExecution::query()
+                ->where('instance_id', $instance->id)
+                ->where('node_key', $nodeKey)
+                ->orderByDesc('attempt')
+                ->first();
+
+            $nextAttempt = ($lastExecution?->attempt ?? 0) + 1;
+            $idempotencyKey = hash('sha256', $instance->id.':'.$nodeKey.':'.$nextAttempt);
+
+            $retry = WorkflowNodeExecution::firstOrCreate(
+                ['idempotency_key' => $idempotencyKey],
+                [
+                    'instance_id' => $instance->id,
+                    'tenant_id' => $instance->tenant_id,
+                    'node_key' => $nodeKey,
+                    'node_type' => $nodeType,
+                    'status' => NodeExecutionStatus::Pending,
+                    'attempt' => $nextAttempt,
+                    'parent_execution_id' => $lastExecution?->parent_execution_id,
+                    'input' => $lastExecution?->input ?? [],
+                ],
+            );
+
+            if ($retry->wasRecentlyCreated) {
+                $instance->update(['status' => WorkflowInstanceStatus::Running]);
+                $category = $this->resolveCategory($nodeType);
+                ExecuteNodeJob::dispatch($retry->id, $category->value)
+                    ->onQueue($this->queueFor($category));
+            }
+        });
+    }
+
+    // ─── Claim ───────────────────────────────────────────────────────────────
+
     protected function claim(int $executionId): ?WorkflowNodeExecution
     {
         return DB::transaction(function () use ($executionId): ?WorkflowNodeExecution {
@@ -102,6 +160,8 @@ class WorkflowRuntime
         });
     }
 
+    // ─── Result dispatch ─────────────────────────────────────────────────────
+
     protected function applyResult(
         WorkflowNodeExecution $execution,
         WorkflowInstance $instance,
@@ -113,8 +173,8 @@ class WorkflowRuntime
             ResultKind::Proceed, ResultKind::Branch => $this->onSucceed($execution, $instance, $plan, $context, $result),
             ResultKind::Terminate => $this->onTerminate($execution, $instance),
             ResultKind::Wait => $this->onWait($execution, $instance, $result),
-            ResultKind::Fail => $this->onFail($execution, $instance, $context, $result),
-            ResultKind::Noop => null,
+            ResultKind::Fail => $this->onFail($execution, $instance, $plan, $result),
+            ResultKind::Noop => $this->onConsume($execution),
         };
     }
 
@@ -133,7 +193,6 @@ class WorkflowRuntime
             'finished_at' => now(),
         ]);
 
-        // Flush any context mutations the executor buffered on the instance.
         if ($instance->isDirty('context')) {
             $instance->save();
         }
@@ -141,7 +200,6 @@ class WorkflowRuntime
         Event::dispatch(new NodeCompleted($instance, $execution));
 
         if (empty($result->edges)) {
-            // No successors — this is a structural terminal or the workflow ends here.
             if (! $this->hasLiveExecutions($instance)) {
                 $this->completeInstance($instance);
             }
@@ -178,7 +236,6 @@ class WorkflowRuntime
             'wait_type' => $result->waitType,
         ]);
 
-        // If all live executions are now waiting, reflect that on the instance.
         if (! $this->hasNonWaitingLiveExecutions($instance)) {
             $instance->update(['status' => WorkflowInstanceStatus::Waiting]);
         }
@@ -187,7 +244,7 @@ class WorkflowRuntime
     protected function onFail(
         WorkflowNodeExecution $execution,
         WorkflowInstance $instance,
-        NodeExecutionContext $context,
+        ExecutionPlan $plan,
         NodeExecutionResult $result,
     ): void {
         $errorPayload = [
@@ -207,19 +264,103 @@ class WorkflowRuntime
         Event::dispatch(new NodeFailed($instance, $execution, $willRetry));
 
         if ($willRetry) {
-            $this->scheduleRetry($execution, $instance, $context);
+            $this->scheduleRetry($execution, $instance);
 
             return;
         }
 
-        // No more retries — fail the instance.
-        $instance->update([
-            'status' => WorkflowInstanceStatus::Failed,
-            'error' => $errorPayload,
+        // Check for an error-routing edge before failing the instance.
+        $errorEdges = array_filter(
+            $plan->outgoing($execution->node_key),
+            fn (PlanEdge $e) => $e->isErrorEdge(),
+        );
+
+        if (! empty($errorEdges)) {
+            foreach ($errorEdges as $edge) {
+                $this->seedExecution($execution, $instance, $edge, $plan);
+            }
+
+            return;
+        }
+
+        $this->failInstance($instance, $errorPayload);
+    }
+
+    protected function onConsume(WorkflowNodeExecution $execution): void
+    {
+        $execution->update([
+            'status' => NodeExecutionStatus::Consumed,
             'finished_at' => now(),
         ]);
+    }
 
-        Event::dispatch(new InstanceFailed($instance));
+    // ─── Fork-join: merge arrival ─────────────────────────────────────────────
+
+    /**
+     * Called (inside the result-commit transaction) when a branch token edges into a merge node.
+     *
+     * Strategy:
+     *  - firstOrCreate the single shared merge row per (instance, merge_node).
+     *  - lockForUpdate + increment arrived_count.
+     *  - For parallel (merge-and): dispatch when arrived == expected.
+     *  - For conditional (merge-or): dispatch on first arrival; skip if already terminal.
+     *  - Merge timeout is seeded via wait_until/wait_type; ScanWorkflowTimersCommand wakes it up.
+     */
+    protected function arriveAtMerge(
+        WorkflowNodeExecution $parent,
+        WorkflowInstance $instance,
+        string $mergeKey,
+        string $mergeType,
+        ExecutionPlan $plan,
+    ): void {
+        $joinSpec = $plan->joinFor($mergeKey);
+        if ($joinSpec === null) {
+            return;
+        }
+
+        $mergeIdempotencyKey = hash('sha256', $instance->id.':'.$mergeKey.':merge:1');
+
+        // Ensure the single shared merge coordination row exists.
+        $merge = WorkflowNodeExecution::firstOrCreate(
+            ['idempotency_key' => $mergeIdempotencyKey],
+            [
+                'instance_id' => $instance->id,
+                'tenant_id' => $instance->tenant_id,
+                'node_key' => $mergeKey,
+                'node_type' => $mergeType,
+                'status' => NodeExecutionStatus::Waiting,
+                'attempt' => 1,
+                'expected_count' => $joinSpec->expectedCount,
+                'arrived_count' => 0,
+                'input' => $parent->output ?? [],
+                'wait_type' => $joinSpec->timeoutSeconds ? WaitType::MergeTimeout : null,
+                'wait_until' => $joinSpec->timeoutSeconds ? now()->addSeconds($joinSpec->timeoutSeconds) : null,
+            ],
+        );
+
+        // Lock the merge row; another branch may be arriving concurrently.
+        $merge = WorkflowNodeExecution::query()->lockForUpdate()->findOrFail($merge->id);
+
+        // Conditional merge: first branch already won — this arrival is a no-op.
+        if ($merge->status->isTerminal()) {
+            return;
+        }
+
+        // Increment: safe under lockForUpdate (no other transaction holds this row).
+        $arrivedAfterIncrement = $merge->arrived_count + 1;
+        DB::table('workflow_node_executions')
+            ->where('id', $merge->id)
+            ->increment('arrived_count');
+
+        $shouldProceed = $joinSpec->isParallel()
+            ? ($arrivedAfterIncrement >= $joinSpec->expectedCount)
+            : ($arrivedAfterIncrement === 1);
+
+        if ($shouldProceed) {
+            $merge->update(['status' => NodeExecutionStatus::Pending]);
+            ExecuteNodeJob::dispatch($merge->id, NodeCategory::Logic->value)
+                ->onQueue($this->queueFor(NodeCategory::Logic));
+        }
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -232,6 +373,14 @@ class WorkflowRuntime
     ): void {
         $nodeKey = $edge->target;
         $nodeType = $plan->nodeType($nodeKey) ?? 'unknown';
+
+        // Merge nodes use a shared coordination row — handled by arriveAtMerge.
+        if ($plan->isMergeNode($nodeKey)) {
+            $this->arriveAtMerge($parent, $instance, $nodeKey, $nodeType, $plan);
+
+            return;
+        }
+
         $idempotencyKey = hash('sha256', $parent->idempotency_key.':'.$nodeKey.':1');
 
         $child = WorkflowNodeExecution::firstOrCreate(
@@ -258,7 +407,6 @@ class WorkflowRuntime
     protected function scheduleRetry(
         WorkflowNodeExecution $failed,
         WorkflowInstance $instance,
-        NodeExecutionContext $context,
     ): void {
         $nextAttempt = $failed->attempt + 1;
         $idempotencyKey = hash('sha256', $instance->id.':'.$failed->node_key.':'.$nextAttempt);
@@ -298,6 +446,23 @@ class WorkflowRuntime
         $instance->workflow()->decrement('active_instances');
 
         Event::dispatch(new InstanceCompleted($instance));
+    }
+
+    protected function failInstance(WorkflowInstance $instance, array $errorPayload): void
+    {
+        // Cancel all remaining waiting tokens so timers don't fire after the instance is dead.
+        WorkflowNodeExecution::query()
+            ->where('instance_id', $instance->id)
+            ->where('status', NodeExecutionStatus::Waiting->value)
+            ->update(['status' => NodeExecutionStatus::Consumed->value, 'finished_at' => now()]);
+
+        $instance->update([
+            'status' => WorkflowInstanceStatus::Failed,
+            'error' => $errorPayload,
+            'finished_at' => now(),
+        ]);
+
+        Event::dispatch(new InstanceFailed($instance));
     }
 
     protected function hasLiveExecutions(WorkflowInstance $instance): bool

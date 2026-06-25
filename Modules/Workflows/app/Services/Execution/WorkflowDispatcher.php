@@ -15,18 +15,23 @@ use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
 use Modules\Workflows\Models\WorkflowVersion;
+use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 
 /**
  * Creates a new workflow instance, seeds the trigger-node execution, and dispatches the first job.
  *
- * The entire bootstrap (instance row + first execution row + first queue job) runs inside a single
- * DB transaction so the job is never visible to workers before the instance exists.
+ * If the tenant is at its concurrent-instance cap the instance is created in `pending` status
+ * and the job is withheld; AdmitPendingInstancesCommand will promote it when capacity frees.
+ *
+ * The entire bootstrap (instance row + first execution row + optional first job) runs inside a
+ * single DB transaction so no worker can observe a partially-constructed instance.
  */
 class WorkflowDispatcher
 {
     public function __construct(
         protected ExecutionPlanCompiler $compiler,
         protected NodeExecutorRegistry $registry,
+        protected InstanceAdmissionService $admission,
     ) {}
 
     /**
@@ -50,23 +55,29 @@ class WorkflowDispatcher
             ]);
         }
 
+        $admitted = $this->admission->canAdmit((int) $workflow->tenant_id);
+
         return DB::transaction(function () use (
-            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey
+            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey, $admitted
         ): WorkflowInstance {
+            $instanceStatus = $admitted ? WorkflowInstanceStatus::Running : WorkflowInstanceStatus::Pending;
+
             $instance = WorkflowInstance::query()->create([
                 'workflow_id' => $workflow->id,
                 'workflow_version_id' => $version->id,
                 'tenant_id' => $workflow->tenant_id,
-                'status' => WorkflowInstanceStatus::Running,
+                'status' => $instanceStatus,
                 'trigger_type' => $triggerType,
                 'correlation_id' => $correlationId,
                 'payload' => $payload,
                 'context' => [],
-                'started_at' => now(),
+                'started_at' => $admitted ? now() : null,
             ]);
 
             $workflow->increment('total_runs');
-            $workflow->increment('active_instances');
+            if ($admitted) {
+                $workflow->increment('active_instances');
+            }
 
             $triggerNodeType = $plan->nodeType($triggerNodeKey) ?? 'unknown';
             $idempotencyKey = hash('sha256', $instance->id.':'.$triggerNodeKey.':1');
@@ -83,8 +94,11 @@ class WorkflowDispatcher
                 'input' => $payload,
             ]);
 
-            ExecuteNodeJob::dispatch($execution->id, $category->value)
-                ->onQueue($this->queueFor($category));
+            // Only dispatch the first job when admitted; AdmitPendingInstancesCommand handles the rest.
+            if ($admitted) {
+                ExecuteNodeJob::dispatch($execution->id, $category->value)
+                    ->onQueue($this->queueFor($category));
+            }
 
             Event::dispatch(new InstanceStarted($instance));
 

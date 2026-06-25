@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Workflows\Http\Controllers\NodeController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
+use Modules\Workflows\Http\Controllers\WorkflowInstanceController;
+use Modules\Workflows\Http\Controllers\WorkflowTaskController;
 use Modules\Workflows\Http\Controllers\WorkflowTriggerController;
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
@@ -22,4 +24,14 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::post('/{workflow}/trigger/webhook', [WorkflowController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
     Route::post('/{workflow}/trigger/manual', [WorkflowTriggerController::class, 'manual'])->name('workflows.trigger.manual');
     Route::post('/{workflow}/trigger/form', [WorkflowTriggerController::class, 'form'])->name('workflows.trigger.form');
+
+    // Instance management (list, show, cancel, retry-from-node).
+    Route::get('/{workflow}/instances', [WorkflowInstanceController::class, 'index'])->name('workflows.instances.index');
+    Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
+    Route::post('/instances/{instance}/cancel', [WorkflowInstanceController::class, 'cancel'])->name('workflows.instances.cancel');
+    Route::post('/instances/{instance}/retry-from-node', [WorkflowInstanceController::class, 'retryFromNode'])->name('workflows.instances.retry');
+
+    // Human-task inbox + submission.
+    Route::get('/tasks', [WorkflowTaskController::class, 'index'])->name('workflows.tasks.index');
+    Route::post('/tasks/{task}/submit', [WorkflowTaskController::class, 'submit'])->name('workflows.tasks.submit');
 });
