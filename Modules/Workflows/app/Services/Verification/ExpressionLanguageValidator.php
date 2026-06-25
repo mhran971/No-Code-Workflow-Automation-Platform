@@ -51,24 +51,28 @@ class ExpressionLanguageValidator
         while ($offset < $length) {
             if (preg_match('/\G\s+/A', $expression, $match, 0, $offset)) {
                 $offset += strlen($match[0]);
+
                 continue;
             }
 
             if (preg_match('/\G(&&|\|\||==|!=|>=|<=|>|<|!|\(|\))/A', $expression, $match, 0, $offset)) {
                 $tokens[] = ['type' => 'operator', 'value' => $match[1]];
                 $offset += strlen($match[1]);
+
                 continue;
             }
 
             if (preg_match('/\G"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\'/A', $expression, $match, 0, $offset)) {
                 $tokens[] = ['type' => 'string', 'value' => $match[0]];
                 $offset += strlen($match[0]);
+
                 continue;
             }
 
             if (preg_match('/\G-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?/A', $expression, $match, 0, $offset)) {
                 $tokens[] = ['type' => 'number', 'value' => $match[0]];
                 $offset += strlen($match[0]);
+
                 continue;
             }
 
@@ -79,6 +83,7 @@ class ExpressionLanguageValidator
                     'value' => $value,
                 ];
                 $offset += strlen($value);
+
                 continue;
             }
 

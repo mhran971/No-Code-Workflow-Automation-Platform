@@ -3,6 +3,10 @@
 namespace Modules\Workflows\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
+use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
+use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
+use Modules\Workflows\Services\Execution\NodeExecutorRegistry;
 use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
@@ -35,5 +39,11 @@ class WorkflowsServiceProvider extends ServiceProvider
         $this->app->singleton(WorkflowVerificationService::class);
         $this->app->singleton(WorkflowDefinitionValidator::class);
         $this->app->singleton(WorkflowManagementService::class);
+
+        // Execution engine (M0 foundations).
+        $this->app->singleton(ExpressionEvaluator::class);
+        $this->app->singleton(TemplateInterpolator::class);
+        $this->app->singleton(ExecutionPlanCompiler::class);
+        $this->app->singleton(NodeExecutorRegistry::class);
     }
 }

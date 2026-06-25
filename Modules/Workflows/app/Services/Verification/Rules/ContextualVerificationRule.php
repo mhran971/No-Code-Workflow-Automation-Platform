@@ -53,6 +53,7 @@ class ContextualVerificationRule implements VerificationRule
 
             if (! $userExists) {
                 $result->addError('context.assignee_unknown', "Human task assignee '{$assigneeId}' must be an active user in this tenant.", $path, $nodeId);
+
                 continue;
             }
 
@@ -89,12 +90,14 @@ class ContextualVerificationRule implements VerificationRule
 
             if (! is_array($kbDocs)) {
                 $result->addError('context.kb_docs_invalid', 'Knowledge Base documents must be an array of document IDs.', "nodes[{$index}].config.kbDocs", $nodeId);
+
                 continue;
             }
 
             foreach ($kbDocs as $docIndex => $docId) {
                 if (! is_numeric($docId)) {
                     $result->addError('context.kb_doc_id_invalid', 'Knowledge Base document references must be numeric IDs.', "nodes[{$index}].config.kbDocs[{$docIndex}]", $nodeId);
+
                     continue;
                 }
 

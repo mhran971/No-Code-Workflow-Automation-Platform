@@ -2,7 +2,7 @@
 
 namespace Modules\Workflows\Enums;
 
-enum NodeConfigFieldType : string
+enum NodeConfigFieldType: string
 {
     case TEXT = 'text';
     case TEXTAREA = 'textarea';

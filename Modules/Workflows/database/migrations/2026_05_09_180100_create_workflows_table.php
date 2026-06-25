@@ -24,10 +24,10 @@ return new class extends Migration
             $table->json('draft_definition');
             $table->unsignedInteger('draft_revision')->default(1);
             $table->unsignedBigInteger('current_version_id')->nullable();
-            $table->unsignedInteger('current_version_number')->default(0);  //TODO: This can be derived from the versions table, consider removing it to avoid redundancy
+            $table->unsignedInteger('current_version_number')->default(0);  // TODO: This can be derived from the versions table, consider removing it to avoid redundancy
             $table->string('current_version_label')->nullable(); // TODO: This can be derived from the versions table, consider removing it to avoid redundancy
             $table->unsignedInteger('total_runs')->default(0); // TODO: This can be derived from the workflow_runs table, consider removing it to avoid redundancy
-            $table->unsignedInteger('active_instances')->default(0); //TODO: This can be derived from the workflow_runs table, consider removing it to avoid redundancy
+            $table->unsignedInteger('active_instances')->default(0); // TODO: This can be derived from the workflow_runs table, consider removing it to avoid redundancy
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
 

@@ -68,11 +68,11 @@ class GraphControlFlowVerificationRule implements VerificationRule
             }
 
             if ($graph->incoming($nodeId) === []) {
-                $result->addError('graph.incoming_missing', "The Node must have at least one incoming edge.", null, $nodeId);
+                $result->addError('graph.incoming_missing', 'The Node must have at least one incoming edge.', null, $nodeId);
             }
 
             if (! isset($terminalLookup[$nodeId]) && $graph->outgoing($nodeId) === []) {
-                $result->addError('graph.outgoing_missing', "The Node must have at least one outgoing edge.", null, $nodeId);
+                $result->addError('graph.outgoing_missing', 'The Node must have at least one outgoing edge.', null, $nodeId);
             }
         }
     }
@@ -92,7 +92,7 @@ class GraphControlFlowVerificationRule implements VerificationRule
             }
 
             if (! isset($reachable[$nodeId])) {
-                $result->addError('graph.unreachable', "The Node is not reachable from the trigger.", null, $nodeId);
+                $result->addError('graph.unreachable', 'The Node is not reachable from the trigger.', null, $nodeId);
             }
         }
 
@@ -125,5 +125,4 @@ class GraphControlFlowVerificationRule implements VerificationRule
             );
         }
     }
-
 }

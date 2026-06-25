@@ -31,7 +31,6 @@ class ValidateWorkflowDefinitionRequest extends FormRequest
             'definition.edges.*.branch_type' => ['sometimes', 'string'],
             'definition.edges.*.condition_expression' => ['sometimes', 'nullable', 'string'],
             'definition.edges.*.is_default_branch' => ['sometimes', 'boolean'],
-            'definition.edges.*.parallel_strategy' => ['sometimes', 'nullable', 'string'],
             'definition.edges.*.join_node_key' => ['sometimes', 'nullable', 'string'],
             'definition.edges.*.sort_order' => ['sometimes', 'integer'],
             'definition.variables' => ['sometimes', 'array'],
@@ -122,15 +121,10 @@ class ValidateWorkflowDefinitionRequest extends FormRequest
                                 'type' => 'boolean',
                                 'description' => 'Marks the default branch for conditional routing.',
                             ],
-                            'parallel_strategy' => [
-                                'type' => 'string',
-                                'nullable' => true,
-                                'description' => 'Parallel execution strategy, if the edge is parallel.',
-                            ],
                             'join_node_key' => [
                                 'type' => 'string',
                                 'nullable' => true,
-                                'description' => 'Join node key for fork-join parallel edges.',
+                                'description' => 'Required for parallel edges: the merge node that synchronizes this branch.',
                             ],
                             'sort_order' => [
                                 'type' => 'integer',

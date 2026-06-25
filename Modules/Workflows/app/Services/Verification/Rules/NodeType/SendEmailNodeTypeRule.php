@@ -96,5 +96,4 @@ class SendEmailNodeTypeRule implements NodeTypeRule
             );
         }
     }
-
 }

@@ -81,7 +81,6 @@ class WorkflowDefinitionNormalizer
                     'branch_type' => 'default',
                     'condition_expression' => null,
                     'is_default_branch' => false,
-                    'parallel_strategy' => null,
                     'join_node_key' => null,
                     'sort_order' => 0,
                     '_index' => $index,
@@ -102,7 +101,6 @@ class WorkflowDefinitionNormalizer
                     ? (string) $edge['condition_expression']
                     : (isset($edge['condition']) ? (string) $edge['condition'] : null),
                 'is_default_branch' => (bool) ($edge['is_default_branch'] ?? false),
-                'parallel_strategy' => isset($edge['parallel_strategy']) ? (string) $edge['parallel_strategy'] : null,
                 'join_node_key' => isset($edge['join_node_key']) ? (string) $edge['join_node_key'] : null,
                 'sort_order' => isset($edge['sort_order']) ? (int) $edge['sort_order'] : 0,
                 '_index' => $index,

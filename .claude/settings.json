@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./vendor/bin/pint Modules/Workflows/app/Services/Execution Modules/Workflows/app/Models/WorkflowNodeExecution.php Modules/Workflows/app/Models/WorkflowTask.php Modules/Workflows/app/Models/WorkflowEvent.php Modules/Workflows/app/Models/WorkflowInstance.php Modules/Workflows/app/Enums Modules/Workflows/config/config.php tests/Unit/Execution)"
+    ]
+  }
+}
