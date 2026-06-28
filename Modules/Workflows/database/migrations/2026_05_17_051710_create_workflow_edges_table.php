@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('version_id')->nullable()->constrained('workflow_versions')->nullOnDelete();
 
             // Source
-            $table->string('source_node_key'); 
+            $table->string('source_node_key');
             $table->string('source_handle')->nullable(); // visual handle on the node
 
             // Target

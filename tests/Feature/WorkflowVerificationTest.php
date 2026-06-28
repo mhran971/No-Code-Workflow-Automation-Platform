@@ -33,6 +33,7 @@ class WorkflowVerificationTest extends TestCase
     // ─────────────────────────────────────────────────────────────────────────
 
     protected WorkflowDefinitionValidator $validator;
+
     protected WorkflowDefinitionNormalizer $normalizer;
 
     protected function setUp(): void
@@ -74,22 +75,22 @@ class WorkflowVerificationTest extends TestCase
     {
         return array_replace_recursive([
             'trigger' => [
-                'type'   => 'webhook-trigger',
+                'type' => 'webhook-trigger',
                 'config' => [],
             ],
             'nodes' => [
                 [
-                    'id'             => 'start',
-                    'type'           => 'send-email',
-                    'label'          => 'Welcome Email',
-                    'config'         => [],
+                    'id' => 'start',
+                    'type' => 'send-email',
+                    'label' => 'Welcome Email',
+                    'config' => [],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
-            'edges'     => [],
+            'edges' => [],
             'variables' => [],
-            'settings'  => [],
+            'settings' => [],
         ], $overrides);
     }
 
@@ -104,7 +105,7 @@ class WorkflowVerificationTest extends TestCase
     {
         $this->assertTrue(
             $result['is_publishable'],
-            'Expected publishable but got errors: ' . implode(', ', $result['errors'])
+            'Expected publishable but got errors: '.implode(', ', $result['errors'])
         );
     }
 
@@ -121,7 +122,7 @@ class WorkflowVerificationTest extends TestCase
         $this->assertContains(
             $code,
             $codes,
-            "Expected error code '{$code}' but got: " . implode(', ', $codes)
+            "Expected error code '{$code}' but got: ".implode(', ', $codes)
         );
     }
 
@@ -135,9 +136,9 @@ class WorkflowVerificationTest extends TestCase
     /** Assert at least one warning with the given code exists. */
     protected function assertHasWarning(array $result, string $code): void
     {
-        $warnings = array_filter($result['issues'], fn($i) => $i['severity'] === 'warning');
-        $codes    = array_column(array_values($warnings), 'code');
-        $this->assertContains($code, $codes, "Expected warning '{$code}' but got: " . implode(', ', $codes));
+        $warnings = array_filter($result['issues'], fn ($i) => $i['severity'] === 'warning');
+        $codes = array_column(array_values($warnings), 'code');
+        $this->assertContains($code, $codes, "Expected warning '{$code}' but got: ".implode(', ', $codes));
     }
 
     // =========================================================================
@@ -170,7 +171,7 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_trigger_as_array_not_object_produces_trigger_invalid_error(): void
     {
-        $definition            = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['trigger'] = ['webhook-trigger']; // indexed array, not keyed
 
         $result = $this->validate($definition);
@@ -194,7 +195,7 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_nodes_as_string_produces_nodes_invalid_error(): void
     {
-        $definition          = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['nodes'] = 'not-an-array';
 
         $result = $this->validate($definition);
@@ -218,8 +219,8 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_variables_as_string_produces_variables_invalid_error(): void
     {
-        $definition               = $this->validDefinition();
-        $definition['variables']  = 'not-an-array';
+        $definition = $this->validDefinition();
+        $definition['variables'] = 'not-an-array';
 
         $result = $this->validate($definition);
 
@@ -231,7 +232,7 @@ class WorkflowVerificationTest extends TestCase
     public function test_syntax_settings_as_array_not_object_produces_settings_invalid_error(): void
     {
         // Sequential (non-associative) array is not a valid settings "object"
-        $definition             = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['settings'] = ['foo', 'bar'];
 
         $result = $this->validate($definition);
@@ -245,7 +246,7 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_empty_trigger_array_produces_trigger_missing_error(): void
     {
-        $definition            = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['trigger'] = [];
 
         $result = $this->validate($definition);
@@ -257,8 +258,8 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_trigger_with_empty_type_produces_type_missing_error(): void
     {
-        $definition                     = $this->validDefinition();
-        $definition['trigger']['type']  = '';
+        $definition = $this->validDefinition();
+        $definition['trigger']['type'] = '';
 
         $result = $this->validate($definition);
 
@@ -269,7 +270,7 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_trigger_with_nonexistent_type_produces_type_unknown_error(): void
     {
-        $definition                    = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['trigger']['type'] = 'does-not-exist';
 
         $result = $this->validate($definition);
@@ -282,7 +283,7 @@ class WorkflowVerificationTest extends TestCase
     public function test_syntax_trigger_with_inactive_type_produces_type_unknown_error(): void
     {
         // 'inactive-node' was seeded with is_active=false but as a trigger type for the test
-        $definition                    = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['trigger']['type'] = 'inactive-node';
 
         $result = $this->validate($definition);
@@ -294,7 +295,7 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_trigger_config_as_string_produces_config_invalid_error(): void
     {
-        $definition                      = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['trigger']['config'] = 'not-an-object';
 
         $result = $this->validate($definition);
@@ -308,7 +309,7 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_node_that_is_not_object_produces_node_invalid_error(): void
     {
-        $definition          = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['nodes'] = ['just-a-string'];
 
         $result = $this->validate($definition);
@@ -353,7 +354,7 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 ['id' => 'start', 'type' => 'send-email', 'config' => [], 'is_entry_point' => true],
-                ['id' => 'start', 'type' => 'send-email', 'config' => [], 'is_terminal'    => true],
+                ['id' => 'start', 'type' => 'send-email', 'config' => [], 'is_terminal' => true],
             ],
         ]);
 
@@ -414,9 +415,9 @@ class WorkflowVerificationTest extends TestCase
         // Add a required config field to the send-email node type
         $node = Node::where('type', 'send-email')->first();
         NodeConfigField::factory()->create([
-            'node_id'     => $node->id,
-            'name'        => 'to',
-            'type'        => 'string',
+            'node_id' => $node->id,
+            'name' => 'to',
+            'type' => 'string',
             'is_required' => true,
         ]);
 
@@ -437,21 +438,21 @@ class WorkflowVerificationTest extends TestCase
     {
         $node = Node::where('type', 'send-email')->first();
         NodeConfigField::factory()->create([
-            'node_id'     => $node->id,
-            'name'        => 'priority',
-            'type'        => 'enum',
+            'node_id' => $node->id,
+            'name' => 'priority',
+            'type' => 'enum',
             'is_required' => false,
-            'metadata'    => ['values' => ['low', 'medium', 'high']],
+            'metadata' => ['values' => ['low', 'medium', 'high']],
         ]);
 
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'send-email',
-                    'config'         => ['priority' => 'urgent'],   // not in enum
+                    'id' => 'n1',
+                    'type' => 'send-email',
+                    'config' => ['priority' => 'urgent'],   // not in enum
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -467,7 +468,7 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_syntax_edge_that_is_not_object_produces_edge_invalid_error(): void
     {
-        $definition          = $this->validDefinition();
+        $definition = $this->validDefinition();
         $definition['edges'] = ['not-an-object'];
 
         $result = $this->validate($definition);
@@ -482,7 +483,7 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 ['id' => 'n1', 'type' => 'send-email', 'config' => [], 'is_entry_point' => true],
-                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal'    => true],
+                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal' => true],
             ],
             'edges' => [
                 ['target' => 'n2'], // source missing
@@ -555,7 +556,7 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 ['id' => 'n1', 'type' => 'send-email', 'config' => [], 'is_entry_point' => true],
-                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal'    => true],
+                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal' => true],
             ],
             'edges' => [
                 ['source' => 'n1', 'target' => 'n2'],
@@ -575,7 +576,7 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 ['id' => 'n1', 'type' => 'send-email', 'config' => [], 'is_entry_point' => true],
-                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal'    => true],
+                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal' => true],
             ],
             'edges' => [
                 ['source' => 'n1', 'target' => 'n2', 'branch_type' => 'teleport'], // invalid
@@ -595,7 +596,7 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 ['id' => 'n1', 'type' => 'send-email', 'config' => [], 'is_entry_point' => true],
-                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal'    => true],
+                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal' => true],
             ],
             'edges' => [
                 ['from' => 'n1', 'to' => 'n2'],
@@ -743,7 +744,7 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 ['id' => 'n1', 'type' => 'send-email', 'config' => [], 'is_entry_point' => true, 'is_terminal' => true],
-                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal'    => true], // orphan
+                ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal' => true], // orphan
             ],
             'edges' => [],
         ]);
@@ -918,8 +919,8 @@ class WorkflowVerificationTest extends TestCase
             ],
             'edges' => [
                 [
-                    'source'      => 'n1',
-                    'target'      => 'n2',
+                    'source' => 'n1',
+                    'target' => 'n2',
                     'branch_type' => 'conditional',
                     // condition_expression intentionally missing
                 ],
@@ -942,9 +943,9 @@ class WorkflowVerificationTest extends TestCase
             ],
             'edges' => [
                 [
-                    'source'               => 'n1',
-                    'target'               => 'n2',
-                    'branch_type'          => 'conditional',
+                    'source' => 'n1',
+                    'target' => 'n2',
+                    'branch_type' => 'conditional',
                     'condition_expression' => '',
                 ],
             ],
@@ -966,9 +967,9 @@ class WorkflowVerificationTest extends TestCase
             ],
             'edges' => [
                 [
-                    'source'               => 'n1',
-                    'target'               => 'n2',
-                    'branch_type'          => 'conditional',
+                    'source' => 'n1',
+                    'target' => 'n2',
+                    'branch_type' => 'conditional',
                     'condition_expression' => 'x >',  // incomplete expression
                 ],
             ],
@@ -990,9 +991,9 @@ class WorkflowVerificationTest extends TestCase
             ],
             'edges' => [
                 [
-                    'source'               => 'n1',
-                    'target'               => 'n2',
-                    'branch_type'          => 'conditional',
+                    'source' => 'n1',
+                    'target' => 'n2',
+                    'branch_type' => 'conditional',
                     'condition_expression' => 'x + 5', // not boolean
                 ],
             ],
@@ -1006,6 +1007,7 @@ class WorkflowVerificationTest extends TestCase
 
     /**
      * @test
+     *
      * @dataProvider validBooleanExpressions
      */
     public function test_expression_valid_boolean_expressions_pass(string $expression): void
@@ -1017,9 +1019,9 @@ class WorkflowVerificationTest extends TestCase
             ],
             'edges' => [
                 [
-                    'source'               => 'n1',
-                    'target'               => 'n2',
-                    'branch_type'          => 'conditional',
+                    'source' => 'n1',
+                    'target' => 'n2',
+                    'branch_type' => 'conditional',
                     'condition_expression' => $expression,
                 ],
             ],
@@ -1034,25 +1036,26 @@ class WorkflowVerificationTest extends TestCase
     public static function validBooleanExpressions(): array
     {
         return [
-            'simple comparison'            => ['x > 5'],
-            'equality check'               => ['status == "active"'],
-            'negation'                     => ['!is_deleted'],
-            'logical AND'                  => ['x > 5 && y < 10'],
-            'logical OR'                   => ['is_admin || is_manager'],
-            'complex nested'               => ['(x > 5 && y < 10) || is_override'],
-            'not equal'                    => ['role != "guest"'],
-            'greater or equal'             => ['count >= 3'],
-            'less or equal'                => ['score <= 100'],
-            'boolean literal'              => ['true'],
+            'simple comparison' => ['x > 5'],
+            'equality check' => ['status == "active"'],
+            'negation' => ['!is_deleted'],
+            'logical AND' => ['x > 5 && y < 10'],
+            'logical OR' => ['is_admin || is_manager'],
+            'complex nested' => ['(x > 5 && y < 10) || is_override'],
+            'not equal' => ['role != "guest"'],
+            'greater or equal' => ['count >= 3'],
+            'less or equal' => ['score <= 100'],
+            'boolean literal' => ['true'],
             'single quoted string compare' => ["status == 'pending'"],
-            'negative number compare'      => ['temperature > -5'],
-            'decimal compare'              => ['ratio >= 0.5'],
-            'null comparison'              => ['value == null'],
+            'negative number compare' => ['temperature > -5'],
+            'decimal compare' => ['ratio >= 0.5'],
+            'null comparison' => ['value == null'],
         ];
     }
 
     /**
      * @test
+     *
      * @dataProvider invalidExpressions
      */
     public function test_expression_invalid_expressions_produce_condition_invalid_error(string $expression): void
@@ -1064,9 +1067,9 @@ class WorkflowVerificationTest extends TestCase
             ],
             'edges' => [
                 [
-                    'source'               => 'n1',
-                    'target'               => 'n2',
-                    'branch_type'          => 'conditional',
+                    'source' => 'n1',
+                    'target' => 'n2',
+                    'branch_type' => 'conditional',
                     'condition_expression' => $expression,
                 ],
             ],
@@ -1080,12 +1083,12 @@ class WorkflowVerificationTest extends TestCase
     public static function invalidExpressions(): array
     {
         return [
-            'incomplete expression'       => ['x >'],
-            'arithmetic only'             => ['x + 5'],
-            'method call not supported'   => ['user.getName()'],
+            'incomplete expression' => ['x >'],
+            'arithmetic only' => ['x + 5'],
+            'method call not supported' => ['user.getName()'],
             'bare identifier (ambiguous)' => ['just_identifier'],
-            'dangling operator'           => ['&& true'],
-            'unclosed parenthesis'        => ['(x > 5'],
+            'dangling operator' => ['&& true'],
+            'unclosed parenthesis' => ['(x > 5'],
         ];
     }
 
@@ -1097,11 +1100,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'conditional',
-                    'config'         => ['expression' => 'x + 5'], // non-boolean
+                    'id' => 'n1',
+                    'type' => 'conditional',
+                    'config' => ['expression' => 'x + 5'], // non-boolean
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1118,11 +1121,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'conditional',
-                    'config'         => ['expression' => 'score >= 50'],
+                    'id' => 'n1',
+                    'type' => 'conditional',
+                    'config' => ['expression' => 'score >= 50'],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1138,11 +1141,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'conditional',
-                    'config'         => ['condition' => 'bad +++ expression'],
+                    'id' => 'n1',
+                    'type' => 'conditional',
+                    'config' => ['condition' => 'bad +++ expression'],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1164,8 +1167,8 @@ class WorkflowVerificationTest extends TestCase
             ],
             'edges' => [
                 [
-                    'source'      => 'n1',
-                    'target'      => 'n2',
+                    'source' => 'n1',
+                    'target' => 'n2',
                     'branch_type' => 'default', // no condition_expression needed
                 ],
             ],
@@ -1189,11 +1192,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'human-task',
-                    'config'         => ['assignee' => 99999], // non-existent user
+                    'id' => 'n1',
+                    'type' => 'human-task',
+                    'config' => ['assignee' => 99999], // non-existent user
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1210,15 +1213,15 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_context_assignee_that_does_not_exist_produces_assignee_unknown_error(): void
     {
-        $workflow   = Workflow::factory()->create();
+        $workflow = Workflow::factory()->create();
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'human-task',
-                    'config'         => ['assignee' => 99999], // non-existent
+                    'id' => 'n1',
+                    'type' => 'human-task',
+                    'config' => ['assignee' => 99999], // non-existent
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1232,17 +1235,17 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_context_assignee_from_different_tenant_produces_assignee_unknown_error(): void
     {
-        $workflow       = Workflow::factory()->create(['tenant_id' => 1]);
-        $foreignUser    = User::factory()->create(['tenant_id' => 2, 'is_active' => true]);
+        $workflow = Workflow::factory()->create(['tenant_id' => 1]);
+        $foreignUser = User::factory()->create(['tenant_id' => 2, 'is_active' => true]);
 
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'human-task',
-                    'config'         => ['assignee' => $foreignUser->id],
+                    'id' => 'n1',
+                    'type' => 'human-task',
+                    'config' => ['assignee' => $foreignUser->id],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1256,8 +1259,8 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_context_inactive_assignee_produces_assignee_unknown_error(): void
     {
-        $workflow      = Workflow::factory()->create();
-        $inactiveUser  = User::factory()->create([
+        $workflow = Workflow::factory()->create();
+        $inactiveUser = User::factory()->create([
             'tenant_id' => $workflow->tenant_id,
             'is_active' => false,
         ]);
@@ -1265,11 +1268,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'human-task',
-                    'config'         => ['assignee' => $inactiveUser->id],
+                    'id' => 'n1',
+                    'type' => 'human-task',
+                    'config' => ['assignee' => $inactiveUser->id],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1284,7 +1287,7 @@ class WorkflowVerificationTest extends TestCase
     public function test_context_active_user_not_in_workflow_team_produces_assignee_not_team_member_error(): void
     {
         $workflow = Workflow::factory()->create();
-        $user     = User::factory()->create([
+        $user = User::factory()->create([
             'tenant_id' => $workflow->tenant_id,
             'is_active' => true,
         ]);
@@ -1293,11 +1296,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'human-task',
-                    'config'         => ['assignee' => $user->id],
+                    'id' => 'n1',
+                    'type' => 'human-task',
+                    'config' => ['assignee' => $user->id],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1312,25 +1315,25 @@ class WorkflowVerificationTest extends TestCase
     public function test_context_user_with_inactive_team_membership_produces_assignee_not_team_member_error(): void
     {
         $workflow = Workflow::factory()->create();
-        $user     = User::factory()->create([
+        $user = User::factory()->create([
             'tenant_id' => $workflow->tenant_id,
             'is_active' => true,
         ]);
         TeamMembership::factory()->create([
             'tenant_id' => $workflow->tenant_id,
-            'team_id'   => $workflow->team_id,
-            'user_id'   => $user->id,
-            'status'    => 'inactive', // not active
+            'team_id' => $workflow->team_id,
+            'user_id' => $user->id,
+            'status' => 'inactive', // not active
         ]);
 
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'human-task',
-                    'config'         => ['assignee' => $user->id],
+                    'id' => 'n1',
+                    'type' => 'human-task',
+                    'config' => ['assignee' => $user->id],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1345,25 +1348,25 @@ class WorkflowVerificationTest extends TestCase
     public function test_context_valid_active_team_member_assignee_passes(): void
     {
         $workflow = Workflow::factory()->create();
-        $user     = User::factory()->create([
+        $user = User::factory()->create([
             'tenant_id' => $workflow->tenant_id,
             'is_active' => true,
         ]);
         TeamMembership::factory()->create([
             'tenant_id' => $workflow->tenant_id,
-            'team_id'   => $workflow->team_id,
-            'user_id'   => $user->id,
-            'status'    => 'active',
+            'team_id' => $workflow->team_id,
+            'user_id' => $user->id,
+            'status' => 'active',
         ]);
 
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'human-task',
-                    'config'         => ['assignee' => $user->id],
+                    'id' => 'n1',
+                    'type' => 'human-task',
+                    'config' => ['assignee' => $user->id],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1384,11 +1387,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'ai-summarize',
-                    'config'         => ['kbDocs' => 'not-an-array'],
+                    'id' => 'n1',
+                    'type' => 'ai-summarize',
+                    'config' => ['kbDocs' => 'not-an-array'],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1407,11 +1410,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'ai-summarize',
-                    'config'         => ['kbDocs' => ['not-a-number']],
+                    'id' => 'n1',
+                    'type' => 'ai-summarize',
+                    'config' => ['kbDocs' => ['not-a-number']],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1430,11 +1433,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'ai-summarize',
-                    'config'         => ['kbDocs' => [99999]], // non-existent document
+                    'id' => 'n1',
+                    'type' => 'ai-summarize',
+                    'config' => ['kbDocs' => [99999]], // non-existent document
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1448,17 +1451,17 @@ class WorkflowVerificationTest extends TestCase
     /** @test */
     public function test_context_kb_doc_from_different_tenant_produces_kb_doc_unknown_error(): void
     {
-        $workflow    = Workflow::factory()->create(['tenant_id' => 1]);
-        $foreignDoc  = Document::factory()->create(['tenant_id' => 2]);
+        $workflow = Workflow::factory()->create(['tenant_id' => 1]);
+        $foreignDoc = Document::factory()->create(['tenant_id' => 2]);
 
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'ai-summarize',
-                    'config'         => ['kbDocs' => [$foreignDoc->id]],
+                    'id' => 'n1',
+                    'type' => 'ai-summarize',
+                    'config' => ['kbDocs' => [$foreignDoc->id]],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1473,17 +1476,17 @@ class WorkflowVerificationTest extends TestCase
     public function test_context_valid_kb_docs_from_same_tenant_pass(): void
     {
         $workflow = Workflow::factory()->create();
-        $doc1     = Document::factory()->create(['tenant_id' => $workflow->tenant_id]);
-        $doc2     = Document::factory()->create(['tenant_id' => $workflow->tenant_id]);
+        $doc1 = Document::factory()->create(['tenant_id' => $workflow->tenant_id]);
+        $doc2 = Document::factory()->create(['tenant_id' => $workflow->tenant_id]);
 
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'ai-summarize',
-                    'config'         => ['kbDocs' => [$doc1->id, $doc2->id]],
+                    'id' => 'n1',
+                    'type' => 'ai-summarize',
+                    'config' => ['kbDocs' => [$doc1->id, $doc2->id]],
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1503,11 +1506,11 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'ai-summarize',
-                    'config'         => [], // no kbDocs key at all
+                    'id' => 'n1',
+                    'type' => 'ai-summarize',
+                    'config' => [], // no kbDocs key at all
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
@@ -1526,18 +1529,18 @@ class WorkflowVerificationTest extends TestCase
         $definition = $this->validDefinition([
             'nodes' => [
                 [
-                    'id'             => 'n1',
-                    'type'           => 'ai-summarize',
-                    'config'         => ['kbDocs' => [$validDoc->id, 88888, 99999]], // two unknown
+                    'id' => 'n1',
+                    'type' => 'ai-summarize',
+                    'config' => ['kbDocs' => [$validDoc->id, 88888, 99999]], // two unknown
                     'is_entry_point' => true,
-                    'is_terminal'    => true,
+                    'is_terminal' => true,
                 ],
             ],
         ]);
 
         $result = $this->validate($definition, $workflow);
 
-        $unknownErrors = array_filter($result['issues'], fn($i) => $i['code'] === 'context.kb_doc_unknown');
+        $unknownErrors = array_filter($result['issues'], fn ($i) => $i['code'] === 'context.kb_doc_unknown');
         $this->assertCount(2, array_values($unknownErrors));
     }
 
@@ -1552,7 +1555,7 @@ class WorkflowVerificationTest extends TestCase
         // disconnected node. Syntax should dominate.
         $definition = [
             'trigger' => ['type' => '', 'config' => []],
-            'nodes'   => [
+            'nodes' => [
                 ['id' => 'n1', 'type' => 'send-email', 'config' => [], 'is_entry_point' => true, 'is_terminal' => true],
                 ['id' => 'n2', 'type' => 'send-email', 'config' => [], 'is_terminal' => true], // orphan
             ],
@@ -1601,15 +1604,15 @@ class WorkflowVerificationTest extends TestCase
             'edges' => [
                 ['source' => 'n1', 'target' => 'n2'],
                 [
-                    'source'               => 'n2',
-                    'target'               => 'n3',
-                    'branch_type'          => 'conditional',
+                    'source' => 'n2',
+                    'target' => 'n3',
+                    'branch_type' => 'conditional',
                     'condition_expression' => 'approved == true',
                 ],
                 [
-                    'source'               => 'n2',
-                    'target'               => 'n4',
-                    'branch_type'          => 'conditional',
+                    'source' => 'n2',
+                    'target' => 'n4',
+                    'branch_type' => 'conditional',
                     'condition_expression' => 'approved == false',
                 ],
             ],
@@ -1626,12 +1629,12 @@ class WorkflowVerificationTest extends TestCase
         $result = $this->validate($this->validDefinition());
 
         $this->assertArrayHasKey('is_publishable', $result);
-        $this->assertArrayHasKey('summary',        $result);
-        $this->assertArrayHasKey('errors',         $result['summary']);
-        $this->assertArrayHasKey('warnings',       $result['summary']);
-        $this->assertArrayHasKey('issues',         $result);
-        $this->assertArrayHasKey('errors',         $result);
-        $this->assertArrayHasKey('warnings',       $result);
+        $this->assertArrayHasKey('summary', $result);
+        $this->assertArrayHasKey('errors', $result['summary']);
+        $this->assertArrayHasKey('warnings', $result['summary']);
+        $this->assertArrayHasKey('issues', $result);
+        $this->assertArrayHasKey('errors', $result);
+        $this->assertArrayHasKey('warnings', $result);
     }
 
     /** @test */
@@ -1644,11 +1647,11 @@ class WorkflowVerificationTest extends TestCase
 
         foreach ($result['issues'] as $issue) {
             $this->assertArrayHasKey('severity', $issue);
-            $this->assertArrayHasKey('code',     $issue);
-            $this->assertArrayHasKey('message',  $issue);
-            $this->assertArrayHasKey('path',     $issue);
-            $this->assertArrayHasKey('node_id',  $issue);
-            $this->assertArrayHasKey('edge_id',  $issue);
+            $this->assertArrayHasKey('code', $issue);
+            $this->assertArrayHasKey('message', $issue);
+            $this->assertArrayHasKey('path', $issue);
+            $this->assertArrayHasKey('node_id', $issue);
+            $this->assertArrayHasKey('edge_id', $issue);
         }
     }
 

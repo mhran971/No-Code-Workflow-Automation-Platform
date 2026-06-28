@@ -64,6 +64,32 @@ class ForkNodeTypeRule implements NodeTypeRule
                     $nodeId,
                 );
             }
+
+            foreach ($graph->outgoing($nodeId) as $edge) {
+                $joinKey = $edge['join_node_key'] ?? null;
+
+                if (! is_string($joinKey) || trim($joinKey) === '') {
+                    $result->addError(
+                        'fork.join_node_key_missing',
+                        'Every outgoing edge of a fork node must specify join_node_key pointing to its parallel merge.',
+                        null,
+                        $nodeId,
+                        $edge['id'] ?? null,
+                    );
+
+                    continue;
+                }
+
+                if ($graph->hasNode($joinKey) && $graph->nodeType($joinKey) !== 'merge') {
+                    $result->addError(
+                        'fork.join_node_key_invalid',
+                        "join_node_key '{$joinKey}' must reference a merge node.",
+                        null,
+                        $nodeId,
+                        $edge['id'] ?? null,
+                    );
+                }
+            }
         }
     }
 }

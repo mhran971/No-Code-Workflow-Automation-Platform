@@ -3,10 +3,8 @@
 namespace Modules\Workflows\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Workflows\Enums\EdgeBranchType;
-use Modules\Workflows\Enums\ParallelStrategy;
 
 // use Modules\Workflows\Database\Factories\WorkflowEdgeFactory;
 
@@ -23,7 +21,6 @@ class WorkflowEdge extends Model
         'condition_expression',
         'is_default_branch',
         'parallel_group_key',
-        'parallel_strategy',
         'join_node_key',
         'sort_order',
     ];
@@ -31,10 +28,9 @@ class WorkflowEdge extends Model
     protected function casts(): array
     {
         return [
-            'branch_type'       => EdgeBranchType::class,
-            'parallel_strategy' => ParallelStrategy::class,
+            'branch_type' => EdgeBranchType::class,
             'is_default_branch' => 'boolean',
-            'sort_order'        => 'integer',
+            'sort_order' => 'integer',
         ];
     }
 
@@ -60,7 +56,6 @@ class WorkflowEdge extends Model
 
     public function isForkJoin(): bool
     {
-        return $this->isParallel()
-            && $this->parallel_strategy === ParallelStrategy::ForkJoin;
+        return $this->isParallel();
     }
 }

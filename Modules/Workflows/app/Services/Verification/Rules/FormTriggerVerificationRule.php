@@ -48,6 +48,7 @@ class FormTriggerVerificationRule implements VerificationRule
         foreach ($formFields as $fieldIdx => $field) {
             if (! is_array($field)) {
                 $result->addError('form_trigger.form_field_invalid', 'Form field #'.($fieldIdx + 1).' is not a valid object.', "{$fieldsPath}[{$fieldIdx}]");
+
                 continue;
             }
 

@@ -3,7 +3,6 @@
 namespace Modules\Workflows\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -25,7 +24,7 @@ class WorkflowNode extends Model
     protected function casts(): array
     {
         return [
-            'config'     => 'array',
+            'config' => 'array',
             'position_x' => 'float',
             'position_y' => 'float',
         ];
@@ -49,13 +48,13 @@ class WorkflowNode extends Model
     public function outgoingEdges(): HasMany
     {
         return $this->hasMany(WorkflowEdge::class, 'source_node_key', 'key')
-                    ->where('workflow_id', $this->workflow_id);
+            ->where('workflow_id', $this->workflow_id);
     }
 
     public function incomingEdges(): HasMany
     {
         return $this->hasMany(WorkflowEdge::class, 'target_node_key', 'key')
-                    ->where('workflow_id', $this->workflow_id);
+            ->where('workflow_id', $this->workflow_id);
     }
 
     /**

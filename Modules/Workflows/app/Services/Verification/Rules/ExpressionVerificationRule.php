@@ -38,6 +38,7 @@ class ExpressionVerificationRule implements VerificationRule
 
             if ($expression === '') {
                 $result->addError('expression.condition_missing', 'Conditional edge must declare condition_expression.', $path, null, $edgeId);
+
                 continue;
             }
 

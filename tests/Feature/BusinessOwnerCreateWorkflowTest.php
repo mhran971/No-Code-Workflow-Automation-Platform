@@ -25,7 +25,7 @@ class BusinessOwnerCreateWorkflowTest extends TestCase
             'trial_ends_at' => now()->addDays(14),
             'database_connection' => 'sqlite',
         ]);
-        
+
         $owner = User::query()->create([
             'tenant_id' => $tenant->id,
             'first_name' => 'Owner',
@@ -63,7 +63,7 @@ class BusinessOwnerCreateWorkflowTest extends TestCase
 
         $response->assertStatus(201);
         $response->assertJsonPath('workflow.name', 'Owner Created Workflow');
-        
+
         $this->assertDatabaseHas('workflows', [
             'tenant_id' => $tenant->id,
             'name' => 'Owner Created Workflow',

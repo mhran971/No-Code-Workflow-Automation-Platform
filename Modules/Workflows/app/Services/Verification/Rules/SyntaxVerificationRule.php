@@ -128,6 +128,7 @@ class SyntaxVerificationRule implements VerificationRule
 
             if ($type === '') {
                 $result->addError('node.type_missing', 'Workflow node type is required.', "{$path}.type", $nodeId !== '' ? $nodeId : null);
+
                 continue;
             }
 
@@ -135,11 +136,13 @@ class SyntaxVerificationRule implements VerificationRule
 
             if ($nodeDefinition === null) {
                 $result->addError('node.type_unknown', "Workflow node type '{$type}' is not active or does not exist.", "{$path}.type", $nodeId !== '' ? $nodeId : null);
+
                 continue;
             }
 
             if (! is_array($node['_raw']['config'] ?? [])) {
                 $result->addError('node.config_invalid', 'Workflow node config must be an object.', "{$path}.config", $nodeId !== '' ? $nodeId : null);
+
                 continue;
             }
 

@@ -5,7 +5,7 @@ namespace Modules\Workflows\Services\Verification;
 class ExpressionValidationResult
 {
     /**
-     * @param list<string> $variables
+     * @param  list<string>  $variables
      */
     public function __construct(
         public readonly bool $valid,
