@@ -172,15 +172,11 @@ class WorkflowManagementApiTest extends TestCase
             ->assertJsonPath('saved', true)
             ->assertJsonPath('validation.is_publishable', true);
 
-        $publishResponse = $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish", [
-            'expected_draft_revision' => 2,
-            'version_label' => 'v2.1.0',
-            'release_note' => 'Initial published workflow',
-        ]);
+        $publishResponse = $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish");
 
         $publishResponse->assertCreated()
             ->assertJsonPath('published_version.version_number', 1)
-            ->assertJsonPath('published_version.version_label', 'v2.1.0')
+            ->assertJsonPath('published_version.version_label', 'v1.0.0')
             ->assertJsonPath('workflow_status', WorkflowStatus::Disabled->value);
 
         $this->actingAs($manager, 'api')
@@ -198,9 +194,71 @@ class WorkflowManagementApiTest extends TestCase
 
         $workflow->refresh();
 
-        $this->assertSame('v2.1.0', $workflow->current_version_label);
+        $this->assertSame('v1.0.0', $workflow->current_version_label);
         $this->assertSame(1, (int) $workflow->total_runs);
         $this->assertSame(1, (int) $workflow->active_instances);
+    }
+
+    public function test_publish_version_labels_bump_for_structural_and_config_changes(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-versioning');
+        $team = $this->createTeam($tenant, $manager, 'Operations');
+        $this->assignToTeam($tenant, $manager, $team);
+        $workflow = $this->createWorkflow($tenant, $team, $manager);
+
+        $draft = $this->validDefinition();
+
+        $this->actingAs($manager, 'api')->patchJson("/api/v1/workflows/{$workflow->id}/draft", [
+            'definition' => $draft,
+            'expected_draft_revision' => 1,
+        ])->assertOk();
+
+        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish")
+            ->assertCreated()
+            ->assertJsonPath('published_version.version_label', 'v1.0.0');
+
+        $structuralDraft = $draft;
+        $structuralDraft['nodes'][] = [
+            'id' => 'send-reminder-email',
+            'type' => 'send-email',
+            'label' => 'Reminder Email',
+            'is_entry_point' => false,
+            'is_terminal' => true,
+            'config' => [
+                'from' => 'hr@example.test',
+                'to' => 'employee@example.test',
+                'subject' => 'Reminder',
+                'body' => 'Reminder email body',
+            ],
+        ];
+        $structuralDraft['edges'][] = [
+            'id' => 'edge-reminder',
+            'source_node_key' => 'send-welcome-email',
+            'target_node_key' => 'send-reminder-email',
+            'branch_type' => 'default',
+        ];
+
+        $this->actingAs($manager, 'api')->patchJson("/api/v1/workflows/{$workflow->id}/draft", [
+            'definition' => $structuralDraft,
+            'expected_draft_revision' => 2,
+        ])->assertOk();
+
+        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish")
+            ->assertCreated()
+            ->assertJsonPath('published_version.version_label', 'v2.1.0');
+
+        $configDraft = $structuralDraft;
+        $configDraft['nodes'][0]['config']['subject'] = 'Welcome aboard';
+
+        $this->actingAs($manager, 'api')->patchJson("/api/v1/workflows/{$workflow->id}/draft", [
+            'definition' => $configDraft,
+            'expected_draft_revision' => 3,
+        ])->assertOk();
+
+        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish")
+            ->assertCreated()
+            ->assertJsonPath('published_version.version_label', 'v3.1.1');
     }
 
     public function test_validate_only_verifies_without_saving_draft(): void
@@ -246,13 +304,26 @@ class WorkflowManagementApiTest extends TestCase
             ->assertJsonPath('saved', true)
             ->assertJsonPath('validation.is_publishable', false);
 
-        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish", [
-            'expected_draft_revision' => 2,
-            'version_label' => 'v1.0.0',
-        ])->assertUnprocessable()
+        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish")->assertUnprocessable()
             ->assertJsonPath('errors.definition.0', "Workflow node type 'missing-node-type' is not active or does not exist.");
 
         $this->assertDatabaseCount('workflow_versions', 0);
+    }
+
+    public function test_publish_rejects_when_draft_has_no_changes(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-noop-publish');
+        $team = $this->createTeam($tenant, $manager, 'Support');
+        $this->assignToTeam($tenant, $manager, $team);
+        $workflow = $this->createPublishedWorkflow($tenant, $team, $manager);
+
+        $this->actingAs($manager, 'api')
+            ->postJson("/api/v1/workflows/{$workflow->id}/publish")
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.definition.0', 'No changes detected since the current published version. Update the draft before publishing.');
+
+        $this->assertDatabaseCount('workflow_versions', 1);
     }
 
     public function test_disabled_workflow_returns_gone_without_stopping_active_instances(): void
@@ -378,10 +449,7 @@ class WorkflowManagementApiTest extends TestCase
             'expected_draft_revision' => 1,
         ])->assertOk();
 
-        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish", [
-            'expected_draft_revision' => 2,
-            'version_label' => 'v1.0.0',
-        ])->assertCreated();
+        $this->actingAs($manager, 'api')->postJson("/api/v1/workflows/{$workflow->id}/publish")->assertCreated();
 
         return $workflow->refresh();
     }
@@ -390,25 +458,40 @@ class WorkflowManagementApiTest extends TestCase
     {
         return [
             'trigger' => [
-                'type' => 'webhook-trigger',
+                'type' => 'manual-trigger',
                 'config' => [
-                    'webhookUrl' => 'employee-onboarding',
+                    'variables' => [],
                 ],
             ],
             'nodes' => [
                 [
+                    'id' => 'start',
+                    'type' => 'manual-trigger',
+                    'is_entry_point' => true,
+                    'config' => [
+                        'variables' => [],
+                    ],
+                ],
+                [
                     'id' => 'send-welcome-email',
                     'type' => 'send-email',
-                    'is_entry_point' => true,
                     'is_terminal' => true,
                     'config' => [
                         'from' => 'hr@example.test',
                         'to' => 'employee@example.test',
                         'subject' => 'Welcome',
+                        'body' => 'Hello and welcome',
                     ],
                 ],
             ],
-            'edges' => [],
+            'edges' => [
+                [
+                    'id' => 'edge-start-email',
+                    'source_node_key' => 'start',
+                    'target_node_key' => 'send-welcome-email',
+                    'branch_type' => 'default',
+                ],
+            ],
             'settings' => [],
         ];
     }
