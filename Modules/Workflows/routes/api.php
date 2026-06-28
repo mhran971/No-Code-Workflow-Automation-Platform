@@ -28,6 +28,7 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     // Instance management (list, show, cancel, retry-from-node).
     Route::get('/{workflow}/instances', [WorkflowInstanceController::class, 'index'])->name('workflows.instances.index');
     Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
+    Route::get('/instances/{instance}/stream', [WorkflowInstanceController::class, 'stream'])->name('workflows.instances.stream');
     Route::post('/instances/{instance}/cancel', [WorkflowInstanceController::class, 'cancel'])->name('workflows.instances.cancel');
     Route::post('/instances/{instance}/retry-from-node', [WorkflowInstanceController::class, 'retryFromNode'])->name('workflows.instances.retry');
 
