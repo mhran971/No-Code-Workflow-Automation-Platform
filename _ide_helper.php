@@ -23707,7 +23707,7 @@ namespace Nwidart\Modules\Facades {
         /**
          * Get module used for cli session.
          *
-         * @throws \Nwidart\Modules\Exceptions\ModuleNotFoundException
+         * @throws ModuleNotFoundException
          * @static
          */
         public static function getUsedNow()
@@ -23781,7 +23781,7 @@ namespace Nwidart\Modules\Facades {
         /**
          * Enabling a specific module.
          *
-         * @throws \Nwidart\Modules\Exceptions\ModuleNotFoundException
+         * @throws ModuleNotFoundException
          * @static
          */
         public static function enable($name)
@@ -23794,7 +23794,7 @@ namespace Nwidart\Modules\Facades {
         /**
          * Disabling a specific module.
          *
-         * @throws \Nwidart\Modules\Exceptions\ModuleNotFoundException
+         * @throws ModuleNotFoundException
          * @static
          */
         public static function disable($name)

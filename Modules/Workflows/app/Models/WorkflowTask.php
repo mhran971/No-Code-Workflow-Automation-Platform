@@ -25,6 +25,7 @@ class WorkflowTask extends Model
         'status',
         'due_at',
         'response',
+        'draft_response',
         'completed_by_id',
         'completed_at',
     ];
@@ -34,6 +35,7 @@ class WorkflowTask extends Model
         return [
             'input_schema' => 'array',
             'response' => 'array',
+            'draft_response' => 'array',
             'due_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

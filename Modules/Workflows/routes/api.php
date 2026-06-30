@@ -19,12 +19,30 @@ Route::middleware(['auth:api', 'active.user'])
     })->name('broadcasting.auth');
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
+    // Static routes must be declared before /{workflow} to avoid the wildcard swallowing them.
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
     Route::post('/validate', [WorkflowController::class, 'validateDefinition'])->name('workflows.definition.validate');
-    Route::get('/', [WorkflowController::class, 'index'])->name('workflows.index');
-    Route::post('/', [WorkflowController::class, 'store'])->name('workflows.store');
     Route::get('/templates', [WorkflowController::class, 'templates'])->name('workflows.templates.index');
     Route::post('/proposals/ai', [WorkflowController::class, 'proposal'])->name('workflows.proposals.ai');
+
+    // Instance routes with /instances prefix must come before /{workflow}.
+    Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
+    Route::get('/instances/{instance}/failures', [WorkflowInstanceController::class, 'failures'])->name('workflows.instances.failures');
+    Route::post('/instances/{instance}/cancel', [WorkflowInstanceController::class, 'cancel'])->name('workflows.instances.cancel');
+    Route::post('/instances/{instance}/retry-from-node', [WorkflowInstanceController::class, 'retryFromNode'])->name('workflows.instances.retry');
+
+    // Human-task inbox + submission.
+    Route::get('/tasks/summary', [WorkflowTaskController::class, 'summary'])->name('workflows.tasks.summary');
+    Route::get('/tasks', [WorkflowTaskController::class, 'index'])->name('workflows.tasks.index');
+    Route::get('/tasks/{task}', [WorkflowTaskController::class, 'show'])->name('workflows.tasks.show');
+    Route::patch('/tasks/{task}/draft', [WorkflowTaskController::class, 'saveDraft'])->name('workflows.tasks.draft');
+    Route::post('/tasks/{task}/submit', [WorkflowTaskController::class, 'submit'])->name('workflows.tasks.submit');
+
+    // Collection routes.
+    Route::get('/', [WorkflowController::class, 'index'])->name('workflows.index');
+    Route::post('/', [WorkflowController::class, 'store'])->name('workflows.store');
+
+    // Parameterised routes — /{workflow} wildcard last.
     Route::get('/{workflow}', [WorkflowController::class, 'show'])->name('workflows.show');
     Route::patch('/{workflow}/draft', [WorkflowController::class, 'updateDraft'])->name('workflows.draft.update');
     Route::post('/{workflow}/publish', [WorkflowController::class, 'publish'])->name('workflows.publish');
@@ -35,15 +53,5 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::post('/{workflow}/trigger/webhook', [WorkflowController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
     Route::post('/{workflow}/trigger/manual', [WorkflowTriggerController::class, 'manual'])->name('workflows.trigger.manual');
     Route::post('/{workflow}/trigger/form', [WorkflowTriggerController::class, 'form'])->name('workflows.trigger.form');
-
-    // Instance management (list, show, cancel, retry-from-node).
     Route::get('/{workflow}/instances', [WorkflowInstanceController::class, 'index'])->name('workflows.instances.index');
-    Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
-    Route::get('/instances/{instance}/failures', [WorkflowInstanceController::class, 'failures'])->name('workflows.instances.failures');
-    Route::post('/instances/{instance}/cancel', [WorkflowInstanceController::class, 'cancel'])->name('workflows.instances.cancel');
-    Route::post('/instances/{instance}/retry-from-node', [WorkflowInstanceController::class, 'retryFromNode'])->name('workflows.instances.retry');
-
-    // Human-task inbox + submission.
-    Route::get('/tasks', [WorkflowTaskController::class, 'index'])->name('workflows.tasks.index');
-    Route::post('/tasks/{task}/submit', [WorkflowTaskController::class, 'submit'])->name('workflows.tasks.submit');
 });

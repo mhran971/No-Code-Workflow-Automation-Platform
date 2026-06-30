@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Modules\Auth\Http\Requests\LoginRequest;
 use Modules\Auth\Http\Resources\LoginSuccessResource;
 use Modules\Auth\Models\User;
+use Modules\Team\Models\TeamMembership;
 use Tymon\JWTAuth\JWTGuard;
 
 class SessionController extends Controller
@@ -50,6 +51,37 @@ class SessionController extends Controller
             ->additional(['token' => $token])
             ->response()
             ->setStatusCode(200);
+    }
+
+    /**
+     * Return the authenticated user's profile, role, tenant, and team.
+     */
+    public function me(): JsonResponse
+    {
+        /** @var User $user */
+        $user = auth('api')->user();
+        $user->load('tenant');
+
+        $membership = TeamMembership::with('team')
+            ->where('user_id', $user->id)
+            ->first();
+
+        return response()->json([
+            'id' => $user->id,
+            'email' => $user->email,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'position' => $user->position,
+            'role' => $user->role,
+            'tenant' => $user->tenant ? [
+                'id' => $user->tenant->id,
+                'business_name' => $user->tenant->business_name,
+            ] : null,
+            'team' => $membership?->team ? [
+                'id' => $membership->team->id,
+                'name' => $membership->team->name,
+            ] : null,
+        ]);
     }
 
     /**
