@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Workflow Manager — Mobile Prototype</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --blue:       #3B82F6;
+      --blue-dark:  #2563EB;
+      --blue-bg:    #EFF6FF;
+      --red:        #EF4444;
+      --red-bg:     #FEF2F2;
+      --amber:      #F59E0B;
+      --amber-bg:   #FFFBEB;
+      --green:      #22C55E;
+      --green-bg:   #F0FDF4;
+      --surface:    #FFFFFF;
+      --bg:         #F1F5F9;
+      --text:       #1E293B;
+      --text-2:     #64748B;
+      --text-3:     #94A3B8;
+      --border:     #E2E8F0;
+      --shadow-sm:  0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
+      --shadow:     0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -1px rgba(0,0,0,.05);
+      --r:          14px;
+      --r-sm:       10px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d1b69 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* ── DEVICE FRAME ── */
+    .device {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 50px;
+      overflow: hidden;
+      position: relative;
+      box-shadow:
+        0 0 0 2px #111,
+        0 0 0 6px #222,
+        0 40px 80px rgba(0,0,0,.6);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .notch {
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 126px; height: 30px;
+      background: #111;
+      border-radius: 0 0 20px 20px;
+      z-index: 200;
+    }
+
+    .status-bar {
+      height: 44px;
+      background: transparent;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 22px 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+    .status-bar.light { color: white; }
+    .status-icons { display: flex; gap: 5px; align-items: center; }
+
+    /* ── SCREENS ── */
+    .screens { flex: 1; overflow: hidden; position: relative; }
+
+    .screen {
+      position: absolute; inset: 0;
+      overflow-y: auto; overflow-x: hidden;
+      background: var(--bg);
+      display: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .screen.active { display: block; }
+    #screen-login.active { display: flex; }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 4px 18px;
+      display: flex;
+      justify-content: space-around;
+      flex-shrink: 0;
+    }
+    .bottom-nav.hidden { display: none; }
+
+    .nav-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      cursor: pointer; padding: 6px 10px; border-radius: 12px;
+      border: none; background: none; transition: background .15s;
+      position: relative; min-width: 56px;
+    }
+    .nav-btn:active { background: var(--bg); }
+    .nav-btn .n-icon { font-size: 22px; line-height: 1; }
+    .nav-btn .n-label { font-size: 9px; font-weight: 600; color: var(--text-3); font-family: 'Inter', sans-serif; letter-spacing: .01em; }
+    .nav-btn.active .n-label { color: var(--blue); }
+
+    .notif-badge {
+      position: absolute; top: 3px; right: 7px;
+      background: var(--red); color: #fff;
+      font-size: 9px; font-weight: 800;
+      min-width: 16px; height: 16px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      padding: 0 4px; font-family: 'Inter', sans-serif;
+      border: 2px solid var(--surface);
+    }
+
+    /* ── SHARED COMPONENTS ── */
+    .page-header {
+      background: var(--surface);
+      padding: 14px 18px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .page-header h2 { font-size: 18px; font-weight: 800; color: var(--text); }
+
+    .back-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: none; border: none; font-size: 14px; font-weight: 600;
+      color: var(--blue); cursor: pointer; font-family: 'Inter', sans-serif;
+      padding: 4px 0; white-space: nowrap;
+    }
+
+    /* Chips */
+    .chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 3px 9px; border-radius: 100px;
+      font-size: 11px; font-weight: 700; letter-spacing: .01em;
+    }
+    .chip-red    { background: var(--red-bg);   color: var(--red);   }
+    .chip-amber  { background: var(--amber-bg); color: var(--amber); }
+    .chip-green  { background: var(--green-bg); color: var(--green); }
+    .chip-blue   { background: var(--blue-bg);  color: var(--blue-dark); }
+    .chip-gray   { background: var(--border);   color: var(--text-2); }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 18px; border-radius: var(--r-sm);
+      font-size: 14px; font-weight: 700; cursor: pointer; border: none;
+      font-family: 'Inter', sans-serif; transition: opacity .15s; text-align: center;
+    }
+    .btn:active { opacity: .8; }
+    .btn-primary  { background: var(--blue);    color: #fff; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-outline  { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+
+    /* Inputs */
+    .input-field {
+      width: 100%;
+      border: 1.5px solid var(--border); border-radius: var(--r-sm);
+      padding: 11px 14px; font-size: 14px;
+      font-family: 'Inter', sans-serif; color: var(--text);
+      background: var(--surface); outline: none; transition: border-color .2s;
+    }
+    .input-field:focus { border-color: var(--blue); }
+    textarea.input-field { resize: none; min-height: 80px; line-height: 1.6; }
+    select.input-field   { appearance: none; -webkit-appearance: none; cursor: pointer; }
+
+    /* Section header */
+    .sec-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 18px 10px;
+    }
+    .sec-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .sec-link  { font-size: 12px; color: var(--blue); font-weight: 600; cursor: pointer; }
+
+    /* Divider label */
+    .divider-label {
+      font-size: 10px; font-weight: 800; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: .08em;
+      display: flex; align-items: center; gap: 8px; padding: 14px 0 8px;
+    }
+    .divider-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+
+    /* ══════════════════════════════════
+       LOGIN SCREEN
+    ══════════════════════════════════ */
+    #screen-login {
+      background: #fff; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 52px 28px 40px; gap: 28px;
+    }
+
+    .login-logo {
+      width: 76px; height: 76px; background: var(--blue-bg);
+      border-radius: 22px; display: flex; align-items: center;
+      justify-content: center; font-size: 36px;
+    }
+
+    .login-heading { text-align: center; }
+    .login-heading h1 { font-size: 22px; font-weight: 800; color: var(--text); }
+    .login-heading p  { font-size: 13px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
+
+    .login-form { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+    .field-label { font-size: 12px; font-weight: 700; color: var(--text); display: block; margin-bottom: 5px; }
+
+    .pw-wrap { position: relative; }
+    .pw-wrap .input-field { padding-right: 40px; }
+    .eye-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-3);
+    }
+
+    .forgot-link { text-align: center; font-size: 13px; color: var(--blue); font-weight: 500; cursor: pointer; }
+
+
+    /* ══════════════════════════════════
+       HOME SCREEN
+    ══════════════════════════════════ */
+    .home-hero {
+      background: linear-gradient(135deg, #3B82F6, #2563EB);
+      padding: 18px 18px 34px;
+    }
+    .home-hero-top {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .home-greeting small { font-size: 12px; color: rgba(255,255,255,.75); display: block; }
+    .home-greeting h2 { font-size: 20px; font-weight: 800; color: #fff; margin-top: 2px; }
+
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,.22);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; color: #fff; cursor: pointer;
+      border: 2px solid rgba(255,255,255,.3);
+    }
+
+    .stats-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin: -22px 16px 0; position: relative; z-index: 5;
+    }
+
+    .stat-card {
+      background: #fff; border-radius: var(--r);
+      padding: 16px; box-shadow: var(--shadow);
+    }
+    .stat-card .s-label { font-size: 10px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; }
+    .stat-card .s-num   { font-size: 34px; font-weight: 800; line-height: 1.1; margin: 6px 0 3px; }
+    .stat-card .s-sub   { font-size: 11px; color: var(--text-3); }
+    .stat-card.s-blue .s-num { color: var(--blue); }
+    .stat-card.s-red  .s-num { color: var(--red);  }
+
+
+    /* ══════════════════════════════════
+       TASK CARD
+    ══════════════════════════════════ */
+    .task-card {
+      background: var(--surface); border-radius: var(--r);
+      padding: 14px 16px; margin: 0 16px 10px;
+      box-shadow: var(--shadow-sm); cursor: pointer;
+      border-left: 4px solid transparent;
+      transition: box-shadow .15s, transform .1s;
+    }
+    .task-card:active { box-shadow: var(--shadow); transform: scale(.99); }
+    .task-card.tc-red    { border-left-color: var(--red);   }
+    .task-card.tc-amber  { border-left-color: var(--amber); }
+    .task-card.tc-green  { border-left-color: var(--green); }
+    .task-card.tc-gray   { border-left-color: var(--text-3); }
+
+    .tc-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .tc-wf    { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+    .tc-footer{ display: flex; align-items: center; justify-content: space-between; }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600; color: var(--text-2);
+    }
+    .s-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .s-dot.open      { background: var(--blue);  }
+    .s-dot.completed { background: var(--green); }
+    .s-dot.expired   { background: var(--red);   }
+    .s-dot.cancelled { background: var(--text-3);}
+
+    .due-label { font-size: 11px; font-weight: 700; }
+    .due-red   { color: var(--red);   }
+    .due-amber { color: var(--amber); }
+    .due-green { color: var(--green); }
+    .due-gray  { color: var(--text-3);}
+
+
+    /* ══════════════════════════════════
+       SEARCH & FILTERS
+    ══════════════════════════════════ */
+    .search-wrap { padding: 12px 16px 0; }
+    .search-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 10px 14px;
+    }
+    .search-bar input {
+      flex: 1; border: none; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 14px; color: var(--text);
+      background: transparent;
+    }
+    .search-bar input::placeholder { color: var(--text-3); }
+    .search-ico { color: var(--text-3); font-size: 15px; }
+
+    .chips-scroll {
+      display: flex; gap: 7px; padding: 10px 16px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .chips-scroll::-webkit-scrollbar { display: none; }
+
+    .fchip {
+      display: inline-flex; align-items: center; padding: 6px 14px;
+      border-radius: 100px; font-size: 12px; font-weight: 600;
+      border: 1.5px solid var(--border); background: var(--surface);
+      color: var(--text-2); white-space: nowrap; cursor: pointer;
+      font-family: 'Inter', sans-serif; transition: all .15s; flex-shrink: 0;
+    }
+    .fchip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+
+    /* ══════════════════════════════════
+       TASK DETAIL
+    ══════════════════════════════════ */
+    .detail-hdr {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 12px 16px 0; position: sticky; top: 0; z-index: 20;
+    }
+    .detail-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .detail-titles { flex: 1; }
+    .detail-title { font-size: 16px; font-weight: 800; color: var(--text); line-height: 1.3; }
+    .detail-wf    { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+    .detail-meta  { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
+
+    /* Tabs */
+    .tabs-bar {
+      display: flex; overflow-x: auto; border-top: 1px solid var(--border);
+    }
+    .tabs-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex-shrink: 0; padding: 10px 14px;
+      font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif;
+      color: var(--text-2); border: none; background: none; cursor: pointer;
+      border-bottom: 2.5px solid transparent; white-space: nowrap; transition: all .15s;
+    }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    .tab-pane { display: none; padding: 16px; }
+    .tab-pane.active { display: block; }
+
+    /* Form elements inside tab */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      font-size: 12px; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 4px; margin-bottom: 6px;
+    }
+    .req { color: var(--red); }
+
+    .toggle-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 14px; background: var(--surface);
+      border: 1.5px solid var(--border); border-radius: var(--r-sm);
+    }
+    .toggle-lbl { font-size: 13px; color: var(--text); }
+    .toggle {
+      width: 44px; height: 24px; background: var(--border);
+      border-radius: 12px; position: relative; cursor: pointer;
+      transition: background .2s; flex-shrink: 0;
+    }
+    .toggle.on { background: var(--blue); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; background: #fff; border-radius: 50%;
+      transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    .draft-banner {
+      background: var(--amber-bg); border: 1px solid #FDE68A;
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 12px; color: #92400E; font-weight: 500;
+      display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+    }
+
+    .actions-bar {
+      display: flex; gap: 10px; margin-top: 20px;
+      position: sticky; bottom: 0;
+      background: var(--bg); padding: 12px 0 4px;
+    }
+    .actions-bar .btn { flex: 1; }
+
+    /* Info table */
+    .info-card {
+      background: var(--surface); border-radius: var(--r);
+      overflow: hidden; box-shadow: var(--shadow-sm); margin-bottom: 14px;
+    }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 11px 16px; border-bottom: 1px solid var(--border);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-key { font-size: 12px; color: var(--text-2); font-weight: 500; flex-shrink: 0; }
+    .info-val { font-size: 13px; color: var(--text); font-weight: 600; text-align: right; }
+
+    /* Timeline */
+    .timeline { padding: 4px 0 8px; }
+    .tl-item {
+      display: flex; gap: 14px; padding-bottom: 22px; position: relative;
+    }
+    .tl-item:not(:last-child)::before {
+      content: ''; position: absolute;
+      left: 19px; top: 40px; bottom: 0;
+      width: 2px; background: var(--border);
+    }
+    .tl-dot {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 17px;
+      background: var(--bg); border: 2px solid var(--border);
+    }
+    .tl-dot.done    { background: var(--blue-bg); border-color: var(--blue); }
+    .tl-dot.current { background: var(--blue); border-color: var(--blue); animation: tl-pulse 2s infinite; }
+    .tl-dot.pending { background: var(--bg); border-color: var(--border); opacity: .6; }
+
+    @keyframes tl-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,.4); }
+      50%      { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+    }
+
+    .tl-body { flex: 1; padding-top: 9px; }
+    .tl-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .tl-title.muted { color: var(--text-3); }
+    .tl-time  { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+    /* Files & comments */
+    .file-item {
+      display: flex; gap: 12px; align-items: center;
+      padding: 12px; background: var(--surface);
+      border-radius: var(--r-sm); margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+    .file-ico {
+      width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .file-ico.pdf { background: #FEF2F2; }
+    .file-ico.img { background: #F0FDF4; }
+    .file-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .file-meta { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+    .file-view { font-size: 18px; cursor: pointer; color: var(--text-3); }
+
+    .upload-btn {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px; border-radius: var(--r-sm); border: 2px dashed var(--border);
+      background: transparent; font-size: 13px; font-weight: 600; color: var(--text-2);
+      cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 18px;
+      transition: border-color .15s, color .15s;
+    }
+    .upload-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    .comment-item { display: flex; gap: 10px; margin-bottom: 14px; }
+    .c-avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #fff;
+    }
+    .c-body { flex: 1; }
+    .c-meta { display: flex; gap: 7px; align-items: baseline; margin-bottom: 5px; }
+    .c-name { font-size: 12px; font-weight: 700; color: var(--text); }
+    .c-time { font-size: 11px; color: var(--text-3); }
+    .c-text {
+      font-size: 13px; color: var(--text); line-height: 1.6;
+      background: var(--bg); padding: 9px 12px;
+      border-radius: 3px 12px 12px 12px;
+    }
+
+    .comment-input-row {
+      display: flex; gap: 8px; align-items: flex-end;
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 8px 12px;
+      position: sticky; bottom: 16px; margin-top: 4px;
+    }
+    .comment-input {
+      flex: 1; border: none; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 14px;
+      color: var(--text); background: transparent; resize: none;
+    }
+    .send-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--blue); border: none; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; padding: 60px 32px; text-align: center;
+    }
+    .empty-ico   { font-size: 52px; }
+    .empty-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .empty-sub   { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+
+
+    /* ══════════════════════════════════
+       NOTIFICATIONS SCREEN
+    ══════════════════════════════════ */
+    .notif-item {
+      display: flex; gap: 12px; padding: 14px 16px;
+      border-bottom: 1px solid var(--border); cursor: pointer;
+      background: var(--surface); transition: background .15s;
+    }
+    .notif-item:active { background: var(--bg); }
+    .notif-item.unread { background: #F0F7FF; }
+
+    .notif-ico-wrap {
+      width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .notif-ico-wrap.n-assigned { background: #E0F2FE; }
+    .notif-ico-wrap.n-due      { background: var(--amber-bg); }
+    .notif-ico-wrap.n-overdue  { background: var(--red-bg); }
+
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
+    .notif-item.unread .notif-title { font-weight: 800; }
+    .notif-sub  { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+    .notif-time { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+    .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex-shrink: 0; margin-top: 18px; }
+
+
+    /* ══════════════════════════════════
+       DOCUMENTS SCREEN
+    ══════════════════════════════════ */
+    .docs-list {
+      background: var(--surface); border-radius: var(--r);
+      margin: 0 16px; overflow: hidden; box-shadow: var(--shadow-sm);
+    }
+
+    .doc-card {
+      display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+      border-bottom: 1px solid var(--border); cursor: pointer;
+      transition: background .15s;
+    }
+    .doc-card:last-child { border-bottom: none; }
+    .doc-card:active { background: var(--bg); }
+
+    .doc-ico {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--blue-bg); display: flex; align-items: center;
+      justify-content: center; font-size: 22px; flex-shrink: 0;
+    }
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .doc-type  { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+    .doc-tags  { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+    .doc-tag   { background: var(--bg); border-radius: 100px; padding: 2px 8px; font-size: 10px; color: var(--text-2); font-weight: 600; }
+    .doc-arrow { color: var(--text-3); font-size: 18px; }
+
+
+    /* ══════════════════════════════════
+       DOCUMENT VIEWER
+    ══════════════════════════════════ */
+    #screen-doc-viewer { background: #1a1a2e; }
+
+    .dv-header {
+      background: rgba(0,0,0,.7); padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);
+    }
+    .dv-title { flex: 1; font-size: 15px; font-weight: 700; color: #fff; }
+    .dv-share { color: #fff; font-size: 20px; cursor: pointer; }
+
+    .pdf-wrap {
+      margin: 16px; background: #fff; border-radius: 8px;
+      overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    }
+    .pdf-body { padding: 32px 26px; }
+    .pdf-body h3 {
+      font-size: 17px; font-weight: 800; color: var(--text);
+      text-align: center; margin-bottom: 14px;
+      padding-bottom: 14px; border-bottom: 2px solid var(--border);
+    }
+    .pdf-body p  { font-size: 13px; line-height: 1.8; color: #475569; margin-bottom: 10px; }
+    .pdf-body ul { padding-left: 18px; }
+    .pdf-body ul li { font-size: 13px; color: #475569; margin-bottom: 6px; line-height: 1.6; }
+    .pdf-body strong { color: var(--text); }
+
+    .pdf-nav {
+      background: rgba(0,0,0,.5); padding: 14px;
+      display: flex; align-items: center; justify-content: center; gap: 20px;
+    }
+    .pdf-nav-btn {
+      background: #fff; border: none; border-radius: 50%;
+      width: 36px; height: 36px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .pdf-page-lbl { color: #fff; font-size: 13px; font-weight: 600; }
+
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+      background: #1E293B; color: #fff; padding: 11px 20px; border-radius: 12px;
+      font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600;
+      opacity: 0; transition: opacity .3s; z-index: 9999;
+      white-space: nowrap; pointer-events: none;
+    }
+
+    /* ── SCROLLBAR HIDE ── */
+    .screen::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="device">
+  <div class="notch"></div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar" id="status-bar">
+    <span>9:41</span>
+    <div class="status-icons">
+      <span>▐▐▐</span>
+      <span>🔋</span>
+    </div>
+  </div>
+
+  <!-- SCREENS -->
+  <div class="screens">
+
+    <!-- ════════════════════════════════
+         LOGIN
+    ════════════════════════════════ -->
+    <div class="screen active" id="screen-login">
+      <div class="login-logo">⚙️</div>
+
+      <div class="login-heading">
+        <h1>Workflow Manager</h1>
+        <p>Sign in to access your tasks<br>and workflow assignments</p>
+      </div>
+
+      <div class="login-form">
+        <div>
+          <label class="field-label">Email address</label>
+          <input type="email" class="input-field" placeholder="sara@company.com" value="sara@company.com">
+        </div>
+        <div>
+          <label class="field-label">Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="pw-input" class="input-field" placeholder="••••••••" value="password">
+            <button class="eye-btn" onclick="document.getElementById('pw-input').type = document.getElementById('pw-input').type === 'password' ? 'text' : 'password'">👁</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="navigate('home')">Sign In</button>
+      </div>
+
+      <div class="forgot-link">Forgot password?</div>
+    </div>
+
+
+    <!-- ════════════════════════════════
+         HOME
+    ════════════════════════════════ -->
+    <div class="screen" id="screen-home">
+      <!-- Hero -->
+      <div class="home-hero">
+        <div class="home-hero-top">
+          <div class="home-greeting">
+            <small>Good morning,</small>
+            <h2>Sara Mohammed 👋</h2>
+          </div>
+          <div class="avatar">SM</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card s-blue">
+          <div class="s-label">Pending</div>
+          <div class="s-num">12</div>
+          <div class="s-sub">open tasks</div>
+        </div>
+        <div class="stat-card s-red">
+          <div class="s-label">Overdue</div>
+          <div class="s-num">3</div>
+          <div class="s-sub">past deadline</div>
+        </div>
+      </div>
+
+      <!-- Upcoming tasks -->
+      <div class="sec-header" style="margin-top:12px;">
+        <span class="sec-title">Upcoming Tasks</span>
+        <span class="sec-link" onclick="navigate('tasks')">View all →</span>
+      </div>
+
+      <div class="task-card tc-red" onclick="navigate('task-detail')">
+        <div class="tc-title">Review Sales Proposal</div>
+        <div class="tc-wf">📋 Sales Onboarding Workflow</div>
+        <div class="tc-footer">
+          <span class="status-pill"><span class="s-dot open"></span> Open</span>
+          <span class="due-label due-red">⚠ Overdue by 2 days</span>
+        </div>
+      </div>
+
+      <div class="task-card tc-amber" onclick="navigate('task-detail')">
+        <div class="tc-title">Approve Client Contract</div>
+        <div class="tc-wf">📋 Client Renewal Workflow</div>
+        <div class="tc-footer">
+          <span class="status-pill"><span class="s-dot open"></span> Open</span>
+          <span class="due-label due-amber">Due in 3 hours</span>
+        </div>
+      </div>
+
+      <div class="task-card tc-green" onclick="navigate('task-detail')">
+        <div class="tc-title">Fill Customer Intake Form</div>
+        <div class="tc-wf">📋 Onboarding Workflow</div>
+        <div class="tc-footer">
+          <span class="status-pill"><span class="s-dot open"></span> Open</span>
+          <span class="due-label due-green">Due in 3 days</span>
+        </div>
+      </div>
+
+      <div style="padding: 6px 16px 24px;">
+        <button class="btn btn-outline" style="width:100%;" onclick="navigate('tasks')">View All Tasks →</button>
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════
+         TASKS LIST
+    ════════════════════════════════ -->
+    <div class="screen" id="screen-tasks">
+      <div class="page-header">
+        <h2>My Tasks</h2>
+        <span style="font-size:12px;color:var(--text-2);font-weight:600;">15 tasks</span>
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-bar">
+          <span class="search-ico">🔍</span>
+          <input type="text" placeholder="Search tasks or workflows...">
+        </div>
+      </div>
+
+      <!-- Sort chips -->
+      <div class="chips-scroll" id="sort-chips">
+        <button class="fchip active" data-group="sort">Nearest due date</button>
+        <button class="fchip"        data-group="sort">Latest due date</button>
+        <button class="fchip"        data-group="sort">Oldest</button>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="chips-scroll" id="filter-chips" style="padding-top:0;">
+        <button class="fchip active" data-group="filter">All</button>
+        <button class="fchip"        data-group="filter">Open</button>
+        <button class="fchip"        data-group="filter">Completed</button>
+        <button class="fchip"        data-group="filter">Expired</button>
+        <button class="fchip"        data-group="filter">Cancelled</button>
+      </div>
+
+      <!-- Task cards -->
+      <div style="padding-bottom: 24px;">
+        <div class="task-card tc-red" onclick="navigate('task-detail')">
+          <div class="tc-title">Review Sales Proposal</div>
+          <div class="tc-wf">📋 Sales Onboarding Workflow</div>
+          <div class="tc-footer">
+            <span class="status-pill"><span class="s-dot open"></span> Open</span>
+            <span class="due-label due-red">⚠ Overdue 2d</span>
+          </div>
+        </div>
+
+        <div class="task-card tc-amber" onclick="navigate('task-detail')">
+          <div class="tc-title">Approve Client Contract</div>
+          <div class="tc-wf">📋 Client Renewal Workflow</div>
+          <div class="tc-footer">
+            <span class="status-pill"><span class="s-dot open"></span> Open</span>
+            <span class="due-label due-amber">Due in 3h</span>
+          </div>
+        </div>
+
+        <div class="task-card tc-green" onclick="navigate('task-detail')">
+          <div class="tc-title">Fill Customer Intake Form</div>
+          <div class="tc-wf">📋 Onboarding Workflow</div>
+          <div class="tc-footer">
+            <span class="status-pill"><span class="s-dot open"></span> Open</span>
+            <span class="due-label due-green">Jan 8, 2026</span>
+          </div>
+        </div>
+
+        <div class="task-card tc-green" onclick="navigate('task-detail')">
+          <div class="tc-title">Update CRM Data Fields</div>
+          <div class="tc-wf">📋 Sales Ops Workflow</div>
+          <div class="tc-footer">
+            <span class="status-pill"><span class="s-dot open"></span> Open</span>
+            <span class="due-label due-green">Jan 10, 2026</span>
+          </div>
+        </div>
+
+        <div class="task-card tc-gray" onclick="navigate('task-detail')">
+          <div class="tc-title">Customer Call Notes</div>
+          <div class="tc-wf">📋 Support Workflow</div>
+          <div class="tc-footer">
+            <span class="status-pill"><span class="s-dot completed"></span> Completed</span>
+            <span class="due-label due-gray">Jan 5, 2026</span>
+          </div>
+        </div>
+
+        <div class="task-card tc-gray" onclick="navigate('task-detail')">
+          <div class="tc-title">Fill Intake Registration Form</div>
+          <div class="tc-wf">📋 Onboarding Workflow</div>
+          <div class="tc-footer">
+            <span class="status-pill"><span class="s-dot expired"></span> Expired</span>
+            <span class="due-label due-gray">Dec 28, 2025</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════
+         TASK DETAIL
+    ════════════════════════════════ -->
+    <div class="screen" id="screen-task-detail">
+      <!-- Sticky header -->
+      <div class="detail-hdr">
+        <div class="detail-top">
+          <button class="back-btn" onclick="goBack()">← Back</button>
+          <div class="detail-titles">
+            <div class="detail-title">Review Sales Proposal</div>
+            <div class="detail-wf">📋 Sales Onboarding Workflow</div>
+          </div>
+        </div>
+        <div class="detail-meta">
+          <span class="chip chip-blue">● Open</span>
+          <span class="chip chip-red">⚠ Overdue 2 days</span>
+          <span style="font-size:11px;color:var(--text-2);align-self:center;">Assigned to: Sara M.</span>
+        </div>
+        <!-- Tabs -->
+        <div class="tabs-bar">
+          <button class="tab-btn active" onclick="switchTab(this,'tp-form')">Form</button>
+          <button class="tab-btn" onclick="switchTab(this,'tp-details')">Instance</button>
+          <button class="tab-btn" onclick="switchTab(this,'tp-timeline')">Timeline</button>
+          <button class="tab-btn" onclick="switchTab(this,'tp-files')">Files</button>
+          <button class="tab-btn" onclick="switchTab(this,'tp-comments')">Comments</button>
+          <button class="tab-btn" onclick="switchTab(this,'tp-customer')">Customer</button>
+        </div>
+      </div>
+
+      <!-- ─ TAB: Form ─ -->
+      <div class="tab-pane active" id="tp-form">
+        <div class="draft-banner">
+          ⚠️ Draft saved 2 minutes ago
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Customer Name <span class="req">*</span></label>
+          <input type="text" class="input-field" value="Acme Technology Co.">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Deal Value (SAR) <span class="req">*</span></label>
+          <input type="number" class="input-field" value="42500">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Product Category <span class="req">*</span></label>
+          <select class="input-field">
+            <option>Select category...</option>
+            <option selected>Enterprise Software</option>
+            <option>Cloud Services</option>
+            <option>Consulting</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Contract Type</label>
+          <select class="input-field">
+            <option selected>Annual</option>
+            <option>Monthly</option>
+            <option>One-time</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Send Follow-up Email</label>
+          <div class="toggle-row">
+            <span class="toggle-lbl">Email client after approval</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="input-field">Client interested in annual plan. Please review clause 5 before signing. Budget confirmed by their CFO.</textarea>
+        </div>
+
+        <div class="actions-bar">
+          <button class="btn btn-secondary">Save Draft</button>
+          <button class="btn btn-primary" onclick="showToast('Form submitted successfully ✅')">Submit</button>
+        </div>
+      </div>
+
+      <!-- ─ TAB: Instance Details ─ -->
+      <div class="tab-pane" id="tp-details">
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-key">Workflow</span>
+            <span class="info-val">Sales Onboarding Workflow</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Instance Status</span>
+            <span class="info-val"><span class="chip chip-blue">● Running</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Started</span>
+            <span class="info-val">Jan 6, 2026 · 9:00 AM</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Trigger</span>
+            <span class="info-val">Manual</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Version</span>
+            <span class="info-val">v2.1</span>
+          </div>
+        </div>
+
+        <div class="divider-label">Workflow Data</div>
+
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-key">Customer Name</span>
+            <span class="info-val">Acme Technology Co.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Deal Value</span>
+            <span class="info-val">42,500 SAR</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Contract Type</span>
+            <span class="info-val">Annual</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Region</span>
+            <span class="info-val">Eastern Province</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Sales Rep</span>
+            <span class="info-val">Ahmed Al-Ghamdi</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Priority</span>
+            <span class="info-val"><span class="chip chip-red">High</span></span>
+          </div>
+        </div>
+        <div style="height:24px;"></div>
+      </div>
+
+      <!-- ─ TAB: Timeline ─ -->
+      <div class="tab-pane" id="tp-timeline">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot done">🚀</div>
+            <div class="tl-body">
+              <div class="tl-title">Workflow started</div>
+              <div class="tl-time">Jan 6, 2026 · 9:00 AM</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot done">✉️</div>
+            <div class="tl-body">
+              <div class="tl-title">Email sent to client</div>
+              <div class="tl-time">Jan 6, 2026 · 9:02 AM</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot done">✨</div>
+            <div class="tl-body">
+              <div class="tl-title">AI proposal generated</div>
+              <div class="tl-time">Jan 6, 2026 · 9:03 AM</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot done">👤</div>
+            <div class="tl-body">
+              <div class="tl-title">Task assigned to Sara Mohammed</div>
+              <div class="tl-time">Jan 6, 2026 · 9:05 AM</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot current">⏳</div>
+            <div class="tl-body">
+              <div class="tl-title">Waiting for your response</div>
+              <div class="tl-time">Awaiting since Jan 6, 2026</div>
+              <div style="margin-top:6px;"><span class="chip chip-amber">Action required</span></div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot pending">✅</div>
+            <div class="tl-body">
+              <div class="tl-title muted">Manager approval</div>
+              <div class="tl-time">Not started yet</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot pending">🏁</div>
+            <div class="tl-body">
+              <div class="tl-title muted">Workflow completed</div>
+              <div class="tl-time">Pending</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ TAB: Files ─ -->
+      <div class="tab-pane" id="tp-files">
+        <div class="divider-label">Files (2)</div>
+
+        <div class="file-item">
+          <div class="file-ico pdf">📄</div>
+          <div style="flex:1;">
+            <div class="file-name">Initial_Contract.pdf</div>
+            <div class="file-meta">Uploaded by Sara · Jan 6 · 2.4 MB</div>
+          </div>
+          <span class="file-view" onclick="navigate('doc-viewer')">👁</span>
+        </div>
+
+        <div class="file-item">
+          <div class="file-ico img">🖼️</div>
+          <div style="flex:1;">
+            <div class="file-name">Presentation_Screenshot.png</div>
+            <div class="file-meta">Uploaded by Ali · Jan 7 · 890 KB</div>
+          </div>
+          <span class="file-view">👁</span>
+        </div>
+
+        <button class="upload-btn">📎 Upload New File</button>
+        <div style="height:24px;"></div>
+      </div>
+
+      <!-- ─ TAB: Comments ─ -->
+      <div class="tab-pane" id="tp-comments">
+        <div class="divider-label">Comments (3)</div>
+
+        <div class="comment-item">
+          <div class="c-avatar" style="background:#3B82F6;">SM</div>
+          <div class="c-body">
+            <div class="c-meta">
+              <span class="c-name">Sara Mohammed</span>
+              <span class="c-time">9:10 AM</span>
+            </div>
+            <div class="c-text">Please review page 3 of the contract before approving.</div>
+          </div>
+        </div>
+
+        <div class="comment-item">
+          <div class="c-avatar" style="background:#10B981;">AG</div>
+          <div class="c-body">
+            <div class="c-meta">
+              <span class="c-name">Ahmed Al-Ghamdi</span>
+              <span class="c-time">2:01 PM</span>
+            </div>
+            <div class="c-text">Reviewed page 3 — everything looks good. Good to proceed.</div>
+          </div>
+        </div>
+
+        <div class="comment-item">
+          <div class="c-avatar" style="background:#F59E0B;">MK</div>
+          <div class="c-body">
+            <div class="c-meta">
+              <span class="c-name">Mohammed Al-Khalidi</span>
+              <span class="c-time">4:30 PM</span>
+            </div>
+            <div class="c-text">Has the financial terms been reviewed with senior management?</div>
+          </div>
+        </div>
+
+        <div class="comment-input-row">
+          <textarea class="comment-input" placeholder="Add a comment..." rows="1"></textarea>
+          <button class="send-btn" onclick="showToast('Comment added ✅')">➤</button>
+        </div>
+        <div style="height:28px;"></div>
+      </div>
+
+      <!-- ─ TAB: Customer (placeholder) ─ -->
+      <div class="tab-pane" id="tp-customer">
+        <div class="empty-state">
+          <div class="empty-ico">👤</div>
+          <div class="empty-title">Customer Details</div>
+          <div class="empty-sub">Customer profile and CRM data will appear here in a future update.</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════
+         NOTIFICATIONS
+    ════════════════════════════════ -->
+    <div class="screen" id="screen-notifications">
+      <div class="page-header">
+        <h2>Notifications</h2>
+        <span class="sec-link" onclick="showToast('All marked as read')">Mark all read</span>
+      </div>
+
+      <div style="background:var(--surface);">
+        <div class="notif-item unread" onclick="navigate('task-detail')">
+          <div class="notif-ico-wrap n-assigned">📌</div>
+          <div class="notif-body">
+            <div class="notif-title">New task assigned to you</div>
+            <div class="notif-sub">"Review Sales Proposal" · Sales Onboarding</div>
+            <div class="notif-time">2 hours ago</div>
+          </div>
+          <div class="unread-dot"></div>
+        </div>
+
+        <div class="notif-item unread" onclick="navigate('task-detail')">
+          <div class="notif-ico-wrap n-due">⏰</div>
+          <div class="notif-body">
+            <div class="notif-title">Task due in 3 hours</div>
+            <div class="notif-sub">"Approve Client Contract" · Client Renewal</div>
+            <div class="notif-time">3 hours ago</div>
+          </div>
+          <div class="unread-dot"></div>
+        </div>
+
+        <div class="notif-item" onclick="navigate('task-detail')">
+          <div class="notif-ico-wrap n-overdue">🚨</div>
+          <div class="notif-body">
+            <div class="notif-title">Task is overdue — 2 days past deadline</div>
+            <div class="notif-sub">"Fill Intake Registration Form" · Onboarding</div>
+            <div class="notif-time">2 days ago</div>
+          </div>
+        </div>
+
+        <div class="notif-item" onclick="navigate('task-detail')">
+          <div class="notif-ico-wrap n-assigned">📌</div>
+          <div class="notif-body">
+            <div class="notif-title">New task assigned to you</div>
+            <div class="notif-sub">"Update CRM Data Fields" · Sales Ops</div>
+            <div class="notif-time">Jan 5, 2026</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════
+         DOCUMENTS
+    ════════════════════════════════ -->
+    <div class="screen" id="screen-documents">
+      <div class="page-header">
+        <h2>Team Documents</h2>
+        <span style="font-size:12px;color:var(--text-2);font-weight:600;">8 docs</span>
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-bar">
+          <span class="search-ico">🔍</span>
+          <input type="text" placeholder="Search documents...">
+        </div>
+      </div>
+
+      <div class="chips-scroll">
+        <button class="fchip active" data-group="dtype">All</button>
+        <button class="fchip"        data-group="dtype">Policy</button>
+        <button class="fchip"        data-group="dtype">Templates</button>
+        <button class="fchip"        data-group="dtype">Training</button>
+        <button class="fchip"        data-group="dtype">Contracts</button>
+      </div>
+
+      <div class="docs-list" style="margin-bottom:24px;">
+        <div class="doc-card" onclick="navigate('doc-viewer')">
+          <div class="doc-ico">📋</div>
+          <div class="doc-info">
+            <div class="doc-title">Sales Procedures Playbook</div>
+            <div class="doc-type">Policy</div>
+            <div class="doc-tags">
+              <span class="doc-tag">sales</span>
+              <span class="doc-tag">procedures</span>
+            </div>
+          </div>
+          <span class="doc-arrow">›</span>
+        </div>
+
+        <div class="doc-card" onclick="navigate('doc-viewer')">
+          <div class="doc-ico">📝</div>
+          <div class="doc-info">
+            <div class="doc-title">NDA Agreement Template</div>
+            <div class="doc-type">Template</div>
+            <div class="doc-tags">
+              <span class="doc-tag">legal</span>
+              <span class="doc-tag">contracts</span>
+            </div>
+          </div>
+          <span class="doc-arrow">›</span>
+        </div>
+
+        <div class="doc-card" onclick="navigate('doc-viewer')">
+          <div class="doc-ico">🎓</div>
+          <div class="doc-info">
+            <div class="doc-title">New Employee Onboarding Guide</div>
+            <div class="doc-type">Training</div>
+            <div class="doc-tags">
+              <span class="doc-tag">HR</span>
+              <span class="doc-tag">onboarding</span>
+            </div>
+          </div>
+          <span class="doc-arrow">›</span>
+        </div>
+
+        <div class="doc-card" onclick="navigate('doc-viewer')">
+          <div class="doc-ico">📊</div>
+          <div class="doc-info">
+            <div class="doc-title">Pricing &amp; Discount Policy</div>
+            <div class="doc-type">Policy</div>
+            <div class="doc-tags">
+              <span class="doc-tag">finance</span>
+              <span class="doc-tag">sales</span>
+            </div>
+          </div>
+          <span class="doc-arrow">›</span>
+        </div>
+
+        <div class="doc-card" onclick="navigate('doc-viewer')">
+          <div class="doc-ico">🔒</div>
+          <div class="doc-info">
+            <div class="doc-title">Data Security &amp; Compliance Policy</div>
+            <div class="doc-type">Policy</div>
+            <div class="doc-tags">
+              <span class="doc-tag">security</span>
+              <span class="doc-tag">compliance</span>
+            </div>
+          </div>
+          <span class="doc-arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════
+         DOCUMENT VIEWER
+    ════════════════════════════════ -->
+    <div class="screen" id="screen-doc-viewer">
+      <div class="dv-header">
+        <button class="back-btn" style="color:#fff;" onclick="goBack()">← Back</button>
+        <span class="dv-title">Sales Procedures Playbook</span>
+        <span class="dv-share">⤴</span>
+      </div>
+
+      <div style="padding: 16px 16px 0;">
+        <div class="pdf-wrap">
+          <div class="pdf-body">
+            <h3>Sales Procedures Playbook</h3>
+            <p>This playbook defines the approved procedures for the sales team, ensuring consistency in client interactions and deal closure processes.</p>
+            <p><strong>Chapter 1: Sales Cycle Stages</strong></p>
+            <ul>
+              <li>Initial prospect qualification</li>
+              <li>Discovery call and requirements gathering</li>
+              <li>Proposal preparation and pricing</li>
+              <li>Contract review with legal team</li>
+              <li>Formal signing and deal closure</li>
+              <li>Handover to customer success</li>
+            </ul>
+            <p style="margin-top:12px;"><strong>Chapter 2: Qualification Criteria</strong></p>
+            <p>Verify budget availability, decision-maker authority, and project timeline before escalating to management for review and resource allocation.</p>
+            <p><strong>Chapter 3: CRM Requirements</strong></p>
+            <p>All deal stages must be logged in the CRM within 24 hours of the interaction. Missing entries will result in pipeline reporting gaps.</p>
+          </div>
+        </div>
+
+        <div class="pdf-nav" style="background:rgba(0,0,0,.15);border-radius:12px;margin-top:12px;">
+          <button class="pdf-nav-btn">◀</button>
+          <span class="pdf-page-lbl" style="color:var(--text);">Page 1 of 8</span>
+          <button class="pdf-nav-btn">▶</button>
+        </div>
+      </div>
+      <div style="height:28px;"></div>
+    </div>
+
+  </div><!-- /.screens -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav hidden" id="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="navigate('home')">
+      <span class="n-icon">🏠</span>
+      <span class="n-label">Home</span>
+    </button>
+    <button class="nav-btn" id="nav-tasks" onclick="navigate('tasks')">
+      <span class="n-icon">✅</span>
+      <span class="n-label">Tasks</span>
+    </button>
+    <button class="nav-btn" id="nav-notifications" onclick="navigate('notifications')">
+      <span class="n-icon" style="position:relative;">
+        🔔
+        <span class="notif-badge">2</span>
+      </span>
+      <span class="n-label">Alerts</span>
+    </button>
+    <button class="nav-btn" id="nav-documents" onclick="navigate('documents')">
+      <span class="n-icon">📁</span>
+      <span class="n-label">Docs</span>
+    </button>
+    <button class="nav-btn" id="nav-profile" onclick="showToast('Profile settings coming soon')">
+      <span class="n-icon">👤</span>
+      <span class="n-label">Profile</span>
+    </button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────
+  let currentScreen = 'login';
+  let historyStack  = [];
+
+  const NAV_MAP = {
+    home:          'nav-home',
+    tasks:         'nav-tasks',
+    notifications: 'nav-notifications',
+    documents:     'nav-documents',
+  };
+
+  // Screens that hide the bottom nav
+  const NO_NAV = new Set(['login', 'task-detail', 'doc-viewer']);
+
+  // Screens that need a light status bar (white text)
+  const LIGHT_STATUS = new Set(['home']);
+
+  // ── Navigation ─────────────────────────
+  function navigate(screen) {
+    historyStack.push(currentScreen);
+    showScreen(screen);
+  }
+
+  function goBack() {
+    if (historyStack.length > 0) {
+      showScreen(historyStack.pop());
+    }
+  }
+
+  function showScreen(screen) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+    const el = document.getElementById('screen-' + screen);
+    if (el) {
+      el.classList.add('active');
+      el.scrollTop = 0;
+    }
+
+    currentScreen = screen;
+
+    // Status bar color
+    const sb = document.getElementById('status-bar');
+    sb.className = 'status-bar' + (LIGHT_STATUS.has(screen) ? ' light' : '');
+
+    // Bottom nav visibility + active state
+    const nav = document.getElementById('bottom-nav');
+    if (NO_NAV.has(screen)) {
+      nav.classList.add('hidden');
+    } else {
+      nav.classList.remove('hidden');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      const navId = NAV_MAP[screen];
+      if (navId) document.getElementById(navId).classList.add('active');
+    }
+  }
+
+  // ── Tab switching ───────────────────────
+  function switchTab(btn, paneId) {
+    // Deactivate all tabs in the same bar
+    btn.closest('.tabs-bar').querySelectorAll('.tab-btn')
+      .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Deactivate all panes in the same detail screen
+    document.querySelectorAll('#screen-task-detail .tab-pane')
+      .forEach(p => p.classList.remove('active'));
+    const pane = document.getElementById(paneId);
+    if (pane) pane.classList.add('active');
+  }
+
+  // ── Filter chips (single-select per group) ─
+  document.querySelectorAll('.fchip').forEach(chip => {
+    chip.addEventListener('click', function () {
+      const group = this.dataset.group;
+      this.closest('.chips-scroll').querySelectorAll(`.fchip[data-group="${group}"]`)
+        .forEach(c => c.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // ── Toast ───────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2400);
+  }
+</script>
+</body>
+</html>
