@@ -6,12 +6,9 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Modules\Workflows\Models\WorkflowInstance;
 
-class InstancePaused implements ShouldBroadcast
+class InstanceCancelled implements ShouldBroadcast
 {
-    public function __construct(
-        public readonly WorkflowInstance $instance,
-        public readonly string $reason,
-    ) {}
+    public function __construct(public readonly WorkflowInstance $instance) {}
 
     public function broadcastOn(): array
     {
@@ -20,15 +17,15 @@ class InstancePaused implements ShouldBroadcast
 
     public function broadcastAs(): string
     {
-        return 'instance.paused';
+        return 'instance.cancelled';
     }
 
     public function broadcastWith(): array
     {
         return [
             'instance_id' => $this->instance->id,
-            'status'      => 'paused',
-            'reason'      => $this->reason,
+            'status'      => 'cancelled',
+            'finished_at' => $this->instance->finished_at?->toISOString(),
         ];
     }
 }

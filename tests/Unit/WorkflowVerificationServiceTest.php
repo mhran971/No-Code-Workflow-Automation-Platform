@@ -162,13 +162,13 @@ class WorkflowVerificationServiceTest extends TestCase
         $assigneeDefinition = $this->validDefinition();
         $assigneeDefinition['nodes'][0] = [
             'id' => 'review',
-            'type' => 'human-task',
+            'type' => 'task-node',
             'is_entry_point' => true,
             'is_terminal' => true,
             'config' => [
-                'taskName' => 'Review request',
-                'outcomes' => ['approved', 'rejected'],
-                'assignee' => 999999,
+                'title' => 'Review request',
+                'assignTo' => 999999,
+                'inputFields' => [],
             ],
         ];
 

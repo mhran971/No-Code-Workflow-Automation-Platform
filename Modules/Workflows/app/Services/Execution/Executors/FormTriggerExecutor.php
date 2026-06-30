@@ -21,9 +21,15 @@ class FormTriggerExecutor implements NodeExecutor
 
     public function execute(NodeExecutionContext $context): NodeExecutionResult
     {
+        $formData = $context->instance()->payload ?? [];
+
+        // Seed the instance context with the form submission so downstream nodes
+        // can reference fields with {{context.fieldName}}.
+        $context->mergeContext($formData);
+
         return NodeExecutionResult::proceed(
             $context->plan()->outgoing($context->nodeKey()),
-            ['form_data' => $context->instance()->payload ?? []],
+            ['form_data' => $formData],
         );
     }
 }

@@ -21,18 +21,29 @@ class SwitchNodeExecutor implements NodeExecutor
 
     public function execute(NodeExecutionContext $context): NodeExecutionResult
     {
-        $outgoing = $context->plan()->outgoing($context->nodeKey());
+        $outgoing    = $context->plan()->outgoing($context->nodeKey());
+        $config      = $context->config();
         $defaultEdge = null;
 
-        // Evaluate in sort_order; first matching condition wins.
+        // Resolve the switch variable to its current string value.
+        $varPath = trim((string) ($config['variable'] ?? ''));
+        $value   = $varPath !== '' ? $context->render($varPath) : null;
+
         foreach ($outgoing as $edge) {
-            if ($edge->isDefaultBranch) {
+            // Default / fallback branch — keep it as last resort.
+            if ($edge->branchType === 'default' || $edge->isDefaultBranch) {
                 $defaultEdge = $edge;
 
                 continue;
             }
 
+            // Per-edge condition expression (advanced override) takes priority.
             if ($edge->conditionExpression !== null && $context->evaluateBoolean($edge->conditionExpression)) {
+                return NodeExecutionResult::branch($edge);
+            }
+
+            // Canonical match: branch_type matches the evaluated variable value.
+            if ($value !== null && $edge->branchType === $value) {
                 return NodeExecutionResult::branch($edge);
             }
         }

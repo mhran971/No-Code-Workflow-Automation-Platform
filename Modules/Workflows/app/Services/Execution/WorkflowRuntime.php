@@ -4,16 +4,19 @@ namespace Modules\Workflows\Services\Execution;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\WaitType;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
+use Modules\Workflows\Events\InstanceCancelled;
 use Modules\Workflows\Events\InstanceCompleted;
 use Modules\Workflows\Events\InstanceFailed;
 use Modules\Workflows\Events\NodeCompleted;
 use Modules\Workflows\Events\NodeFailed;
 use Modules\Workflows\Events\NodeRetrying;
 use Modules\Workflows\Events\NodeStarted;
+use Modules\Workflows\Events\NodeWaiting;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
@@ -63,6 +66,17 @@ class WorkflowRuntime
         try {
             $result = $executor->execute($context);
         } catch (Throwable $e) {
+            Log::error('workflow.node.exception', [
+                'instance_id' => $instance->id,
+                'execution_id' => $executionId,
+                'node_key'    => $execution->node_key,
+                'node_type'   => $execution->node_type,
+                'attempt'     => $execution->attempt,
+                'exception'   => get_class($e),
+                'message'     => $e->getMessage(),
+                'file'        => $e->getFile().':'.$e->getLine(),
+                'trace'       => $e->getTraceAsString(),
+            ]);
             $result = NodeExecutionResult::fail($e, $this->classifier->isRetryable($e));
         }
 
@@ -97,6 +111,8 @@ class WorkflowRuntime
                 'finished_at' => now(),
             ]);
         });
+
+        Event::dispatch(new InstanceCancelled($instance));
     }
 
     /**
@@ -193,6 +209,10 @@ class WorkflowRuntime
             'finished_at' => now(),
         ]);
 
+        if (! empty($result->output)) {
+            $context->setContextValue((string) $execution->node_key, $result->output);
+        }
+
         if ($instance->isDirty('context')) {
             $instance->save();
         }
@@ -239,6 +259,8 @@ class WorkflowRuntime
         if (! $this->hasNonWaitingLiveExecutions($instance)) {
             $instance->update(['status' => WorkflowInstanceStatus::Waiting]);
         }
+
+        Event::dispatch(new NodeWaiting($instance, $execution));
     }
 
     protected function onFail(
@@ -248,10 +270,23 @@ class WorkflowRuntime
         NodeExecutionResult $result,
     ): void {
         $errorPayload = [
-            'message' => $result->errorMessage ?? 'Unknown error',
-            'node_key' => $execution->node_key,
-            'attempt' => $execution->attempt,
+            'message'   => $result->errorMessage ?? 'Unknown error',
+            'node_key'  => $execution->node_key,
+            'node_type' => $execution->node_type,
+            'attempt'   => $execution->attempt,
         ];
+
+        if ($result->error !== null) {
+            $errorPayload['exception'] = get_class($result->error);
+            $errorPayload['file']      = $result->error->getFile().':'.$result->error->getLine();
+        }
+
+        Log::error('workflow.node.failed', array_merge($errorPayload, [
+            'instance_id'  => $instance->id,
+            'execution_id' => $execution->id,
+            'retryable'    => $result->retryable,
+            'trace'        => $result->error?->getTraceAsString(),
+        ]));
 
         $execution->update([
             'status' => NodeExecutionStatus::Failed,

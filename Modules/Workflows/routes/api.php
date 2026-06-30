@@ -1,11 +1,22 @@
 <?php
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Modules\Workflows\Http\Controllers\NodeController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
 use Modules\Workflows\Http\Controllers\WorkflowInstanceController;
 use Modules\Workflows\Http\Controllers\WorkflowTaskController;
 use Modules\Workflows\Http\Controllers\WorkflowTriggerController;
+
+// Broadcasting auth endpoint — uses auth:api so JWT users can subscribe to private channels.
+// The default Broadcast::routes() only works with the web guard.
+Route::middleware(['auth:api', 'active.user'])
+    ->post('broadcasting/auth', function (Request $request) {
+        auth()->shouldUse('api');
+
+        return Broadcast::auth($request);
+    })->name('broadcasting.auth');
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
@@ -28,7 +39,7 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     // Instance management (list, show, cancel, retry-from-node).
     Route::get('/{workflow}/instances', [WorkflowInstanceController::class, 'index'])->name('workflows.instances.index');
     Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
-    Route::get('/instances/{instance}/stream', [WorkflowInstanceController::class, 'stream'])->name('workflows.instances.stream');
+    Route::get('/instances/{instance}/failures', [WorkflowInstanceController::class, 'failures'])->name('workflows.instances.failures');
     Route::post('/instances/{instance}/cancel', [WorkflowInstanceController::class, 'cancel'])->name('workflows.instances.cancel');
     Route::post('/instances/{instance}/retry-from-node', [WorkflowInstanceController::class, 'retryFromNode'])->name('workflows.instances.retry');
 

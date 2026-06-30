@@ -82,6 +82,7 @@ class NodeExecutionContext
         return [
             'context' => $this->instance->context ?? [],
             'trigger' => $this->instance->payload ?? [],
+            'input'   => $this->execution->input ?? [],
         ];
     }
 

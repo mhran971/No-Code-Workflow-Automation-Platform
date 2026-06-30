@@ -28,7 +28,7 @@ class WorkflowEdge extends Model
     protected function casts(): array
     {
         return [
-            'branch_type' => EdgeBranchType::class,
+            // keep raw branch_type for backwards compatibility but do not cast to enum
             'is_default_branch' => 'boolean',
             'sort_order' => 'integer',
         ];
@@ -46,12 +46,12 @@ class WorkflowEdge extends Model
 
     public function isConditional(): bool
     {
-        return $this->branch_type === EdgeBranchType::Conditional;
+        return ! empty($this->condition_expression);
     }
 
     public function isParallel(): bool
     {
-        return $this->branch_type === EdgeBranchType::Parallel;
+        return ! empty($this->join_node_key) || ! empty($this->parallel_group_key);
     }
 
     public function isForkJoin(): bool

@@ -96,7 +96,8 @@ class WorkflowDefinitionNormalizer
                 'id' => isset($edge['id']) ? (string) $edge['id'] : sprintf('edge-%d', $index + 1),
                 'source_node_key' => $source !== null ? (string) $source : null,
                 'target_node_key' => $target !== null ? (string) $target : null,
-                'branch_type' => isset($edge['branch_type']) ? (string) $edge['branch_type'] : 'default',
+                // 'branch_type' is legacy and ignored; derive semantics from edge properties instead
+                'branch_type' => isset($edge['branch_type']) ? (string) $edge['branch_type'] : null,
                 'condition_expression' => isset($edge['condition_expression'])
                     ? (string) $edge['condition_expression']
                     : (isset($edge['condition']) ? (string) $edge['condition'] : null),

@@ -57,7 +57,7 @@ class TaskNodeExecutor implements NodeExecutor
         }
 
         // Initial creation path.
-        $dueHours = (int) ($config['due_within_hours'] ?? config('workflows.execution.task.default_due_within_hours', 24));
+        $dueHours = (int) ($config['dueWithin'] ?? config('workflows.execution.task.default_due_within_hours', 24));
         $dueAt = now()->addHours($dueHours);
 
         if ($task === null) {
@@ -69,7 +69,7 @@ class TaskNodeExecutor implements NodeExecutor
                 'assignee_id' => $this->resolveAssigneeId($context, $config),
                 'title' => $context->render((string) ($config['title'] ?? 'Task')),
                 'description' => $context->render((string) ($config['description'] ?? '')),
-                'input_schema' => $config['input_schema'] ?? null,
+                'input_schema' => $config['inputFields'] ?? null,
                 'status' => 'open',
                 'due_at' => $dueAt,
             ]);
@@ -80,11 +80,13 @@ class TaskNodeExecutor implements NodeExecutor
 
     protected function resolveAssigneeId(NodeExecutionContext $context, array $config): ?int
     {
-        $expr = $config['assignee'] ?? null;
-        if ($expr === null) {
+        $expr = $config['assignTo'] ?? null;
+        if ($expr === null || $expr === '') {
             return null;
         }
-        $value = $context->evaluate((string) $expr);
+        // assignTo may be a plain numeric string (user ID from the picker) or
+        // a template expression like {{context.user_id}} — evaluate handles both.
+        $value = $context->render((string) $expr);
 
         return is_numeric($value) ? (int) $value : null;
     }
