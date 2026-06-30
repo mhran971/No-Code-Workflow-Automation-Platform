@@ -32,11 +32,11 @@ class ContextualVerificationRule implements VerificationRule
         WorkflowVerificationResult $result,
     ): void {
         foreach ($graph->nodes() as $index => $node) {
-            if (($node['type'] ?? null) !== 'human-task') {
+            if (($node['type'] ?? null) !== 'task-node') {
                 continue;
             }
 
-            $assignee = $node['config']['assignee'] ?? null;
+            $assignee = $node['config']['assignTo'] ?? null;
 
             if ($assignee === null || $assignee === '' || ! is_numeric($assignee)) {
                 continue;
@@ -44,7 +44,7 @@ class ContextualVerificationRule implements VerificationRule
 
             $assigneeId = (int) $assignee;
             $nodeId = is_string($node['id'] ?? null) ? $node['id'] : null;
-            $path = "nodes[{$index}].config.assignee";
+            $path = "nodes[{$index}].config.assignTo";
             $userExists = User::query()
                 ->where('id', $assigneeId)
                 ->where('tenant_id', (int) $workflow->tenant_id)

@@ -235,9 +235,8 @@ class WorkflowManagementService
         $changeType = $this->detectPublishChangeType($workflow);
 
         if ($changeType === 'none') {
-            throw ValidationException::withMessages([
-                'definition' => 'No changes detected since the current published version. Update the draft before publishing.',
-            ]);
+            $workflow->update(['status' => WorkflowStatus::Active]);
+            return $workflow->currentVersion->load('publishedBy:id,first_name,last_name,name,email');
         }
 
         return DB::transaction(function () use ($actor, $workflow, $changeType): WorkflowVersion {
@@ -264,6 +263,7 @@ class WorkflowManagementService
                 'current_version_id' => (int) $version->id,
                 'current_version_number' => $nextVersionNumber,
                 'current_version_label' => $versionLabel,
+                'status' => WorkflowStatus::Active,
             ])->save();
 
             return $version->load('publishedBy:id,first_name,last_name,name,email');
@@ -609,7 +609,6 @@ class WorkflowManagementService
                 'id' => null,
                 'source_node_key' => null,
                 'target_node_key' => null,
-                'branch_type' => null,
                 'condition_expression' => null,
                 'is_default_branch' => false,
                 'parallel_strategy' => null,
@@ -622,7 +621,6 @@ class WorkflowManagementService
             'id' => isset($edge['id']) ? (string) $edge['id'] : null,
             'source_node_key' => isset($edge['source_node_key']) ? (string) $edge['source_node_key'] : null,
             'target_node_key' => isset($edge['target_node_key']) ? (string) $edge['target_node_key'] : null,
-            'branch_type' => isset($edge['branch_type']) ? (string) $edge['branch_type'] : null,
             'condition_expression' => isset($edge['condition_expression']) ? (string) $edge['condition_expression'] : null,
             'is_default_branch' => (bool) ($edge['is_default_branch'] ?? false),
             'parallel_strategy' => isset($edge['parallel_strategy']) ? (string) $edge['parallel_strategy'] : null,

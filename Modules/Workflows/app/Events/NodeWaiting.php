@@ -7,12 +7,11 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
 
-class NodeFailed implements ShouldBroadcast
+class NodeWaiting implements ShouldBroadcast
 {
     public function __construct(
         public readonly WorkflowInstance $instance,
         public readonly WorkflowNodeExecution $execution,
-        public readonly bool $willRetry,
     ) {}
 
     public function broadcastOn(): array
@@ -22,7 +21,7 @@ class NodeFailed implements ShouldBroadcast
 
     public function broadcastAs(): string
     {
-        return 'node.failed';
+        return 'node.waiting';
     }
 
     public function broadcastWith(): array
@@ -31,14 +30,15 @@ class NodeFailed implements ShouldBroadcast
             'instance_id' => $this->instance->id,
             'node_key'    => $this->execution->node_key,
             'node_type'   => $this->execution->node_type,
-            'status'      => 'failed',
+            'status'      => 'waiting',
             'attempt'     => $this->execution->attempt,
             'input'       => $this->execution->input ?? [],
             'output'      => null,
-            'error'       => $this->execution->error,
-            'will_retry'  => $this->willRetry,
+            'error'       => null,
+            'wait_type'   => $this->execution->wait_type?->value,
+            'wait_until'  => $this->execution->wait_until?->toISOString(),
             'started_at'  => $this->execution->started_at?->toISOString(),
-            'finished_at' => $this->execution->finished_at?->toISOString(),
+            'finished_at' => null,
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
 use Modules\Workflows\Console\Commands\AdmitPendingInstancesCommand;
 use Modules\Workflows\Console\Commands\ExpireOverdueInstancesCommand;
@@ -56,6 +57,18 @@ class WorkflowsServiceProvider extends ServiceProvider
             $schedule->command('workflows:scan-timers')->everyMinute()->withoutOverlapping();
             $schedule->command('workflows:admit-pending')->everyMinute()->withoutOverlapping();
             $schedule->command('workflows:expire-overdue')->daily()->withoutOverlapping();
+        });
+
+        $this->bootBroadcasting();
+    }
+
+    private function bootBroadcasting(): void
+    {
+        Broadcast::channel('workflow-instance.{instanceId}', function ($user, string $instanceId): bool {
+            $instance = \Modules\Workflows\Models\WorkflowInstance::find((int) $instanceId);
+
+            return $instance !== null
+                && (int) $instance->tenant_id === (int) $user->tenant_id;
         });
     }
 

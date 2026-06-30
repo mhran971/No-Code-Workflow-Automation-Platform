@@ -2,6 +2,7 @@
 
 namespace Modules\Workflows\Services\Execution\Expression;
 
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -26,9 +27,29 @@ class TemplateInterpolator
         return (string) preg_replace_callback(
             '/\{\{\s*(.+?)\s*\}\}/s',
             function (array $matches) use ($data): string {
+                $expression = trim($matches[1]);
                 try {
-                    return $this->stringify($this->evaluator->evaluate($matches[1], $data));
-                } catch (Throwable) {
+                    $value = $this->evaluator->evaluate($expression, $data);
+
+                    if ($value === null) {
+                        Log::warning('workflow.template.unresolved', [
+                            'expression'     => $expression,
+                            'context_keys'   => array_keys((array) ($data['context'] ?? [])),
+                            'trigger_keys'   => array_keys((array) ($data['trigger'] ?? [])),
+                            'input_keys'     => array_keys((array) ($data['input'] ?? [])),
+                        ]);
+                    }
+
+                    return $this->stringify($value);
+                } catch (Throwable $e) {
+                    Log::warning('workflow.template.eval_error', [
+                        'expression' => $expression,
+                        'error'      => $e->getMessage(),
+                        'context_keys' => array_keys((array) ($data['context'] ?? [])),
+                        'trigger_keys' => array_keys((array) ($data['trigger'] ?? [])),
+                        'input_keys'   => array_keys((array) ($data['input'] ?? [])),
+                    ]);
+
                     return '';
                 }
             },

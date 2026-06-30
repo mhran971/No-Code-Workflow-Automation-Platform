@@ -28,7 +28,7 @@ class ValidateWorkflowDefinitionRequest extends FormRequest
             'definition.edges.*.id' => ['sometimes', 'nullable', 'string'],
             'definition.edges.*.source_node_key' => ['required', 'string'],
             'definition.edges.*.target_node_key' => ['required', 'string'],
-            'definition.edges.*.branch_type' => ['sometimes', 'string'],
+            // 'branch_type' removed: legacy field is ignored by the validator
             'definition.edges.*.condition_expression' => ['sometimes', 'nullable', 'string'],
             'definition.edges.*.is_default_branch' => ['sometimes', 'boolean'],
             'definition.edges.*.join_node_key' => ['sometimes', 'nullable', 'string'],
@@ -107,15 +107,10 @@ class ValidateWorkflowDefinitionRequest extends FormRequest
                                 'type' => 'string',
                                 'description' => 'Target node id.',
                             ],
-                            'branch_type' => [
-                                'type' => 'string',
-                                'enum' => ['default', 'conditional', 'parallel'],
-                                'description' => 'Branch type for the edge.',
-                            ],
                             'condition_expression' => [
                                 'type' => 'string',
                                 'nullable' => true,
-                                'description' => 'Expression required when branch_type is conditional.',
+                                'description' => 'Optional expression evaluated for conditional routing.',
                             ],
                             'is_default_branch' => [
                                 'type' => 'boolean',

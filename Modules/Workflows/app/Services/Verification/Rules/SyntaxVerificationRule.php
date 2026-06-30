@@ -195,9 +195,7 @@ class SyntaxVerificationRule implements VerificationRule
                 $seenPairs[$pair] = true;
             }
 
-            if (! in_array($edge['branch_type'] ?? 'default', ['default', 'conditional', 'parallel'], true)) {
-                $result->addError('edge.branch_type_invalid', 'Edge branch type must be default, conditional, or parallel.', "{$path}.branch_type", null, $edgeId);
-            }
+            // 'branch_type' is ignored; conditional/parallel semantics are derived from edge properties
         }
     }
 

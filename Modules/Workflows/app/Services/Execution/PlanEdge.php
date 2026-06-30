@@ -11,7 +11,7 @@ final class PlanEdge
         public readonly ?string $id,
         public readonly string $source,
         public readonly string $target,
-        public readonly string $branchType,
+        public readonly ?string $branchType,
         public readonly ?string $conditionExpression,
         public readonly bool $isDefaultBranch,
         public readonly ?string $joinNodeKey,
@@ -27,7 +27,7 @@ final class PlanEdge
             id: isset($edge['id']) ? (string) $edge['id'] : null,
             source: (string) ($edge['source_node_key'] ?? ''),
             target: (string) ($edge['target_node_key'] ?? ''),
-            branchType: (string) ($edge['branch_type'] ?? 'default'),
+            branchType: isset($edge['branch_type']) ? (string) $edge['branch_type'] : null,
             conditionExpression: isset($edge['condition_expression']) ? (string) $edge['condition_expression'] : null,
             isDefaultBranch: (bool) ($edge['is_default_branch'] ?? false),
             joinNodeKey: isset($edge['join_node_key']) ? (string) $edge['join_node_key'] : null,
@@ -37,16 +37,16 @@ final class PlanEdge
 
     public function isConditional(): bool
     {
-        return $this->branchType === 'conditional';
+        return $this->conditionExpression !== null && $this->conditionExpression !== '';
     }
 
     public function isParallel(): bool
     {
-        return $this->branchType === 'parallel';
+        return $this->joinNodeKey !== null && $this->joinNodeKey !== '';
     }
 
     public function isErrorEdge(): bool
     {
-        return $this->branchType === 'error';
+        return false;
     }
 }
