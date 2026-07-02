@@ -13,6 +13,7 @@ class WorkflowsDatabaseSeeder extends Seeder
     {
         $this->call([
             'Modules\\Workflows\\Database\\Seeders\\NodeDefinitionSeeder',
+            'Modules\\Workflows\\Database\\Seeders\\WorkflowTemplateSeeder',
         ]);
     }
 }
