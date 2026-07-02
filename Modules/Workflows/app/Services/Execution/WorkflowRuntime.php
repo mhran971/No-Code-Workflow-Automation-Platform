@@ -43,6 +43,16 @@ class WorkflowRuntime
     ) {}
 
     /**
+     * Broadcast events now fire synchronously (ShouldBroadcastNow), so defer dispatch until
+     * the enclosing transaction commits — otherwise clients could see a status over the socket
+     * before it's visible via the API, or see one that gets rolled back.
+     */
+    protected function broadcast(object $event): void
+    {
+        DB::afterCommit(fn () => Event::dispatch($event));
+    }
+
+    /**
      * Advance a single execution: claim → run → commit result.
      */
     public function advance(int $executionId): void
@@ -59,7 +69,7 @@ class WorkflowRuntime
         $plan = $this->compiler->compileVersion($instance->workflowVersion);
         $context = new NodeExecutionContext($instance, $execution, $plan, $this->evaluator, $this->interpolator);
 
-        Event::dispatch(new NodeStarted($instance, $execution));
+        $this->broadcast(new NodeStarted($instance, $execution));
 
         $executor = $this->registry->for($execution->node_type);
 
@@ -112,7 +122,7 @@ class WorkflowRuntime
             ]);
         });
 
-        Event::dispatch(new InstanceCancelled($instance));
+        $this->broadcast(new InstanceCancelled($instance));
     }
 
     /**
@@ -217,7 +227,7 @@ class WorkflowRuntime
             $instance->save();
         }
 
-        Event::dispatch(new NodeCompleted($instance, $execution));
+        $this->broadcast(new NodeCompleted($instance, $execution));
 
         if (empty($result->edges)) {
             if (! $this->hasLiveExecutions($instance)) {
@@ -241,7 +251,7 @@ class WorkflowRuntime
             'finished_at' => now(),
         ]);
 
-        Event::dispatch(new NodeCompleted($instance, $execution));
+        $this->broadcast(new NodeCompleted($instance, $execution));
         $this->completeInstance($instance);
     }
 
@@ -260,7 +270,7 @@ class WorkflowRuntime
             $instance->update(['status' => WorkflowInstanceStatus::Waiting]);
         }
 
-        Event::dispatch(new NodeWaiting($instance, $execution));
+        $this->broadcast(new NodeWaiting($instance, $execution));
     }
 
     protected function onFail(
@@ -296,7 +306,7 @@ class WorkflowRuntime
 
         $willRetry = $result->retryable && $this->retryPolicy->shouldRetry($execution->attempt);
 
-        Event::dispatch(new NodeFailed($instance, $execution, $willRetry));
+        $this->broadcast(new NodeFailed($instance, $execution, $willRetry));
 
         if ($willRetry) {
             $this->scheduleRetry($execution, $instance);
@@ -461,7 +471,7 @@ class WorkflowRuntime
         );
 
         if ($retry->wasRecentlyCreated) {
-            Event::dispatch(new NodeRetrying($instance, $failed, $retry));
+            $this->broadcast(new NodeRetrying($instance, $failed, $retry));
 
             $delay = $this->retryPolicy->delaySeconds($nextAttempt);
             $category = $this->resolveCategory($failed->node_type);
@@ -480,7 +490,7 @@ class WorkflowRuntime
 
         $instance->workflow()->decrement('active_instances');
 
-        Event::dispatch(new InstanceCompleted($instance));
+        $this->broadcast(new InstanceCompleted($instance));
     }
 
     protected function failInstance(WorkflowInstance $instance, array $errorPayload): void
@@ -497,7 +507,7 @@ class WorkflowRuntime
             'finished_at' => now(),
         ]);
 
-        Event::dispatch(new InstanceFailed($instance));
+        $this->broadcast(new InstanceFailed($instance));
     }
 
     protected function hasLiveExecutions(WorkflowInstance $instance): bool

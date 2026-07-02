@@ -3,10 +3,10 @@
 namespace Modules\Workflows\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Modules\Workflows\Models\WorkflowInstance;
 
-class InstancePaused implements ShouldBroadcast
+class InstancePaused implements ShouldBroadcastNow
 {
     public function __construct(
         public readonly WorkflowInstance $instance,

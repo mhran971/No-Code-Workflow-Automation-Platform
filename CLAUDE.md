@@ -26,6 +26,7 @@ cd workflow-builder && npm run lint   # ESLint
 | Database | PostgreSQL (prod/dev), SQLite in-memory (tests) |
 | Auth | JWT (`tymon/jwt-auth`) + Sanctum; middleware: `auth:api`, `active.user` |
 | Queue / Cache / Session | database driver |
+| Realtime | Laravel Reverb (`BROADCAST_CONNECTION=reverb`, `config/reverb.php`); private channel `App.Models.User.{id}` in `routes/channels.php`; JWT users authenticate via `POST /api/v1/broadcasting/auth` |
 | Frontend | React 19 + TypeScript + Vite (`workflow-builder/`) |
 | API docs | OpenAPI via `dedoc/scramble` |
 
@@ -84,9 +85,18 @@ Prefix: `/api/v1/workflows` — all routes behind `auth:api`, `active.user`. See
 |---|---|---|
 | GET | `/nodes` | List available node types |
 | POST | `/validate` | Validate a workflow definition |
-| GET / POST | `/` | List / create workflows |
 | GET | `/templates` | Workflow templates |
 | POST | `/proposals/ai` | AI workflow proposal (Manager or BusinessOwner role required) |
+| GET | `/instances/{instance}` | Show workflow instance |
+| GET | `/instances/{instance}/failures` | Instance failure details |
+| POST | `/instances/{instance}/cancel` | Cancel a running instance |
+| POST | `/instances/{instance}/retry-from-node` | Retry instance from a given node |
+| GET | `/tasks/summary` | Human-task inbox summary (counts by state) |
+| GET | `/tasks` | List human tasks (role-based) |
+| GET | `/tasks/{task}` | Show task detail |
+| PATCH | `/tasks/{task}/draft` | Save a draft task response |
+| POST | `/tasks/{task}/submit` | Submit a task response |
+| GET / POST | `/` | List / create workflows |
 | GET | `/{workflow}` | Show workflow |
 | PATCH | `/{workflow}/draft` | Update draft |
 | POST | `/{workflow}/publish` | Publish |
@@ -95,6 +105,11 @@ Prefix: `/api/v1/workflows` — all routes behind `auth:api`, `active.user`. See
 | DELETE | `/{workflow}` | Soft delete |
 | DELETE | `/{workflow}/purge` | Hard delete |
 | POST | `/{workflow}/trigger/webhook` | Webhook trigger |
+| POST | `/{workflow}/trigger/manual` | Manual trigger |
+| POST | `/{workflow}/trigger/form` | Form trigger |
+| GET | `/{workflow}/instances` | List instances for a workflow |
+
+Auth module also exposes `GET /api/v1/me` (profile, role, tenant, team) alongside `POST /register`, `POST /login`, `POST /logout` — see `Modules/Auth/routes/api.php`.
 
 ### Models
 
@@ -116,6 +131,8 @@ Prefix: `/api/v1/workflows` — all routes behind `auth:api`, `active.user`. See
 ## Reference
 
 - Verification system docs: `Modules/Workflows/docs/` (6 markdown files covering overview, architecture, rules, data structures, usage guide)
-- API routes: `Modules/Workflows/routes/api.php`
+- API routes: `Modules/Workflows/routes/api.php`, `Modules/Auth/routes/api.php`
+- Mobile API reference: `docs/mobile-api.md` (JWT auth, `/me`, task inbox endpoints)
 - Frontend: `workflow-builder/` (separate Node.js project, not served by Laravel)
 - Alternate frontend experiment: `remix-of-workflow-weaver/` (Remix-based, not production)
+- Mobile prototype: `mobile-prototype/index.html` (static HTML prototype, not production)

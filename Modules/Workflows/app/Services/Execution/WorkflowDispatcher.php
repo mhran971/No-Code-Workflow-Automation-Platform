@@ -100,7 +100,7 @@ class WorkflowDispatcher
                     ->onQueue($this->queueFor($category));
             }
 
-            Event::dispatch(new InstanceStarted($instance));
+            DB::afterCommit(fn () => Event::dispatch(new InstanceStarted($instance)));
 
             return $instance;
         });

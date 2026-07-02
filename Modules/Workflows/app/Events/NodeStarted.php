@@ -3,11 +3,11 @@
 namespace Modules\Workflows\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
 
-class NodeStarted implements ShouldBroadcast
+class NodeStarted implements ShouldBroadcastNow
 {
     public function __construct(
         public readonly WorkflowInstance $instance,
