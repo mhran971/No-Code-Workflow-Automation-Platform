@@ -24,6 +24,16 @@ class DataFlowAnalyzer
     /** @var array<string, array<string, true>> */
     private array $outputs = [];
 
+    /**
+     * nodeId => variable => set of node ids that may be responsible for the value seen here.
+     * Used only for conflict detection: a variable merely *available* on two branches (e.g. inherited
+     * unchanged from a shared ancestor like the trigger) is not a conflict — only a variable actually
+     * written independently by two or more producer nodes is.
+     *
+     * @var array<string, array<string, array<string, true>>>
+     */
+    private array $producedBy = [];
+
     public function __construct(private readonly WorkflowDefinitionGraph $graph) {}
 
     public function analyze(): DataFlowResult
@@ -63,6 +73,7 @@ class DataFlowAnalyzer
         if ($predecessors === []) {
             $this->guaranteed[$nodeId] = [];
             $this->possible[$nodeId] = [];
+            $this->producedBy[$nodeId] = $this->overlayOwnWrites($nodeId, []);
 
             return;
         }
@@ -81,32 +92,70 @@ class DataFlowAnalyzer
         $this->possible[$nodeId] = $this->unionAll($leavingPossible);
 
         if ($this->isParallelMerge($nodeId)) {
-            // All branches execute: their variables combine, and overlapping writes are conflicts.
+            // All branches execute concurrently: their variables combine, and a variable actually
+            // written independently by two or more branches (not just inherited from a shared
+            // ancestor) is a data-loss conflict.
             $this->guaranteed[$nodeId] = $this->unionAll($leaving);
-            $this->collectConflicts($nodeId, $leaving, $conflicts);
+            $this->collectConflicts($nodeId, $predecessors, $conflicts);
+            $this->producedBy[$nodeId] = $this->overlayOwnWrites($nodeId, $this->combineProducedBy($predecessors));
 
             return;
         }
 
         // Exactly one branch executes: only variables present on every path are guaranteed.
         $this->guaranteed[$nodeId] = $this->intersectAll($leaving);
+        $this->producedBy[$nodeId] = $this->overlayOwnWrites($nodeId, $this->combineProducedBy($predecessors));
     }
 
     /**
-     * @param  list<array<string, true>>  $leaving
-     * @param  list<array{node:string,variable:string}>  $conflicts
+     * The producer-node-id set a variable inherits from a node's direct predecessors: the union of
+     * whatever each predecessor may itself be passing forward.
+     *
+     * @param  list<string>  $predecessors
+     * @return array<string, array<string, true>>
      */
-    private function collectConflicts(string $nodeId, array $leaving, array &$conflicts): void
+    private function combineProducedBy(array $predecessors): array
     {
-        $counts = [];
-        foreach ($leaving as $set) {
-            foreach (array_keys($set) as $key) {
-                $counts[$key] = ($counts[$key] ?? 0) + 1;
+        $combined = [];
+        foreach ($predecessors as $predId) {
+            foreach ($this->producedBy[$predId] ?? [] as $variable => $ids) {
+                $combined[$variable] = ($combined[$variable] ?? []) + $ids;
             }
         }
 
-        foreach ($counts as $variable => $count) {
-            if ($count >= 2) {
+        return $combined;
+    }
+
+    /**
+     * A node's own writes always replace whatever producer identity it inherited for that variable —
+     * within a single branch, execution is sequential, so the latest write wins deterministically.
+     *
+     * @param  array<string, array<string, true>>  $inherited
+     * @return array<string, array<string, true>>
+     */
+    private function overlayOwnWrites(string $nodeId, array $inherited): array
+    {
+        foreach (array_keys($this->outputs[$nodeId]) as $variable) {
+            $inherited[$variable] = [$nodeId => true];
+        }
+
+        return $inherited;
+    }
+
+    /**
+     * A variable conflicts at a parallel merge only if two or more of its *direct* predecessor
+     * branches may have produced it via different nodes — not merely because both branches carry it
+     * forward from a shared ancestor (e.g. the trigger) unchanged.
+     *
+     * @param  list<string>  $predecessors
+     * @param  list<array{node:string,variable:string}>  $conflicts
+     */
+    private function collectConflicts(string $nodeId, array $predecessors, array &$conflicts): void
+    {
+        $union = $this->combineProducedBy($predecessors);
+
+        foreach ($union as $variable => $ids) {
+            if (count($ids) >= 2) {
                 $conflicts[] = ['node' => $nodeId, 'variable' => $variable];
             }
         }

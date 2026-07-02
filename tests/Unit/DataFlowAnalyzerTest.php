@@ -82,6 +82,32 @@ class DataFlowAnalyzerTest extends TestCase
         $this->assertSame([], $result->conflicts);
     }
 
+    public function test_trigger_variable_merely_read_on_parallel_branches_is_not_a_conflict(): void
+    {
+        $definition = [
+            'trigger' => ['type' => 'manual-trigger', 'config' => ['variables' => [['key' => 'name']]]],
+            'nodes' => [
+                ['id' => 't', 'type' => 'manual-trigger', 'config' => []],
+                ['id' => 'f', 'type' => 'and-node', 'config' => []],
+                ['id' => 'a', 'type' => 'send-email', 'config' => ['subject' => '{{context.name}}']],
+                ['id' => 'b', 'type' => 'send-email', 'config' => ['subject' => '{{context.name}}']],
+                ['id' => 'm', 'type' => 'merge', 'config' => ['mergeMode' => 'parallel']],
+            ],
+            'edges' => [
+                ['source_node_key' => 't', 'target_node_key' => 'f'],
+                ['source_node_key' => 'f', 'target_node_key' => 'a'],
+                ['source_node_key' => 'f', 'target_node_key' => 'b'],
+                ['source_node_key' => 'a', 'target_node_key' => 'm'],
+                ['source_node_key' => 'b', 'target_node_key' => 'm'],
+            ],
+        ];
+
+        $result = (new DataFlowAnalyzer(new WorkflowDefinitionGraph($definition)))->analyze();
+
+        $this->assertSame([], $result->conflicts);
+        $this->assertContains('context.name', $result->guaranteedAt('m'));
+    }
+
     public function test_trigger_variables_are_guaranteed_downstream(): void
     {
         $definition = [
