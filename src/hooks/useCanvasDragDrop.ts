@@ -9,6 +9,7 @@ type SetNodes = React.Dispatch<React.SetStateAction<Node[]>>;
 // Maps a node type key to the ReactFlow node component used to render it.
 // Add a case here when a node type needs a custom canvas component.
 function nodeComponentType(type: string): string {
+  if (type === 'if-node') return 'ifNode';
   if (type === 'switch') return 'switchNode';
   if (type === 'and-node') return 'forkNode';
   if (type === 'merge') return 'mergeNode';

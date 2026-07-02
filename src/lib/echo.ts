@@ -11,7 +11,7 @@ export function createEcho(token: string): Echo<'pusher'> {
         key: 'fa314367b08646e41d11',               // PUSHER_APP_KEY
         cluster: 'eu',                        // PUSHER_APP_CLUSTER
         forceTLS: true,                        // always true with Pusher
-        authEndpoint: 'https://workflow-api.hudashakir.serv00.net/api/broadcasting/auth',
+        authEndpoint: 'http://localhost:8000/api/broadcasting/auth',
         auth: {
             headers: {
                 Authorization: `Bearer ${token}`,
