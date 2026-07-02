@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
 use Modules\Workflows\Http\Requests\DeleteTaskCommentRequest;
 use Modules\Workflows\Http\Requests\ListTaskCommentsRequest;
@@ -15,11 +16,11 @@ class MobileTaskCommentsController extends Controller
 {
     public function __construct(private readonly WorkflowCommentsService $service) {}
 
-    public function index(ListTaskCommentsRequest $request, WorkflowTask $task): JsonResponse
+    public function index(ListTaskCommentsRequest $request, WorkflowTask $task): AnonymousResourceCollection
     {
         $comments = $this->service->listForTask($task, $this->actor(), (int) $request->input('per_page', 20));
 
-        return response()->json(WorkflowInstanceCommentResource::collection($comments));
+        return WorkflowInstanceCommentResource::collection($comments);
     }
 
     public function store(StoreTaskCommentRequest $request, WorkflowTask $task): JsonResponse

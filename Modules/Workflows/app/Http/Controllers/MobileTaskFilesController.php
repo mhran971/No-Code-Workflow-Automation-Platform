@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
 use Modules\Workflows\Http\Requests\DeleteTaskFileRequest;
 use Modules\Workflows\Http\Requests\ListTaskFilesRequest;
@@ -15,11 +16,11 @@ class MobileTaskFilesController extends Controller
 {
     public function __construct(private readonly WorkflowAttachmentService $service) {}
 
-    public function index(ListTaskFilesRequest $request, WorkflowTask $task): JsonResponse
+    public function index(ListTaskFilesRequest $request, WorkflowTask $task): AnonymousResourceCollection
     {
         $attachments = $this->service->listForTask($task, $this->actor(), (int) $request->input('per_page', 20));
 
-        return response()->json(WorkflowInstanceAttachmentResource::collection($attachments));
+        return WorkflowInstanceAttachmentResource::collection($attachments);
     }
 
     public function store(UploadTaskFileRequest $request, WorkflowTask $task): JsonResponse

@@ -17,6 +17,7 @@ use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowInstanceComment;
+use Modules\Workflows\Models\WorkflowNodeExecution;
 use Modules\Workflows\Models\WorkflowTask;
 use Modules\Workflows\Models\WorkflowVersion;
 use Modules\Workflows\Repositories\WorkflowInstanceAttachmentRepository;
@@ -185,9 +186,20 @@ class WorkflowTaskAttachmentsCommentsApiTest extends TestCase
             'started_at' => now(),
         ]);
 
+        $execution = WorkflowNodeExecution::query()->create([
+            'instance_id' => $instance->id,
+            'tenant_id' => $tenant->id,
+            'node_key' => 'review-documents-node',
+            'node_type' => 'task-node',
+            'status' => 'pending',
+            'attempt' => 1,
+            'idempotency_key' => 'task-fixture-'.$instance->id,
+            'started_at' => now(),
+        ]);
+
         $task = WorkflowTask::query()->create([
             'instance_id' => $instance->id,
-            'execution_id' => 1,
+            'execution_id' => $execution->id,
             'tenant_id' => $tenant->id,
             'node_key' => 'review-documents',
             'assignee_id' => $actor->id,
