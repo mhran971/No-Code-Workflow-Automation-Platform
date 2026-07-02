@@ -1,12 +1,41 @@
-import { Workflow, Save, PlayCircle, Settings, ChevronDown, Loader2 } from 'lucide-react';
+import { Workflow, Save, PlayCircle, Settings, ChevronDown, Loader2, ShieldCheck, Plug, Upload } from 'lucide-react';
 import type { ExecutionMode } from '@/hooks/useWorkflowExecution';
 
 interface WorkflowHeaderProps {
+  workflowName?: string;
   onRunAll?: () => void;
   executionMode?: ExecutionMode;
+  onVerify?: () => void;
+  isVerifying?: boolean;
+  canVerify?: boolean;
+  isApiConnected?: boolean;
+  onApiSettingsClick?: () => void;
+  onSave?: () => void;
+  isSaving?: boolean;
+  saveDisabled?: boolean;
+  onPublish?: () => void;
+  isPublishing?: boolean;
+  publishDisabled?: boolean;
+  hasUnsavedChanges?: boolean;
 }
 
-export function WorkflowHeader({ onRunAll, executionMode = 'idle' }: WorkflowHeaderProps) {
+export function WorkflowHeader({
+  workflowName,
+  onRunAll,
+  executionMode = 'idle',
+  onVerify,
+  isVerifying = false,
+  canVerify = false,
+  isApiConnected = false,
+  onApiSettingsClick,
+  onSave,
+  isSaving = false,
+  saveDisabled = false,
+  onPublish,
+  isPublishing = false,
+  publishDisabled = false,
+  hasUnsavedChanges = false,
+}: WorkflowHeaderProps) {
   const isRunning = executionMode === 'running' || executionMode === 'stepping';
 
   return (
@@ -18,16 +47,53 @@ export function WorkflowHeader({ onRunAll, executionMode = 'idle' }: WorkflowHea
         </div>
         <div className="w-px h-5 bg-border" />
         <div className="flex items-center gap-1.5">
-          <span className="text-sm text-foreground font-medium">Lead Qualification Pipeline</span>
+          <span className="text-sm text-foreground font-medium">{workflowName ?? 'Untitled Workflow'}</span>
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </div>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success font-medium">v2.1</span>
+        {hasUnsavedChanges && (
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" title="Unsaved changes" />
+        )}
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          <Save className="h-3.5 w-3.5" />
-          Save
+        <button
+          onClick={onApiSettingsClick}
+          className={`h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium transition-colors ${
+            isApiConnected
+              ? 'text-success hover:bg-success/10'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          <Plug className="h-3.5 w-3.5" />
+          {isApiConnected ? 'API Connected' : 'Connect API'}
+        </button>
+        <button
+          onClick={onSave}
+          disabled={isSaving || saveDisabled}
+          className="h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          {isSaving ? 'Saving…' : 'Save'}
+        </button>
+        <button
+          onClick={onPublish}
+          disabled={isPublishing || publishDisabled}
+          className="h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isPublishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {isPublishing ? 'Publishing…' : 'Publish Changes'}
+        </button>
+        <button
+          onClick={onVerify}
+          disabled={isVerifying || !canVerify}
+          className="h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isVerifying ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <ShieldCheck className="h-3.5 w-3.5" />
+          )}
+          {isVerifying ? 'Verifying…' : 'Verify'}
         </button>
         <button className="h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
           <Settings className="h-3.5 w-3.5" />

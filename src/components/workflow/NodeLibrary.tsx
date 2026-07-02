@@ -1,32 +1,40 @@
-import { useState } from 'react';
-import { NODE_TYPES, NODE_CATEGORIES, type NodeCategory, type NodeTypeDefinition } from '@/types/workflow';
+import { useMemo, useState } from 'react';
+import { NODE_CATEGORIES, type NodeCategory, type NodeTypeDefinition } from '@/types/workflow';
+import { mapApiNodeToUiNode } from '@/lib/api/utils';
+import type { ApiNodeDefinition } from '@/lib/api/types';
 import {
-  Zap, GitBranch, Brain, Plug, Database, Play,
-  MousePointerClick, Webhook, FormInput, Clock, Bell,
-  GitMerge, Split, Merge, Timer, Route, Repeat, ListOrdered, Filter as FilterIcon,
-  Signpost, Tags, FileText, Bot, Search, Heart, Wand2, ShieldCheck,
-  Mail, MailOpen, UserPlus, Handshake, CheckSquare, HardDrive, Sheet, FileEdit,
-  Variable, Braces, Calendar,
-  Globe, Send, ExternalLink, UserCheck,
-  ChevronDown, SearchIcon
+  Zap, GitBranch, Brain, Play,
+  MousePointerClick, FormInput,
+  GitMerge, Merge, Route, ListChecks,
+  Wand2,
+  Workflow, Shuffle,
+  Send, UserCheck,
+  ChevronDown, SearchIcon, Loader2, Plug,
 } from 'lucide-react';
 
+const GmailIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="5" width="20" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+    <path d="M2 8L9 13.5L12 11L15 13.5L22 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M9 13.5V19M15 13.5V19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
 const iconMap: Record<string, React.ElementType> = {
-  Zap, GitBranch, Brain, Plug, Database, Play,
-  MousePointerClick, Webhook, FormInput, Clock, Bell,
-  GitMerge, Split, Merge, Timer, Route, Repeat, ListOrdered, Filter: FilterIcon,
-  Signpost, Tags, FileText, Bot, Search, Heart, Wand2, ShieldCheck,
-  Mail, MailOpen, UserPlus, Handshake, CheckSquare, HardDrive, Sheet, FileEdit,
-  Variable, Braces, Calendar,
-  Globe, Send, ExternalLink, UserCheck,
+  Zap, GitBranch, Brain, Play,
+  MousePointerClick, FormInput,
+  GitMerge, Merge, Route, ListChecks,
+  Wand2,
+  Workflow, Shuffle,
+  Send, UserCheck,
+  Gmail: GmailIcon,
 };
 
 const categoryColorMap: Record<string, string> = {
   amber: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
   indigo: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/20',
   violet: 'bg-violet-500/15 text-violet-400 border-violet-500/20',
-  blue: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
-  emerald: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
+  teal: 'bg-teal-500/15 text-teal-400 border-teal-500/20',
   rose: 'bg-rose-500/15 text-rose-400 border-rose-500/20',
 };
 
@@ -34,15 +42,31 @@ const dotColorMap: Record<string, string> = {
   amber: 'bg-amber-400',
   indigo: 'bg-indigo-400',
   violet: 'bg-violet-400',
-  blue: 'bg-blue-400',
-  emerald: 'bg-emerald-400',
+  teal: 'bg-teal-400',
   rose: 'bg-rose-400',
 };
 
-export function NodeLibrary() {
+interface NodeLibraryProps {
+  nodeDefinitions?: ApiNodeDefinition[];
+  isConnected?: boolean;
+  isLoading?: boolean;
+  onConnectClick?: () => void;
+}
+
+export function NodeLibrary({
+  nodeDefinitions = [],
+  isConnected = false,
+  isLoading = false,
+  onConnectClick,
+}: NodeLibraryProps) {
   const [search, setSearch] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<NodeCategory>>(
-    new Set(['triggers', 'logic', 'ai', 'integrations', 'data', 'actions'])
+    new Set(['triggers', 'logic', 'ai', 'flows', 'actions'])
+  );
+
+  const nodeTypes = useMemo(
+    () => nodeDefinitions.map(mapApiNodeToUiNode),
+    [nodeDefinitions],
   );
 
   const toggleCategory = (cat: NodeCategory) => {
@@ -55,8 +79,8 @@ export function NodeLibrary() {
   };
 
   const filteredNodes = search
-    ? NODE_TYPES.filter(n => n.label.toLowerCase().includes(search.toLowerCase()) || n.description.toLowerCase().includes(search.toLowerCase()))
-    : NODE_TYPES;
+    ? nodeTypes.filter(n => n.label.toLowerCase().includes(search.toLowerCase()) || n.description.toLowerCase().includes(search.toLowerCase()))
+    : nodeTypes;
 
   const groupedNodes = (Object.keys(NODE_CATEGORIES) as NodeCategory[]).map(cat => ({
     category: cat,
@@ -86,7 +110,35 @@ export function NodeLibrary() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        {groupedNodes.map(group => (
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <Loader2 className="h-6 w-6 text-muted-foreground animate-spin mb-3" />
+            <p className="text-xs text-muted-foreground">Loading node library…</p>
+          </div>
+        )}
+
+        {!isLoading && !isConnected && (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <Plug className="h-8 w-8 text-muted-foreground/50 mb-3" />
+            <p className="text-xs text-muted-foreground mb-3">
+              Connect to the API to load available workflow nodes.
+            </p>
+            <button
+              onClick={onConnectClick}
+              className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+            >
+              Connect to API
+            </button>
+          </div>
+        )}
+
+        {!isLoading && isConnected && groupedNodes.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <p className="text-xs text-muted-foreground">No nodes match your search.</p>
+          </div>
+        )}
+
+        {!isLoading && isConnected && groupedNodes.map(group => (
           <div key={group.category}>
             <button
               onClick={() => toggleCategory(group.category)}

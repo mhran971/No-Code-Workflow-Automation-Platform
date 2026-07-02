@@ -50,6 +50,11 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
+## Architecture
+
+For how the code is organized — and how to add a new node type or config field type —
+see [docs/frontend-architecture.md](docs/frontend-architecture.md).
+
 ## What technologies are used for this project?
 
 This project is built with:
