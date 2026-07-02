@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Modules\Workflows\Http\Controllers\NodeController;
+use Modules\Workflows\Http\Controllers\MobileTaskCommentsController;
+use Modules\Workflows\Http\Controllers\MobileTaskFilesController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
 use Modules\Workflows\Http\Controllers\WorkflowInstanceController;
 use Modules\Workflows\Http\Controllers\WorkflowTaskController;
@@ -37,6 +39,12 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/tasks/{task}', [WorkflowTaskController::class, 'show'])->name('workflows.tasks.show');
     Route::patch('/tasks/{task}/draft', [WorkflowTaskController::class, 'saveDraft'])->name('workflows.tasks.draft');
     Route::post('/tasks/{task}/submit', [WorkflowTaskController::class, 'submit'])->name('workflows.tasks.submit');
+    Route::get('/tasks/{task}/files', [MobileTaskFilesController::class, 'index'])->name('workflows.tasks.files.index');
+    Route::post('/tasks/{task}/files', [MobileTaskFilesController::class, 'store'])->name('workflows.tasks.files.store');
+    Route::delete('/tasks/{task}/files/{attachment}', [MobileTaskFilesController::class, 'destroy'])->name('workflows.tasks.files.destroy');
+    Route::get('/tasks/{task}/comments', [MobileTaskCommentsController::class, 'index'])->name('workflows.tasks.comments.index');
+    Route::post('/tasks/{task}/comments', [MobileTaskCommentsController::class, 'store'])->name('workflows.tasks.comments.store');
+    Route::delete('/tasks/{task}/comments/{comment}', [MobileTaskCommentsController::class, 'destroy'])->name('workflows.tasks.comments.destroy');
 
     // Collection routes.
     Route::get('/', [WorkflowController::class, 'index'])->name('workflows.index');
