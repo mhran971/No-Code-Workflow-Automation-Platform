@@ -120,10 +120,12 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(ForkNodeExecutor::class));
             $registry->register($this->app->make(TaskNodeExecutor::class));
 
-            // MergeNodeExecutor handles both merge-and (its canonical type) and merge-or.
+            // MergeNodeExecutor handles merge-and (its canonical type), merge-or, and the unified
+            // 'merge' type (config.mergeMode selects parallel vs conditional at plan-compile time).
             $merge = $this->app->make(MergeNodeExecutor::class);
             $registry->register($merge);
             $registry->registerAs('merge-or', $merge);
+            $registry->registerAs('merge', $merge);
         });
     }
 }

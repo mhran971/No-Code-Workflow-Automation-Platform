@@ -25,9 +25,17 @@ class SwitchNodeExecutor implements NodeExecutor
         $config      = $context->config();
         $defaultEdge = null;
 
-        // Resolve the switch variable to its current string value.
-        $varPath = trim((string) ($config['variable'] ?? ''));
-        $value   = $varPath !== '' ? $context->render($varPath) : null;
+        // Resolve the switch variable to its current value. Note: evaluate(), not render() —
+        // render() only interpolates {{ }} placeholders and returns bare paths like "context.color"
+        // unchanged, which would never match a branch and always fall through to default.
+        $varPath  = trim((string) ($config['variable'] ?? ''));
+        $rawValue = $varPath !== '' ? $context->evaluate($varPath) : null;
+        $value    = match (true) {
+            $rawValue === null => null,
+            is_bool($rawValue) => $rawValue ? 'true' : 'false',
+            is_scalar($rawValue) => (string) $rawValue,
+            default => null,
+        };
 
         foreach ($outgoing as $edge) {
             // Default / fallback branch — keep it as last resort.
