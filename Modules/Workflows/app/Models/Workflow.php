@@ -5,6 +5,7 @@ namespace Modules\Workflows\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Modules\Auth\Models\Tenant;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
@@ -12,6 +13,13 @@ use Modules\Workflows\Enums\WorkflowStatus;
 
 class Workflow extends Model
 {
+    protected static function booted(): void
+    {
+        static::creating(function (Workflow $workflow): void {
+            $workflow->public_token ??= (string) Str::uuid();
+        });
+    }
+
     protected $fillable = [
         'tenant_id',
         'team_id',

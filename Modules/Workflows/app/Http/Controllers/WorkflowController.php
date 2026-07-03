@@ -170,6 +170,7 @@ class WorkflowController extends Controller
     {
         $payload = [
             'id' => $workflow->id,
+            'public_token' => $workflow->public_token,
             'name' => $workflow->name,
             'description' => $workflow->description,
             'status' => $workflow->status?->value,

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Workflows\Http\Controllers\NodeController;
 use Modules\Workflows\Http\Controllers\MobileTaskCommentsController;
 use Modules\Workflows\Http\Controllers\MobileTaskFilesController;
+use Modules\Workflows\Http\Controllers\PublicFormController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
 use Modules\Workflows\Http\Controllers\WorkflowInstanceController;
 use Modules\Workflows\Http\Controllers\WorkflowTaskController;
@@ -19,6 +20,14 @@ Route::middleware(['auth:api', 'active.user'])
 
         return Broadcast::auth($request);
     })->name('broadcasting.auth');
+
+// Public, unauthenticated form-trigger link — no auth:api/active.user. Gated at the service layer
+// (PublicFormService) to workflows that are published, active, and explicitly marked
+// trigger.config.accessLevel === 'public'. Throttled since it's open to the internet.
+Route::prefix('v1/public/forms')->middleware(['throttle:30,1'])->group(function (): void {
+    Route::get('/{publicToken}', [PublicFormController::class, 'show'])->name('public.forms.show');
+    Route::post('/{publicToken}/submit', [PublicFormController::class, 'submit'])->name('public.forms.submit');
+});
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
     // Static routes must be declared before /{workflow} to avoid the wildcard swallowing them.
