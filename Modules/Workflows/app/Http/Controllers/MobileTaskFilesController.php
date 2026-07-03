@@ -18,10 +18,18 @@ class MobileTaskFilesController extends Controller
 
     public function index(ListTaskFilesRequest $request, WorkflowTask $task): AnonymousResourceCollection
     {
+        // Handle cases where route-model binding could not find the task.
+        // In that case Laravel would normally throw a 404 before reaching this method,
+        // but we keep a defensive check for any custom binding/override scenarios.
+        if (! $task || ! $task->exists) {
+            abort(response()->json(['message' => 'Task not found.'], 404));
+        }
+
         $attachments = $this->service->listForTask($task, $this->actor(), (int) $request->input('per_page', 20));
 
         return WorkflowInstanceAttachmentResource::collection($attachments);
     }
+
 
     public function store(UploadTaskFileRequest $request, WorkflowTask $task): JsonResponse
     {

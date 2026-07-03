@@ -14,7 +14,7 @@ class UploadTaskFileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:10240'],
+            'file' => ['required', 'file:pdf,doc,docx,ppt,pptx,jpg,jpeg,png,gif,svg,webp,bmp,tiff,txt,zip,rar', 'max:20480'],
         ];
     }
 }
