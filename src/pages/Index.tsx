@@ -47,6 +47,8 @@ const Index = () => {
   // Workflow metadata
   const [workflowName, setWorkflowName] = useState('');
   const [draftRevision, setDraftRevision] = useState<number | null>(null);
+  const [publicToken, setPublicToken] = useState<string | null>(null);
+  const [hasPublishedVersion, setHasPublishedVersion] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -118,6 +120,8 @@ const Index = () => {
       .then(({ data }) => {
         setWorkflowName(data.name);
         setDraftRevision(data.draft_revision);
+        setPublicToken(data.public_token);
+        setHasPublishedVersion(data.current_version !== null);
 
         if (data.draft_definition && canvasRef.current) {
           isLoadingDefinitionRef.current = true;
@@ -215,10 +219,18 @@ const Index = () => {
     }
   }, [workflowId, draftRevision, apiBaseUrl, accessToken]);
 
+  const formTriggerNode = canvasNodes.find((node) => (node.data as { nodeType?: string })?.nodeType === 'form-trigger');
+  const formTriggerConfig = formTriggerNode?.data?.config as Record<string, unknown> | undefined;
+  const formLink =
+    publicToken && hasPublishedVersion && formTriggerConfig?.accessLevel === 'public'
+      ? `${window.location.origin}/forms/${publicToken}`
+      : null;
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background">
       <WorkflowHeader
         workflowName={workflowName}
+        formLink={formLink}
         onRunAll={runAll}
         executionMode={mode}
         onVerify={handleVerify}

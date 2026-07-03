@@ -124,6 +124,26 @@ export function isTriggerNode(node: Node, definitions: ApiNodeDefinition[]): boo
   return nodeType.endsWith('-trigger');
 }
 
+// Fork (and-node) branches must declare which merge node they rejoin at (backend requirement:
+// ForkNodeTypeRule::verify). Branches are a linear chain of nodes between the fork and the merge,
+// so walk forward from the branch's first node until a 'merge' node is found.
+function findJoinNodeKey(startNodeId: string, nodes: Node[], edges: Edge[]): string | null {
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const visited = new Set<string>();
+  let current: string | undefined = startNodeId;
+
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    const node = nodeById.get(current);
+    const nodeType = (node?.data as CanvasNodeData | undefined)?.nodeType;
+    if (nodeType === 'merge') return current;
+
+    current = edges.find((e) => e.source === current)?.target;
+  }
+
+  return null;
+}
+
 export function buildDefinitionFromCanvas(
   nodes: Node[],
   edges: Edge[],
@@ -157,6 +177,7 @@ export function buildDefinitionFromCanvas(
         source_node_key: edge.source,
         target_node_key: edge.target,
         branch_type: branchTypeFromHandle(edge.sourceHandle, sourceNodeType),
+        join_node_key: sourceNodeType === 'and-node' ? findJoinNodeKey(edge.target, nodes, edges) : undefined,
       };
     }),
     variables: [],

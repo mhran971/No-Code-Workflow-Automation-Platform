@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import WorkflowList from "./pages/WorkflowList.tsx";
 import WorkflowCreate from "./pages/WorkflowCreate.tsx";
+import WorkflowTemplates from "./pages/WorkflowTemplates.tsx";
+import PublicForm from "./pages/PublicForm.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -20,7 +22,9 @@ const App = () => (
           <Route path="/" element={<Navigate to="/workflows" replace />} />
           <Route path="/workflows" element={<WorkflowList />} />
           <Route path="/workflows/new" element={<WorkflowCreate />} />
+          <Route path="/workflows/templates" element={<WorkflowTemplates />} />
           <Route path="/workflows/:id/canvas" element={<Index />} />
+          <Route path="/forms/:publicToken" element={<PublicForm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

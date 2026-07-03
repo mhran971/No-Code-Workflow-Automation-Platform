@@ -82,11 +82,38 @@ export interface TenantUser {
 
 export interface WorkflowSummary {
   id: string;
+  public_token: string;
   name: string;
   description: string | null;
   status: string;
   version_number: number | null;
   version_label: string | null;
+  updated_at: string;
+}
+
+export interface PublicFormField {
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options: string[];
+}
+
+export interface PublicFormSchema {
+  workflow_name: string;
+  form_name: string;
+  form_description: string | null;
+  fields: PublicFormField[];
+}
+
+export interface WorkflowTemplate {
+  id: number;
+  name: string;
+  description: string | null;
+  category: string | null;
+  is_global: boolean;
+  usage_count: number;
+  created_at: string;
   updated_at: string;
 }
 

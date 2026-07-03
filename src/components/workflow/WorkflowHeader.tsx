@@ -1,8 +1,10 @@
-import { Workflow, Save, PlayCircle, Settings, ChevronDown, Loader2, ShieldCheck, Plug, Upload } from 'lucide-react';
+import { Workflow, Save, PlayCircle, Settings, ChevronDown, Loader2, ShieldCheck, Plug, Upload, Link2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { ExecutionMode } from '@/hooks/useWorkflowExecution';
 
 interface WorkflowHeaderProps {
   workflowName?: string;
+  formLink?: string | null;
   onRunAll?: () => void;
   executionMode?: ExecutionMode;
   onVerify?: () => void;
@@ -21,6 +23,7 @@ interface WorkflowHeaderProps {
 
 export function WorkflowHeader({
   workflowName,
+  formLink,
   onRunAll,
   executionMode = 'idle',
   onVerify,
@@ -37,6 +40,16 @@ export function WorkflowHeader({
   hasUnsavedChanges = false,
 }: WorkflowHeaderProps) {
   const isRunning = executionMode === 'running' || executionMode === 'stepping';
+
+  const handleCopyFormLink = async () => {
+    if (!formLink) return;
+    try {
+      await navigator.clipboard.writeText(formLink);
+      toast.success('Form link copied to clipboard');
+    } catch {
+      toast.error('Could not copy the link — copy it manually', { description: formLink });
+    }
+  };
 
   return (
     <header className="h-12 bg-background border-b border-border flex items-center justify-between px-4">
@@ -56,6 +69,16 @@ export function WorkflowHeader({
       </div>
 
       <div className="flex items-center gap-2">
+        {formLink && (
+          <button
+            onClick={handleCopyFormLink}
+            className="h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title={formLink}
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Copy Form Link
+          </button>
+        )}
         <button
           onClick={onApiSettingsClick}
           className={`h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium transition-colors ${

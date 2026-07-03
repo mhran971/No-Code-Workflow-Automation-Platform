@@ -1,4 +1,4 @@
-import type { ApiNodeDefinition, InstanceSummary, KnowledgeBaseDocument, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary } from './types';
+import type { ApiNodeDefinition, InstanceSummary, KnowledgeBaseDocument, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
 import { normalizeToken } from './utils';
 
 export class ApiError extends Error {
@@ -74,6 +74,62 @@ async function request<T>(
   return body as T;
 }
 
+// ─── Public (unauthenticated) form-trigger endpoints ───────────────────────────
+// No Authorization header, no API-connection dialog — these back a public form link that
+// anonymous visitors submit directly, so `request()` (which requires a token) doesn't apply.
+
+async function publicRequest<T>(baseUrl: string, path: string, options: RequestInit = {}): Promise<T> {
+  const url = buildUrl(baseUrl, path);
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      ...(options.headers ?? {}),
+    },
+  });
+
+  const text = await response.text();
+  let body: unknown = null;
+
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = text;
+    }
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof body === 'object' &&
+      body !== null &&
+      'message' in body &&
+      typeof (body as { message: unknown }).message === 'string'
+        ? (body as { message: string }).message
+        : `Request failed with status ${response.status} for ${url}`;
+    throw new ApiError(message, response.status, body, url);
+  }
+
+  return body as T;
+}
+
+export function fetchPublicForm(baseUrl: string, publicToken: string): Promise<PublicFormSchema> {
+  return publicRequest(baseUrl, `/public/forms/${publicToken}`);
+}
+
+export function submitPublicForm(
+  baseUrl: string,
+  publicToken: string,
+  payload: Record<string, unknown>,
+): Promise<{ message: string }> {
+  return publicRequest(baseUrl, `/public/forms/${publicToken}/submit`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function fetchNodeLibrary(
   baseUrl: string,
   token: string,
@@ -117,6 +173,24 @@ export function createWorkflow(
   return request(baseUrl, token, '/workflows', {
     method: 'POST',
     body: JSON.stringify({ method: 'blank', ...payload }),
+  });
+}
+
+export function listTemplates(
+  baseUrl: string,
+  token: string,
+): Promise<{ data: WorkflowTemplate[] }> {
+  return request(baseUrl, token, '/workflows/templates');
+}
+
+export function createWorkflowFromTemplate(
+  baseUrl: string,
+  token: string,
+  payload: { template_id: number; name: string; description?: string; team_id?: number },
+): Promise<{ workflow: WorkflowSummary }> {
+  return request(baseUrl, token, '/workflows', {
+    method: 'POST',
+    body: JSON.stringify({ method: 'template', ...payload }),
   });
 }
 

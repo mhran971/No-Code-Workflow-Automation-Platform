@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Workflow, Plus, ChevronRight, Loader2 } from 'lucide-react';
+import { Workflow, Plus, ChevronRight, Loader2, LayoutTemplate } from 'lucide-react';
 import { ApiConnectionDialog } from '@/components/workflow/ApiConnectionDialog';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { ApiError, listWorkflows } from '@/lib/api/client';
@@ -60,13 +60,22 @@ export default function WorkflowList() {
             <h1 className="text-xl font-semibold text-foreground">Workflows</h1>
             <p className="text-sm text-muted-foreground mt-0.5">Design and manage your automation workflows</p>
           </div>
-          <button
-            onClick={() => navigate('/workflows/new')}
-            className="h-9 px-4 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Workflow
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/workflows/templates')}
+              className="h-9 px-4 flex items-center gap-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5" />
+              From Template
+            </button>
+            <button
+              onClick={() => navigate('/workflows/new')}
+              className="h-9 px-4 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Workflow
+            </button>
+          </div>
         </div>
 
         {loading && (
@@ -86,13 +95,22 @@ export default function WorkflowList() {
             <Workflow className="h-10 w-10 text-muted-foreground/30 mb-4" />
             <p className="text-sm font-medium text-foreground">No workflows yet</p>
             <p className="text-xs text-muted-foreground mt-1 mb-4">Create your first workflow to get started</p>
-            <button
-              onClick={() => navigate('/workflows/new')}
-              className="h-9 px-4 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Workflow
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/workflows/templates')}
+                className="h-9 px-4 flex items-center gap-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+              >
+                <LayoutTemplate className="h-3.5 w-3.5" />
+                From Template
+              </button>
+              <button
+                onClick={() => navigate('/workflows/new')}
+                className="h-9 px-4 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Workflow
+              </button>
+            </div>
           </div>
         )}
 
