@@ -229,6 +229,7 @@ Return full detail for a single task, including the form schema and any saved dr
         "required": false
       }
     ],
+    "response": null,
     "draft_response": {
       "decision": "approve"
     },
@@ -257,6 +258,8 @@ Return full detail for a single task, including the form schema and any saved dr
 | `select` | Single choice from a list | `options: string[]` |
 | `checkbox` | Multiple choices from a list | `options: string[]` |
 
+> `response` is the final submitted answer (a key-value map). It is `null` until the task is submitted.
+>
 > `draft_response` mirrors the `response` shape (a key-value map). It is `null` if no draft has been saved yet.
 >
 > `completed_by` is `null` while the task is open. Once submitted, it contains `{ id, name }`.
@@ -282,7 +285,7 @@ Save a partial response without submitting the task. The task remains `open`. Us
 
 **Request**
 
-The `response` object keys must match the `key` fields in `input_schema`. Partial payloads are accepted — only the provided keys are stored (the whole object is replaced on each call).
+The `response` object keys must match the `key` fields in `input_schema`. Partial payloads are accepted — only the provided keys are stored (the whole object is replaced on each call). `response` may be omitted or empty (e.g. `{}`) to save a blank draft.
 
 ```json
 {
@@ -306,7 +309,7 @@ The `response` object keys must match the `key` fields in `input_schema`. Partia
 |--------|-----------|
 | `403` | Task belongs to another tenant, or caller lacks access (wrong role) |
 | `404` | Task not found |
-| `422` | `response` field missing or not an object / task is already closed |
+| `422` | `response` is present but not an object, or task is already closed |
 
 ---
 

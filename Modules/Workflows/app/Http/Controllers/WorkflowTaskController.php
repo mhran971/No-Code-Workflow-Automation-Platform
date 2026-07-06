@@ -12,6 +12,7 @@ use Modules\Team\Models\Team;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Http\Requests\ListTasksRequest;
+use Modules\Workflows\Http\Requests\SaveTaskDraftRequest;
 use Modules\Workflows\Http\Requests\SubmitTaskRequest;
 use Modules\Workflows\Http\Resources\WorkflowTaskDetailResource;
 use Modules\Workflows\Http\Resources\WorkflowTaskResource;
@@ -157,7 +158,7 @@ class WorkflowTaskController extends Controller
      * Persist a partial response without closing the task.
      * Only allowed while the task is still open.
      */
-    public function saveDraft(SubmitTaskRequest $request, WorkflowTask $task): JsonResponse
+    public function saveDraft(SaveTaskDraftRequest $request, WorkflowTask $task): JsonResponse
     {
         $user = $this->actor();
 

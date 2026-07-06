@@ -22,6 +22,7 @@ class WorkflowTaskDetailResource extends JsonResource
             'completed_at' => $this->completed_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
             'input_schema' => $this->input_schema,
+            'response' => $this->response,
             'draft_response' => $this->draft_response,
             'assignee' => $this->whenLoaded('assignee', fn () => [
                 'id' => $this->assignee->id,
