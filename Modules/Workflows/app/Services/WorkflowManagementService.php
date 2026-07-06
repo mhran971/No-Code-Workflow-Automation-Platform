@@ -381,6 +381,63 @@ class WorkflowManagementService
         return ['view'];
     }
 
+    public function serializeWorkflow(Workflow $workflow, User $actor, bool $includeDetails = false): array
+    {
+        $payload = [
+            'id' => $workflow->id,
+            'public_token' => $workflow->public_token,
+            'name' => $workflow->name,
+            'description' => $workflow->description,
+            'status' => $workflow->status?->value,
+            'team' => $workflow->team ? [
+                'id' => $workflow->team->id,
+                'name' => $workflow->team->name,
+            ] : null,
+            'version_number' => $workflow->current_version_number,
+            'version_label' => $workflow->current_version_label,
+            'created_by' => $workflow->createdBy ? [
+                'id' => $workflow->createdBy->id,
+                'name' => $workflow->createdBy->name,
+                'email' => $workflow->createdBy->email,
+            ] : null,
+            'created_at' => $workflow->created_at,
+            'updated_at' => $workflow->updated_at,
+            'total_runs' => $workflow->total_runs,
+            'active_instances' => $workflow->active_instances,
+            'actions' => $this->availableActions($actor, $workflow),
+        ];
+
+        if ($includeDetails) {
+            $payload['draft_revision'] = $workflow->draft_revision;
+            $payload['draft_definition'] = $workflow->draft_definition;
+            $payload['template'] = $workflow->template ? [
+                'id' => $workflow->template->id,
+                'name' => $workflow->template->name,
+            ] : null;
+            $payload['current_version'] = $workflow->currentVersion
+                ? $this->serializeVersion($workflow->currentVersion)
+                : null;
+        }
+
+        return $payload;
+    }
+
+    public function serializeVersion(WorkflowVersion $version): array
+    {
+        return [
+            'id' => $version->id,
+            'version_number' => $version->version_number,
+            'version_label' => $version->version_label,
+            'release_note' => $version->release_note,
+            'published_at' => $version->published_at,
+            'published_by' => $version->publishedBy ? [
+                'id' => $version->publishedBy->id,
+                'name' => $version->publishedBy->name,
+                'email' => $version->publishedBy->email,
+            ] : null,
+        ];
+    }
+
     protected function visibleWorkflowsQuery(User $actor): Builder
     {
         $query = Workflow::query()->where('tenant_id', (int) $actor->tenant_id);

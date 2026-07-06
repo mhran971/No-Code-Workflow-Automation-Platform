@@ -89,6 +89,38 @@ class WorkflowInstancesApiTest extends TestCase
         ]);
     }
 
+    public function test_instance_detail_includes_basic_workflow_details(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-instance-detail');
+        $team = $this->createTeam($tenant, $manager, 'Operations');
+        $this->assignToTeam($tenant, $manager, $team);
+
+        $workflow = $this->createWorkflow($tenant, $team, $manager);
+        $version = $this->createWorkflowVersion($tenant, $workflow, $manager);
+        /** @var Authenticatable $managerAuth */
+        $managerAuth = $manager;
+
+        $instance = $this->createInstance(
+            $tenant,
+            $workflow,
+            $version,
+            WorkflowInstanceStatus::Waiting,
+            '2026-07-04 08:00:00',
+            null,
+        );
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson("/api/v1/workflows/instances/{$instance->id}")
+            ->assertOk()
+            ->assertJsonPath('workflow.id', $workflow->id)
+            ->assertJsonPath('workflow.name', $workflow->name)
+            ->assertJsonPath('workflow.team.id', $team->id)
+            ->assertJsonPath('workflow.created_by.id', $manager->id)
+            ->assertJsonPath('workflow.actions.0', 'view')
+            ->assertJsonMissingPath('workflow.draft_definition');
+    }
+
     public function test_instances_endpoint_rejects_invalid_status_filters(): void
     {
         $tenant = $this->createTenant();

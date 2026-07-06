@@ -484,6 +484,22 @@ Return full detail for a single workflow instance, including all node executions
   "finished_at": null,
   "created_at": "2026-07-04T08:00:00+00:00",
   "updated_at": "2026-07-04T08:05:00+00:00",
+  "workflow": {
+    "id": 3,
+    "public_token": "b1f2c3d4-...",
+    "name": "Employee Onboarding",
+    "description": "Automated sequence for provisioning access",
+    "status": "active",
+    "team": { "id": 5, "name": "HR Team" },
+    "version_number": 2,
+    "version_label": "v1.2.0",
+    "created_by": { "id": 1, "name": "Alice Smith", "email": "alice@example.com" },
+    "created_at": "2026-05-01T08:00:00+00:00",
+    "updated_at": "2026-06-20T08:00:00+00:00",
+    "total_runs": 42,
+    "active_instances": 3,
+    "actions": ["view"]
+  },
   "node_executions": [
     {
       "id": 101,
@@ -518,6 +534,8 @@ Return full detail for a single workflow instance, including all node executions
   ]
 }
 ```
+
+> `workflow` is the basic workflow shape (not the full detail variant, so `draft_definition` and `template` are omitted). `actions` is the caller's own permissions on that workflow (e.g. `[]` if they can no longer view it).
 
 **Instance status values**
 

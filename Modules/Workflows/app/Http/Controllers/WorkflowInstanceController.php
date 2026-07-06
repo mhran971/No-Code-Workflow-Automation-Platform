@@ -68,9 +68,16 @@ class WorkflowInstanceController extends Controller
     {
         $this->authorizeInstance($instance);
 
-        $instance->load('nodeExecutions');
+        $instance->load([
+            'nodeExecutions',
+            'workflow.team:id,name',
+            'workflow.createdBy:id,first_name,last_name,name,email',
+        ]);
 
-        return response()->json($instance);
+        $payload = $instance->toArray();
+        $payload['workflow'] = $this->workflowManagementService->serializeWorkflow($instance->workflow, $this->actor());
+
+        return response()->json($payload);
     }
 
     /**
