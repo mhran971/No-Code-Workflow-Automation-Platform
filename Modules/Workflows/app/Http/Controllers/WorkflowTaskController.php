@@ -49,10 +49,17 @@ class WorkflowTaskController extends Controller
             $query->where('assignee_id', $request->integer('assignee_id'));
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->string('status'));
+        $status = $request->filled('status') ? $request->string('status')->toString() : 'open';
+
+        if ($status === 'expired') {
+            $query->where('status', 'open')
+                ->whereNotNull('due_at')
+                ->where('due_at', '<', now());
+        } elseif ($status === 'open') {
+            $query->where('status', 'open')
+                ->where(fn ($q) => $q->whereNull('due_at')->orWhere('due_at', '>=', now()));
         } else {
-            $query->where('status', 'open');
+            $query->where('status', $status);
         }
 
         if ($request->filled('search')) {

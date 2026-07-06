@@ -113,6 +113,141 @@ class WorkflowTaskApiTest extends TestCase
             ->assertJsonPath('data.completed_by.id', $manager->id);
     }
 
+    public function test_cancelling_instance_cancels_its_open_tasks(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-cancel');
+        $team = $this->createTeam($tenant, $manager, 'Operations');
+        $this->assignToTeam($tenant, $manager, $team);
+
+        $task = $this->createTask($tenant, $team, $manager);
+        /** @var Authenticatable $managerAuth */
+        $managerAuth = $manager;
+
+        $this->actingAs($managerAuth, 'api')
+            ->postJson("/api/v1/workflows/instances/{$task->instance_id}/cancel")
+            ->assertOk();
+
+        $this->assertDatabaseHas('workflow_instances', [
+            'id' => $task->instance_id,
+            'status' => WorkflowInstanceStatus::Cancelled->value,
+        ]);
+
+        $this->assertDatabaseHas('workflow_tasks', [
+            'id' => $task->id,
+            'status' => 'cancelled',
+        ]);
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson("/api/v1/workflows/tasks/{$task->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled');
+    }
+
+    public function test_cancelling_instance_does_not_reopen_already_completed_tasks(): void
+    {
+        Queue::fake();
+
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-cancel-completed');
+        $team = $this->createTeam($tenant, $manager, 'Operations');
+        $this->assignToTeam($tenant, $manager, $team);
+
+        $task = $this->createTask($tenant, $team, $manager);
+        /** @var Authenticatable $managerAuth */
+        $managerAuth = $manager;
+
+        $this->actingAs($managerAuth, 'api')
+            ->postJson("/api/v1/workflows/tasks/{$task->id}/submit", [
+                'response' => ['decision' => 'approve'],
+            ])
+            ->assertOk();
+
+        $this->actingAs($managerAuth, 'api')
+            ->postJson("/api/v1/workflows/instances/{$task->instance_id}/cancel")
+            ->assertOk();
+
+        $this->assertDatabaseHas('workflow_tasks', [
+            'id' => $task->id,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_overdue_open_task_displays_as_expired(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-expired');
+        $team = $this->createTeam($tenant, $manager, 'Operations');
+        $this->assignToTeam($tenant, $manager, $team);
+
+        $overdueTask = $this->createTask($tenant, $team, $manager, '2000-01-01 00:00:00');
+        $onTimeTask = $this->createTask($tenant, $team, $manager, '2999-01-01 00:00:00');
+        /** @var Authenticatable $managerAuth */
+        $managerAuth = $manager;
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson("/api/v1/workflows/tasks/{$overdueTask->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'expired');
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson("/api/v1/workflows/tasks/{$onTimeTask->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'open');
+
+        $this->assertDatabaseHas('workflow_tasks', [
+            'id' => $overdueTask->id,
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson('/api/v1/workflows/tasks?status=expired')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $overdueTask->id);
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson('/api/v1/workflows/tasks?status=open')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $onTimeTask->id);
+    }
+
+    public function test_cancelled_and_completed_tasks_ignore_due_date_when_displaying_status(): void
+    {
+        Queue::fake();
+
+        $tenant = $this->createTenant();
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-precedence');
+        $team = $this->createTeam($tenant, $manager, 'Operations');
+        $this->assignToTeam($tenant, $manager, $team);
+
+        $completedTask = $this->createTask($tenant, $team, $manager, '2000-01-01 00:00:00');
+        $cancelledTask = $this->createTask($tenant, $team, $manager, '2000-01-01 00:00:00');
+        /** @var Authenticatable $managerAuth */
+        $managerAuth = $manager;
+
+        $this->actingAs($managerAuth, 'api')
+            ->postJson("/api/v1/workflows/tasks/{$completedTask->id}/submit", [
+                'response' => ['decision' => 'approve'],
+            ])
+            ->assertOk();
+
+        $this->actingAs($managerAuth, 'api')
+            ->postJson("/api/v1/workflows/instances/{$cancelledTask->instance_id}/cancel")
+            ->assertOk();
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson("/api/v1/workflows/tasks/{$completedTask->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed');
+
+        $this->actingAs($managerAuth, 'api')
+            ->getJson("/api/v1/workflows/tasks/{$cancelledTask->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled');
+    }
+
     private function createTenant(): Tenant
     {
         return Tenant::query()->create([
@@ -154,7 +289,7 @@ class WorkflowTaskApiTest extends TestCase
         ]);
     }
 
-    private function createTask(Tenant $tenant, Team $team, User $assignee): WorkflowTask
+    private function createTask(Tenant $tenant, Team $team, User $assignee, ?string $dueAt = null): WorkflowTask
     {
         $workflow = Workflow::query()->create([
             'tenant_id' => $tenant->id,
@@ -228,7 +363,7 @@ class WorkflowTaskApiTest extends TestCase
                 ['key' => 'comments', 'label' => 'Comments', 'type' => 'textarea', 'required' => false],
             ],
             'status' => 'open',
-            'due_at' => null,
+            'due_at' => $dueAt ? Carbon::parse($dueAt, 'UTC') : null,
         ]);
     }
 }

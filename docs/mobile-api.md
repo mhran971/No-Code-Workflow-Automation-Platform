@@ -136,6 +136,12 @@ Return pending and overdue task counts for the home screen stat cards. Counts ar
 
 Return a paginated list of tasks. Defaults to `status=open`, sorted by `due_at` ascending.
 
+`open` and `expired` are mutually exclusive: an open task whose `due_at` has passed is reported as
+`expired` (in both the `status` filter and the `status` field on each item) and is excluded from the
+`open` bucket. This is purely a display/filter distinction — the task stays actionable (its parked
+execution is unaffected) until it is submitted or its instance is cancelled. `completed` and
+`cancelled` tasks are unaffected by `due_at` and always keep their real status.
+
 **Query parameters**
 
 | Parameter | Type | Default | Description |
@@ -263,6 +269,10 @@ Return full detail for a single task, including the form schema and any saved dr
 > `draft_response` mirrors the `response` shape (a key-value map). It is `null` if no draft has been saved yet.
 >
 > `completed_by` is `null` while the task is open. Once submitted, it contains `{ id, name }`.
+>
+> `status` is `expired` for an open task whose `due_at` has passed. `completed` and `cancelled` are
+> final and are never overridden by `due_at`. A task is also set to `cancelled` automatically when
+> its workflow instance is cancelled.
 
 **Error responses**
 
