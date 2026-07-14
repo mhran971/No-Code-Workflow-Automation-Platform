@@ -61,12 +61,6 @@ class WorkflowManagementApiTest extends TestCase
             'created_by_id' => $manager->id,
         ]);
 
-        $this->assertDatabaseHas('workflow_access_grants', [
-            'workflow_id' => $workflowId,
-            'user_id' => $employee->id,
-            'access_level' => 'view',
-        ]);
-
         $this->actingAs($employee, 'api')
             ->getJson('/api/v1/workflows')
             ->assertOk()

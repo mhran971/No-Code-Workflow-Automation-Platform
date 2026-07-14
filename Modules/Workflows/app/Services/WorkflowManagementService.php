@@ -15,7 +15,6 @@ use Modules\Team\Models\TeamMembership;
 use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
-use Modules\Workflows\Models\WorkflowAccessGrant;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowTemplate;
 use Modules\Workflows\Models\WorkflowVersion;
@@ -129,8 +128,6 @@ class WorkflowManagementService
                 'total_runs' => 0,
                 'active_instances' => 0,
             ]);
-
-            $this->grantTeamEmployeesViewAccess($workflow, $actor);
 
             return $workflow->refresh()->load(['team:id,name', 'createdBy:id,first_name,last_name,name,email']);
         });
@@ -327,7 +324,6 @@ class WorkflowManagementService
 
         DB::transaction(function () use ($workflow): void {
             $workflow->instances()->delete();
-            $workflow->accessGrants()->delete();
             $workflow->versions()->delete();
             $workflow->delete();
         });
@@ -385,6 +381,63 @@ class WorkflowManagementService
         return ['view'];
     }
 
+    public function serializeWorkflow(Workflow $workflow, User $actor, bool $includeDetails = false): array
+    {
+        $payload = [
+            'id' => $workflow->id,
+            'public_token' => $workflow->public_token,
+            'name' => $workflow->name,
+            'description' => $workflow->description,
+            'status' => $workflow->status?->value,
+            'team' => $workflow->team ? [
+                'id' => $workflow->team->id,
+                'name' => $workflow->team->name,
+            ] : null,
+            'version_number' => $workflow->current_version_number,
+            'version_label' => $workflow->current_version_label,
+            'created_by' => $workflow->createdBy ? [
+                'id' => $workflow->createdBy->id,
+                'name' => $workflow->createdBy->name,
+                'email' => $workflow->createdBy->email,
+            ] : null,
+            'created_at' => $workflow->created_at,
+            'updated_at' => $workflow->updated_at,
+            'total_runs' => $workflow->total_runs,
+            'active_instances' => $workflow->active_instances,
+            'actions' => $this->availableActions($actor, $workflow),
+        ];
+
+        if ($includeDetails) {
+            $payload['draft_revision'] = $workflow->draft_revision;
+            $payload['draft_definition'] = $workflow->draft_definition;
+            $payload['template'] = $workflow->template ? [
+                'id' => $workflow->template->id,
+                'name' => $workflow->template->name,
+            ] : null;
+            $payload['current_version'] = $workflow->currentVersion
+                ? $this->serializeVersion($workflow->currentVersion)
+                : null;
+        }
+
+        return $payload;
+    }
+
+    public function serializeVersion(WorkflowVersion $version): array
+    {
+        return [
+            'id' => $version->id,
+            'version_number' => $version->version_number,
+            'version_label' => $version->version_label,
+            'release_note' => $version->release_note,
+            'published_at' => $version->published_at,
+            'published_by' => $version->publishedBy ? [
+                'id' => $version->publishedBy->id,
+                'name' => $version->publishedBy->name,
+                'email' => $version->publishedBy->email,
+            ] : null,
+        ];
+    }
+
     protected function visibleWorkflowsQuery(User $actor): Builder
     {
         $query = Workflow::query()->where('tenant_id', (int) $actor->tenant_id);
@@ -400,9 +453,10 @@ class WorkflowManagementService
         }
 
         if ($actor->role === Role::Employee) {
-            return $query->whereHas('accessGrants', function (Builder $query) use ($actor): void {
-                $query->where('user_id', (int) $actor->id)
-                    ->where('access_level', 'view');
+            return $query->whereHas('team.memberships', function (Builder $query) use ($actor): void {
+                $query->where('tenant_id', (int) $actor->tenant_id)
+                    ->where('user_id', (int) $actor->id)
+                    ->where('status', 'active');
             });
         }
 
@@ -441,29 +495,6 @@ class WorkflowManagementService
         }
 
         return $template;
-    }
-
-    protected function grantTeamEmployeesViewAccess(Workflow $workflow, User $actor): void
-    {
-        TeamMembership::query()
-            ->where('tenant_id', (int) $workflow->tenant_id)
-            ->where('team_id', (int) $workflow->team_id)
-            ->where('status', 'active')
-            ->whereHas('user', fn (Builder $query) => $query->where('role', Role::Employee->value))
-            ->pluck('user_id')
-            ->each(function ($userId) use ($workflow, $actor): void {
-                WorkflowAccessGrant::query()->updateOrCreate(
-                    [
-                        'workflow_id' => (int) $workflow->id,
-                        'user_id' => (int) $userId,
-                    ],
-                    [
-                        'access_level' => 'view',
-                        'granted_by_id' => (int) $actor->id,
-                        'granted_at' => now(),
-                    ]
-                );
-            });
     }
 
     protected function blankDefinition(): array
@@ -687,10 +718,11 @@ class WorkflowManagementService
         }
 
         if ($actor->role === Role::Employee) {
-            return WorkflowAccessGrant::query()
-                ->where('workflow_id', (int) $workflow->id)
+            return TeamMembership::query()
+                ->where('tenant_id', (int) $actor->tenant_id)
+                ->where('team_id', (int) $workflow->team_id)
                 ->where('user_id', (int) $actor->id)
-                ->where('access_level', 'view')
+                ->where('status', 'active')
                 ->exists();
         }
 

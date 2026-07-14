@@ -20,6 +20,7 @@ use Modules\Workflows\Events\NodeWaiting;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
+use Modules\Workflows\Models\WorkflowTask;
 use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
 use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
 use Throwable;
@@ -115,6 +116,11 @@ class WorkflowRuntime
                     NodeExecutionStatus::Waiting->value,
                 ])
                 ->update(['status' => NodeExecutionStatus::Consumed->value, 'finished_at' => now()]);
+
+            WorkflowTask::query()
+                ->where('instance_id', $instance->id)
+                ->where('status', 'open')
+                ->update(['status' => 'cancelled']);
 
             $instance->update([
                 'status' => WorkflowInstanceStatus::Cancelled,

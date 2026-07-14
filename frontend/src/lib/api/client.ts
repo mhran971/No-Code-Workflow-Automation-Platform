@@ -260,10 +260,32 @@ export function cancelInstance(
   });
 }
 
+export interface ListInstancesFilters {
+  status?: string;
+  started_from?: string;
+  started_to?: string;
+  finished_from?: string;
+  finished_to?: string;
+}
+
 export function listInstances(
   baseUrl: string,
   token: string,
   workflowId: string,
+  filters: ListInstancesFilters = {},
 ): Promise<{ data: InstanceSummary[] }> {
-  return request(baseUrl, token, `/workflows/${workflowId}/instances`);
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.set(key, value);
+    }
+  }
+
+  const queryString = searchParams.toString();
+  const path = queryString.length > 0
+    ? `/workflows/${workflowId}/instances?${queryString}`
+    : `/workflows/${workflowId}/instances`;
+
+  return request(baseUrl, token, path);
 }

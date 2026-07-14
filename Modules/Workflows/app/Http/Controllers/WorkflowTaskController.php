@@ -12,6 +12,7 @@ use Modules\Team\Models\Team;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Http\Requests\ListTasksRequest;
+use Modules\Workflows\Http\Requests\SaveTaskDraftRequest;
 use Modules\Workflows\Http\Requests\SubmitTaskRequest;
 use Modules\Workflows\Http\Resources\WorkflowTaskDetailResource;
 use Modules\Workflows\Http\Resources\WorkflowTaskResource;
@@ -48,10 +49,17 @@ class WorkflowTaskController extends Controller
             $query->where('assignee_id', $request->integer('assignee_id'));
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->string('status'));
+        $status = $request->filled('status') ? $request->string('status')->toString() : 'open';
+
+        if ($status === 'expired') {
+            $query->where('status', 'open')
+                ->whereNotNull('due_at')
+                ->where('due_at', '<', now());
+        } elseif ($status === 'open') {
+            $query->where('status', 'open')
+                ->where(fn ($q) => $q->whereNull('due_at')->orWhere('due_at', '>=', now()));
         } else {
-            $query->where('status', 'open');
+            $query->where('status', $status);
         }
 
         if ($request->filled('search')) {
@@ -157,7 +165,7 @@ class WorkflowTaskController extends Controller
      * Persist a partial response without closing the task.
      * Only allowed while the task is still open.
      */
-    public function saveDraft(SubmitTaskRequest $request, WorkflowTask $task): JsonResponse
+    public function saveDraft(SaveTaskDraftRequest $request, WorkflowTask $task): JsonResponse
     {
         $user = $this->actor();
 

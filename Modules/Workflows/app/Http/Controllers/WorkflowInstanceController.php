@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\NodeExecutionStatus;
+use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
+use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\Execution\WorkflowRuntime;
 
 /**
@@ -17,18 +19,44 @@ use Modules\Workflows\Services\Execution\WorkflowRuntime;
  */
 class WorkflowInstanceController extends Controller
 {
-    public function __construct(protected WorkflowRuntime $runtime) {}
+    public function __construct(
+        protected WorkflowRuntime $runtime,
+        protected WorkflowManagementService $workflowManagementService,
+    ) {}
 
     /**
      * List instances for a given workflow (most recent first).
      */
-    public function index(Request $request, Workflow $workflow): JsonResponse
+    public function index(ListWorkflowInstancesRequest $request, Workflow $workflow): JsonResponse
     {
-        $instances = WorkflowInstance::query()
+        $validated = $request->validated();
+        $workflow = $this->workflowManagementService->getVisibleWorkflow($this->actor(), $workflow);
+
+        $query = WorkflowInstance::query()
             ->where('workflow_id', $workflow->id)
-            ->where('tenant_id', $this->actor()->tenant_id)
-            ->latest()
-            ->paginate(20);
+            ->where('tenant_id', $this->actor()->tenant_id);
+
+        if (array_key_exists('status', $validated)) {
+            $query->where('status', $validated['status']);
+        }
+
+        if (array_key_exists('started_from', $validated)) {
+            $query->whereDate('started_at', '>=', $validated['started_from']);
+        }
+
+        if (array_key_exists('started_to', $validated)) {
+            $query->whereDate('started_at', '<=', $validated['started_to']);
+        }
+
+        if (array_key_exists('finished_from', $validated)) {
+            $query->whereDate('finished_at', '>=', $validated['finished_from']);
+        }
+
+        if (array_key_exists('finished_to', $validated)) {
+            $query->whereDate('finished_at', '<=', $validated['finished_to']);
+        }
+
+        $instances = $query->latest()->paginate(20);
 
         return response()->json($instances);
     }
@@ -40,9 +68,16 @@ class WorkflowInstanceController extends Controller
     {
         $this->authorizeInstance($instance);
 
-        $instance->load('nodeExecutions');
+        $instance->load([
+            'nodeExecutions',
+            'workflow.team:id,name',
+            'workflow.createdBy:id,first_name,last_name,name,email',
+        ]);
 
-        return response()->json($instance);
+        $payload = $instance->toArray();
+        $payload['workflow'] = $this->workflowManagementService->serializeWorkflow($instance->workflow, $this->actor());
+
+        return response()->json($payload);
     }
 
     /**

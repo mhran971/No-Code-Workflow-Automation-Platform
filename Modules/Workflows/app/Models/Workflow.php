@@ -81,11 +81,6 @@ class Workflow extends Model
         return $this->hasMany(WorkflowVersion::class);
     }
 
-    public function accessGrants(): HasMany
-    {
-        return $this->hasMany(WorkflowAccessGrant::class);
-    }
-
     public function instances(): HasMany
     {
         return $this->hasMany(WorkflowInstance::class);

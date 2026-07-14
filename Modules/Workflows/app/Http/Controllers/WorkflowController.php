@@ -30,7 +30,7 @@ class WorkflowController extends Controller
         $workflows = $this->workflowManagementService->listVisibleWorkflows($actor, $request->query());
 
         return response()->json([
-            'data' => $workflows->map(fn (Workflow $workflow) => $this->serializeWorkflow($workflow, $actor))->values(),
+            'data' => $workflows->map(fn (Workflow $workflow) => $this->workflowManagementService->serializeWorkflow($workflow, $actor))->values(),
         ]);
     }
 
@@ -49,7 +49,7 @@ class WorkflowController extends Controller
 
         return response()->json([
             'message' => 'Workflow created successfully.',
-            'workflow' => $this->serializeWorkflow($workflow, $this->actor()),
+            'workflow' => $this->workflowManagementService->serializeWorkflow($workflow, $this->actor()),
         ], 201);
     }
 
@@ -74,7 +74,7 @@ class WorkflowController extends Controller
         $workflow = $this->workflowManagementService->getVisibleWorkflow($this->actor(), $workflow);
 
         return response()->json([
-            'data' => $this->serializeWorkflow($workflow, $this->actor(), true),
+            'data' => $this->workflowManagementService->serializeWorkflow($workflow, $this->actor(), true),
         ]);
     }
 
@@ -98,7 +98,7 @@ class WorkflowController extends Controller
 
         return response()->json([
             'workflow_id' => $workflow->id,
-            'published_version' => $this->serializeVersion($version),
+            'published_version' => $this->workflowManagementService->serializeVersion($version),
             'workflow_status' => $workflow->status?->value,
         ], 201);
     }
@@ -108,7 +108,7 @@ class WorkflowController extends Controller
         $versions = $this->workflowManagementService->listVersions($this->actor(), $workflow);
 
         return response()->json([
-            'data' => $versions->map(fn (WorkflowVersion $version) => $this->serializeVersion($version))->values(),
+            'data' => $versions->map(fn (WorkflowVersion $version) => $this->workflowManagementService->serializeVersion($version))->values(),
         ]);
     }
 
@@ -166,47 +166,6 @@ class WorkflowController extends Controller
         return $actor;
     }
 
-    protected function serializeWorkflow(Workflow $workflow, User $actor, bool $includeDetails = false): array
-    {
-        $payload = [
-            'id' => $workflow->id,
-            'public_token' => $workflow->public_token,
-            'name' => $workflow->name,
-            'description' => $workflow->description,
-            'status' => $workflow->status?->value,
-            'team' => $workflow->team ? [
-                'id' => $workflow->team->id,
-                'name' => $workflow->team->name,
-            ] : null,
-            'version_number' => $workflow->current_version_number,
-            'version_label' => $workflow->current_version_label,
-            'created_by' => $workflow->createdBy ? [
-                'id' => $workflow->createdBy->id,
-                'name' => $workflow->createdBy->name,
-                'email' => $workflow->createdBy->email,
-            ] : null,
-            'created_at' => $workflow->created_at,
-            'updated_at' => $workflow->updated_at,
-            'total_runs' => $workflow->total_runs,
-            'active_instances' => $workflow->active_instances,
-            'actions' => $this->workflowManagementService->availableActions($actor, $workflow),
-        ];
-
-        if ($includeDetails) {
-            $payload['draft_revision'] = $workflow->draft_revision;
-            $payload['draft_definition'] = $workflow->draft_definition;
-            $payload['template'] = $workflow->template ? [
-                'id' => $workflow->template->id,
-                'name' => $workflow->template->name,
-            ] : null;
-            $payload['current_version'] = $workflow->currentVersion
-                ? $this->serializeVersion($workflow->currentVersion)
-                : null;
-        }
-
-        return $payload;
-    }
-
     protected function serializeTemplate(WorkflowTemplate $template): array
     {
         return [
@@ -221,19 +180,4 @@ class WorkflowController extends Controller
         ];
     }
 
-    protected function serializeVersion(WorkflowVersion $version): array
-    {
-        return [
-            'id' => $version->id,
-            'version_number' => $version->version_number,
-            'version_label' => $version->version_label,
-            'release_note' => $version->release_note,
-            'published_at' => $version->published_at,
-            'published_by' => $version->publishedBy ? [
-                'id' => $version->publishedBy->id,
-                'name' => $version->publishedBy->name,
-                'email' => $version->publishedBy->email,
-            ] : null,
-        ];
-    }
 }
