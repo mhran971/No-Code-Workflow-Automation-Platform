@@ -498,6 +498,8 @@ class WorkflowRuntime
         $instance->workflow()->decrement('active_instances');
 
         $this->broadcast(new InstanceCompleted($instance));
+
+        $this->wakeParentExecution($instance);
     }
 
     protected function failInstance(WorkflowInstance $instance, array $errorPayload): void
@@ -515,6 +517,34 @@ class WorkflowRuntime
         ]);
 
         $this->broadcast(new InstanceFailed($instance));
+
+        $this->wakeParentExecution($instance);
+    }
+
+    /**
+     * If this instance was spawned as a child (sub-workflow or dynamic-flow),
+     * wake the parked parent execution so it can resume.
+     */
+    protected function wakeParentExecution(WorkflowInstance $instance): void
+    {
+        $parentExecutionId = $instance->parent_execution_id;
+        if ($parentExecutionId === null) {
+            return;
+        }
+
+        $parentExecution = WorkflowNodeExecution::query()->find($parentExecutionId);
+        if ($parentExecution === null || $parentExecution->status !== NodeExecutionStatus::Waiting) {
+            return;
+        }
+
+        $parentExecution->update([
+            'status' => NodeExecutionStatus::Pending,
+            'wait_until' => null,
+        ]);
+
+        $category = $this->resolveCategory($parentExecution->node_type);
+        ExecuteNodeJob::dispatch($parentExecution->id, $category->value)
+            ->onQueue($this->queueFor($category));
     }
 
     protected function hasLiveExecutions(WorkflowInstance $instance): bool

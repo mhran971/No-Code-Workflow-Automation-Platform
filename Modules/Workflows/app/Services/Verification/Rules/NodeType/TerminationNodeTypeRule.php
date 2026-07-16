@@ -2,6 +2,7 @@
 
 namespace Modules\Workflows\Services\Verification\Rules\NodeType;
 
+use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
@@ -19,6 +20,7 @@ class TerminationNodeTypeRule implements NodeTypeRule
         int $index,
         WorkflowDefinitionGraph $graph,
         WorkflowVerificationResult $result,
+        ?Workflow $workflow = null,
     ): void {
         $nodeId = is_string($node['id'] ?? null) ? $node['id'] : null;
 

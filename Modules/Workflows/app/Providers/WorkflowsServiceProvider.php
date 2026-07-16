@@ -18,6 +18,7 @@ use Modules\Workflows\Services\Execution\Executors\IfNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\ManualTriggerExecutor;
 use Modules\Workflows\Services\Execution\Executors\MergeNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\SendEmailExecutor;
+use Modules\Workflows\Services\Execution\Executors\SubWorkflowExecutor;
 use Modules\Workflows\Services\Execution\Executors\SwitchNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\TaskNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\TerminationNodeExecutor;
@@ -119,6 +120,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             // M2 executors
             $registry->register($this->app->make(ForkNodeExecutor::class));
             $registry->register($this->app->make(TaskNodeExecutor::class));
+            $registry->register($this->app->make(SubWorkflowExecutor::class));
 
             // MergeNodeExecutor handles merge-and (its canonical type), merge-or, and the unified
             // 'merge' type (config.mergeMode selects parallel vs conditional at plan-compile time).

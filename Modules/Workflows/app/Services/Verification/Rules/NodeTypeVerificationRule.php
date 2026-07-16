@@ -29,7 +29,7 @@ class NodeTypeVerificationRule implements VerificationRule
             $type = $node['type'] ?? '';
 
             if (isset($this->rules[$type])) {
-                $this->rules[$type]->verify($node, (int) $index, $graph, $result);
+                $this->rules[$type]->verify($node, (int) $index, $graph, $result, $workflow);
             }
         }
     }

@@ -44,6 +44,8 @@ class WorkflowDispatcher
         TriggerType $triggerType,
         array $payload = [],
         ?string $correlationId = null,
+        ?int $parentInstanceId = null,
+        ?int $parentExecutionId = null,
     ): WorkflowInstance {
         $version = $this->resolveVersion($workflow);
         $plan = $this->compiler->compileVersion($version);
@@ -58,13 +60,15 @@ class WorkflowDispatcher
         $admitted = $this->admission->canAdmit((int) $workflow->tenant_id);
 
         return DB::transaction(function () use (
-            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey, $admitted
+            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey, $admitted, $parentInstanceId, $parentExecutionId
         ): WorkflowInstance {
             $instanceStatus = $admitted ? WorkflowInstanceStatus::Running : WorkflowInstanceStatus::Pending;
 
             $instance = WorkflowInstance::query()->create([
                 'workflow_id' => $workflow->id,
                 'workflow_version_id' => $version->id,
+                'parent_instance_id' => $parentInstanceId,
+                'parent_execution_id' => $parentExecutionId,
                 'tenant_id' => $workflow->tenant_id,
                 'status' => $instanceStatus,
                 'trigger_type' => $triggerType,

@@ -14,6 +14,7 @@ use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\MergeNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SendEmailNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SubWorkflowNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SwitchNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\TaskNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\TerminationNodeTypeRule;
@@ -44,6 +45,7 @@ class WorkflowVerificationService
         protected SendEmailNodeTypeRule $sendEmailNodeTypeRule,
         protected AiGeneratorNodeTypeRule $aiGeneratorNodeTypeRule,
         protected TerminationNodeTypeRule $terminationNodeTypeRule,
+        protected SubWorkflowNodeTypeRule $subWorkflowNodeTypeRule,
     ) {
         $this->nodeTypeRule->register($this->ifNodeTypeRule);
         $this->nodeTypeRule->register($this->forkNodeTypeRule);
@@ -53,6 +55,7 @@ class WorkflowVerificationService
         $this->nodeTypeRule->register($this->sendEmailNodeTypeRule);
         $this->nodeTypeRule->register($this->aiGeneratorNodeTypeRule);
         $this->nodeTypeRule->register($this->terminationNodeTypeRule);
+        $this->nodeTypeRule->register($this->subWorkflowNodeTypeRule);
     }
 
     public function verify(array $definition, ?Workflow $workflow = null, ?User $actor = null): WorkflowVerificationResult

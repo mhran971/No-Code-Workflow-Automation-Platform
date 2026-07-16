@@ -15,6 +15,7 @@ class WorkflowInstance extends Model
         'workflow_id',
         'workflow_version_id',
         'parent_instance_id',
+        'parent_execution_id',
         'tenant_id',
         'status',
         'trigger_type',
@@ -63,6 +64,11 @@ class WorkflowInstance extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_instance_id');
+    }
+
+    public function parentExecution(): BelongsTo
+    {
+        return $this->belongsTo(WorkflowNodeExecution::class, 'parent_execution_id');
     }
 
     public function nodeExecutions(): HasMany
