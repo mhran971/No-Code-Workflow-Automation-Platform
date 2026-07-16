@@ -15,11 +15,12 @@ import {
   ApiError,
   fetchKnowledgeBaseDocuments,
   fetchTenantUsers,
+  listWorkflows,
   loadWorkflow,
   publishWorkflow,
   saveDraft,
 } from '@/lib/api/client';
-import type { KnowledgeBaseDocument, TenantUser } from '@/lib/api/types';
+import type { KnowledgeBaseDocument, TenantUser, WorkflowSummary } from '@/lib/api/types';
 import { buildDefinitionFromCanvas, normalizeToken } from '@/lib/api/utils';
 import type { Node, Edge } from '@xyflow/react';
 
@@ -43,6 +44,7 @@ const Index = () => {
   const [canvasEdges, setCanvasEdges] = useState<Edge[]>([]);
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [kbDocuments, setKbDocuments] = useState<KnowledgeBaseDocument[]>([]);
+  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
 
   // Workflow metadata
   const [workflowName, setWorkflowName] = useState('');
@@ -108,6 +110,9 @@ const Index = () => {
       .catch(() => { /* non-critical */ });
     fetchKnowledgeBaseDocuments(apiBaseUrl, accessToken)
       .then((res) => setKbDocuments(res.data))
+      .catch(() => { /* non-critical */ });
+    listWorkflows(apiBaseUrl, accessToken)
+      .then((res) => setWorkflows(res.data))
       .catch(() => { /* non-critical */ });
   }, [isConnected, apiBaseUrl, accessToken]);
 
@@ -273,6 +278,9 @@ const Index = () => {
           nodeValidationIssues={nodeValidationIssues}
           tenantUsers={tenantUsers}
           kbDocuments={kbDocuments}
+          workflows={workflows}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={accessToken}
           execution={execution}
           executionMode={mode}
           currentStepIndex={currentStepIndex}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { WorkflowExecution } from '@/types/workflow';
-import type { ApiConfigField, KnowledgeBaseDocument, TenantUser, ValidationIssue } from '@/lib/api/types';
+import type { ApiConfigField, KnowledgeBaseDocument, TenantUser, ValidationIssue, WorkflowSummary } from '@/lib/api/types';
 import { Zap, AlertCircle } from 'lucide-react';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import type { SelectedNodeInfo } from '@/pages/Index';
@@ -19,6 +19,9 @@ interface ExecutionPanelProps {
   nodeValidationIssues?: Map<string, ValidationIssue[]>;
   tenantUsers?: TenantUser[];
   kbDocuments?: KnowledgeBaseDocument[];
+  workflows?: WorkflowSummary[];
+  apiBaseUrl?: string;
+  accessToken?: string;
   execution?: WorkflowExecution | null;
   executionMode?: ExecutionMode;
   currentStepIndex?: number;
@@ -41,6 +44,9 @@ export function ExecutionPanel({
   nodeValidationIssues,
   tenantUsers = [],
   kbDocuments = [],
+  workflows = [],
+  apiBaseUrl,
+  accessToken,
   execution,
   executionMode = 'idle',
   currentStepIndex = -1,
@@ -96,6 +102,9 @@ export function ExecutionPanel({
             validationIssues={selectedNode ? nodeValidationIssues?.get(selectedNode.id) : undefined}
             tenantUsers={tenantUsers}
             kbDocuments={kbDocuments}
+            workflows={workflows}
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
           />
         ) : effectiveTab === 'execution' ? (
           <div className="h-full overflow-y-auto p-3">

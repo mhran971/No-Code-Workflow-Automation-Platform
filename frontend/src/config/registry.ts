@@ -6,6 +6,7 @@ import { integrationConfigs } from '@/config/schemas/integrations';
 import { googleConfigs } from '@/config/schemas/google';
 import { dataConfigs } from '@/config/schemas/data';
 import { actionConfigs } from '@/config/schemas/actions';
+import { flowConfigs } from '@/config/schemas/flows';
 
 // Single lookup table mapping a node type to its config form schema.
 // To add a whole new category of nodes: create a schemas/<category>.ts file and
@@ -19,4 +20,5 @@ export const NODE_CONFIG_REGISTRY: Record<string, NodeConfigSchema> = {
   ...googleConfigs,
   ...dataConfigs,
   ...actionConfigs,
+  ...flowConfigs,
 };

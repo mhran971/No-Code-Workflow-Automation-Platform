@@ -3,11 +3,16 @@
 namespace Modules\Workflows\Services\Verification\Rules\NodeType;
 
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Rules\NodeType\Concerns\VariableAvailability;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 class SubWorkflowNodeTypeRule implements NodeTypeRule
 {
+    use VariableAvailability;
+
+    protected const CODE_PREFIX = 'sub_workflow';
+
     public function nodeType(): string
     {
         return 'sub-workflow';
@@ -75,6 +80,37 @@ class SubWorkflowNodeTypeRule implements NodeTypeRule
                 "{$path}.workflowId",
                 $nodeId,
             );
+        }
+
+        // Validate inputMapping template expressions (syntax + variable existence)
+        $inputMapping = $config['inputMapping'] ?? [];
+        if (is_array($inputMapping)) {
+            foreach ($inputMapping as $childKey => $template) {
+                if (! is_string($template)) {
+                    continue;
+                }
+
+                // Detect unclosed template expressions (has {{ but no matching }})
+                if (preg_match('/\{\{/', $template) && ! preg_match('/\{\{[^}]+\}\}/', $template)) {
+                    $result->addError(
+                        self::CODE_PREFIX.'.unclosed_template',
+                        "Input mapping for \"{$childKey}\": Unclosed template expression. Use {{context.<key>}}.",
+                        "{$path}.inputMapping.{$childKey}",
+                        $nodeId,
+                    );
+
+                    continue;
+                }
+
+                $this->validateTemplateVariables(
+                    $template,
+                    "{$path}.inputMapping.{$childKey}",
+                    $nodeId,
+                    self::CODE_PREFIX,
+                    $graph,
+                    $result,
+                );
+            }
         }
     }
 }

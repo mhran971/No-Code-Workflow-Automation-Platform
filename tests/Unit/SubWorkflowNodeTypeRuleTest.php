@@ -311,4 +311,242 @@ class SubWorkflowNodeTypeRuleTest extends TestCase
         $this->assertFalse($result->isPublishable());
         $this->assertContains('sub_workflow.self_reference', array_column($result->issues(), 'code'));
     }
+
+    public function test_invalid_template_expression_adds_error(): void
+    {
+        $tenant = Tenant::query()->create([
+            'business_name' => 'Acme Inc',
+            'business_type' => BusinessType::SaaS->value,
+        ]);
+
+        $manager = User::query()->create([
+            'first_name' => 'Manager',
+            'last_name' => 'User',
+            'name' => 'Manager User',
+            'email' => 'manager-'.uniqid().'@example.test',
+            'password' => Hash::make('Pass1234!'),
+            'tenant_id' => $tenant->id,
+            'role' => Role::Manager,
+            'is_active' => true,
+        ]);
+
+        $team = Team::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Operations',
+            'manager_id' => $manager->id,
+        ]);
+
+        $parentWorkflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+            'name' => 'Parent',
+            'status' => WorkflowStatus::Active->value,
+            'draft_definition' => ['trigger' => null, 'nodes' => [], 'edges' => []],
+            'draft_revision' => 1,
+        ]);
+
+        $childWorkflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+            'name' => 'Child',
+            'status' => WorkflowStatus::Active->value,
+            'draft_definition' => ['trigger' => null, 'nodes' => [], 'edges' => []],
+            'draft_revision' => 1,
+        ]);
+
+        $version = WorkflowVersion::query()->create([
+            'workflow_id' => $childWorkflow->id,
+            'tenant_id' => $tenant->id,
+            'version_number' => 1,
+            'version_label' => 'v1.0.0',
+            'definition' => [
+                'trigger' => ['type' => 'manual-trigger'],
+                'nodes' => [['id' => 'manual-trigger', 'type' => 'manual-trigger', 'config' => []]],
+                'edges' => [],
+            ],
+            'published_by_id' => $manager->id,
+            'published_at' => now(),
+        ]);
+
+        $childWorkflow->update(['current_version_id' => $version->id]);
+
+        $node = [
+            'id' => 'sw1',
+            'type' => 'sub-workflow',
+            'config' => [
+                'workflowId' => $childWorkflow->id,
+                'inputMapping' => [
+                    'hrEmail' => '{{context.invalidvar',
+                ],
+            ],
+        ];
+        $graph = new WorkflowDefinitionGraph(['nodes' => [$node], 'edges' => []]);
+        $result = new WorkflowVerificationResult;
+
+        $this->rule->verify($node, 0, $graph, $result, $parentWorkflow);
+
+        $this->assertFalse($result->isPublishable());
+        $this->assertContains('sub_workflow.unclosed_template', array_column($result->issues(), 'code'));
+    }
+
+    public function test_invalid_variable_name_adds_error(): void
+    {
+        $tenant = Tenant::query()->create([
+            'business_name' => 'Acme Inc',
+            'business_type' => BusinessType::SaaS->value,
+        ]);
+
+        $manager = User::query()->create([
+            'first_name' => 'Manager',
+            'last_name' => 'User',
+            'name' => 'Manager User',
+            'email' => 'manager-'.uniqid().'@example.test',
+            'password' => Hash::make('Pass1234!'),
+            'tenant_id' => $tenant->id,
+            'role' => Role::Manager,
+            'is_active' => true,
+        ]);
+
+        $team = Team::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Operations',
+            'manager_id' => $manager->id,
+        ]);
+
+        $parentWorkflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+            'name' => 'Parent',
+            'status' => WorkflowStatus::Active->value,
+            'draft_definition' => ['trigger' => null, 'nodes' => [], 'edges' => []],
+            'draft_revision' => 1,
+        ]);
+
+        $childWorkflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+            'name' => 'Child',
+            'status' => WorkflowStatus::Active->value,
+            'draft_definition' => ['trigger' => null, 'nodes' => [], 'edges' => []],
+            'draft_revision' => 1,
+        ]);
+
+        $version = WorkflowVersion::query()->create([
+            'workflow_id' => $childWorkflow->id,
+            'tenant_id' => $tenant->id,
+            'version_number' => 1,
+            'version_label' => 'v1.0.0',
+            'definition' => [
+                'trigger' => ['type' => 'manual-trigger'],
+                'nodes' => [['id' => 'manual-trigger', 'type' => 'manual-trigger', 'config' => []]],
+                'edges' => [],
+            ],
+            'published_by_id' => $manager->id,
+            'published_at' => now(),
+        ]);
+
+        $childWorkflow->update(['current_version_id' => $version->id]);
+
+        $node = [
+            'id' => 'sw1',
+            'type' => 'sub-workflow',
+            'config' => [
+                'workflowId' => $childWorkflow->id,
+                'inputMapping' => [
+                    'hrEmail' => '{{invalidvar}}',
+                ],
+            ],
+        ];
+        $graph = new WorkflowDefinitionGraph(['nodes' => [$node], 'edges' => []]);
+        $result = new WorkflowVerificationResult;
+
+        $this->rule->verify($node, 0, $graph, $result, $parentWorkflow);
+
+        $this->assertFalse($result->isPublishable());
+        $this->assertContains('sub_workflow.invalid_template_variable', array_column($result->issues(), 'code'));
+    }
+
+    public function test_valid_template_expression_passes(): void
+    {
+        $tenant = Tenant::query()->create([
+            'business_name' => 'Acme Inc',
+            'business_type' => BusinessType::SaaS->value,
+        ]);
+
+        $manager = User::query()->create([
+            'first_name' => 'Manager',
+            'last_name' => 'User',
+            'name' => 'Manager User',
+            'email' => 'manager-'.uniqid().'@example.test',
+            'password' => Hash::make('Pass1234!'),
+            'tenant_id' => $tenant->id,
+            'role' => Role::Manager,
+            'is_active' => true,
+        ]);
+
+        $team = Team::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Operations',
+            'manager_id' => $manager->id,
+        ]);
+
+        $parentWorkflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+            'name' => 'Parent',
+            'status' => WorkflowStatus::Active->value,
+            'draft_definition' => ['trigger' => null, 'nodes' => [], 'edges' => []],
+            'draft_revision' => 1,
+        ]);
+
+        $childWorkflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'created_by_id' => $manager->id,
+            'name' => 'Child',
+            'status' => WorkflowStatus::Active->value,
+            'draft_definition' => ['trigger' => null, 'nodes' => [], 'edges' => []],
+            'draft_revision' => 1,
+        ]);
+
+        $version = WorkflowVersion::query()->create([
+            'workflow_id' => $childWorkflow->id,
+            'tenant_id' => $tenant->id,
+            'version_number' => 1,
+            'version_label' => 'v1.0.0',
+            'definition' => [
+                'trigger' => ['type' => 'manual-trigger'],
+                'nodes' => [['id' => 'manual-trigger', 'type' => 'manual-trigger', 'config' => []]],
+                'edges' => [],
+            ],
+            'published_by_id' => $manager->id,
+            'published_at' => now(),
+        ]);
+
+        $childWorkflow->update(['current_version_id' => $version->id]);
+
+        $node = [
+            'id' => 'sw1',
+            'type' => 'sub-workflow',
+            'config' => [
+                'workflowId' => $childWorkflow->id,
+                'inputMapping' => [
+                    'hrEmail' => '{{context.hrEmail}}',
+                    'staticVal' => 'hello',
+                ],
+            ],
+        ];
+        $graph = new WorkflowDefinitionGraph(['nodes' => [$node], 'edges' => []]);
+        $result = new WorkflowVerificationResult;
+
+        $this->rule->verify($node, 0, $graph, $result, $parentWorkflow);
+
+        $templateErrors = array_filter($result->issues(), fn($i) => in_array($i['code'], ['sub_workflow.unclosed_template', 'sub_workflow.invalid_template_variable', 'sub_workflow.variable_invalid_namespace', 'sub_workflow.variable_undefined']));
+        $this->assertEmpty($templateErrors);
+    }
 }

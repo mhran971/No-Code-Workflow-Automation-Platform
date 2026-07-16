@@ -101,12 +101,7 @@ class SubWorkflowExecutor implements NodeExecutor
 
         // Evaluate inputMapping against the parent's context.
         $inputMapping = $config['inputMapping'] ?? [];
-        $payload = [];
-        if (is_array($inputMapping)) {
-            foreach ($inputMapping as $childKey => $template) {
-                $payload[$childKey] = $context->render((string) $template);
-            }
-        }
+        $payload = is_array($inputMapping) ? $this->resolvePayload($inputMapping, $context) : [];
 
         $childInstance = $this->dispatcher->dispatch(
             $childWorkflow,
@@ -118,5 +113,25 @@ class SubWorkflowExecutor implements NodeExecutor
         );
 
         return NodeExecutionResult::wait(null, WaitType::SubWorkflow, 'Waiting for child instance to complete');
+    }
+
+    /**
+     * Recursively resolve inputMapping values — render string templates,
+     * recurse into nested arrays.
+     */
+    private function resolvePayload(array $mapping, NodeExecutionContext $context): array
+    {
+        $resolved = [];
+        foreach ($mapping as $key => $value) {
+            if (is_string($value)) {
+                $resolved[$key] = $context->render($value);
+            } elseif (is_array($value)) {
+                $resolved[$key] = $this->resolvePayload($value, $context);
+            } else {
+                $resolved[$key] = $value;
+            }
+        }
+
+        return $resolved;
     }
 }
