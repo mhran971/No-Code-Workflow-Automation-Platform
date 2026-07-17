@@ -149,3 +149,18 @@ export interface InstanceSummary {
   started_at: string | null;
   finished_at: string | null;
 }
+
+export interface DynamicFlowSummary {
+  id: number;
+  status: string;
+  node_key: string;
+  instance_id: number;
+  child_instance_id: number | null;
+  definition: WorkflowDefinition | null;
+  created_at: string;
+}
+
+export interface DynamicFlowDesignResponse {
+  dynamic_flow: DynamicFlowSummary;
+  parent_definition: WorkflowDefinition | null;
+}

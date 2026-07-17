@@ -4,6 +4,7 @@ namespace Modules\Workflows\Services\Verification\Rules;
 
 use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\NodeConfigFieldType;
+use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Node;
 use Modules\Workflows\Models\NodeConfigField;
 use Modules\Workflows\Models\Workflow;
@@ -18,6 +19,7 @@ class SyntaxVerificationRule implements VerificationRule
         WorkflowVerificationResult $result,
         ?Workflow $workflow = null,
         ?User $actor = null,
+        VerificationMode $mode = VerificationMode::Full,
     ): void {
         $raw = $definition['_raw'] ?? [];
         $nodeDefinitions = Node::query()
@@ -26,15 +28,17 @@ class SyntaxVerificationRule implements VerificationRule
             ->get()
             ->keyBy('type');
 
-        $this->verifyTopLevelShape($raw, $result);
-        $this->verifyTrigger($definition['trigger'] ?? null, $nodeDefinitions, $result);
+        $this->verifyTopLevelShape($raw, $result, $mode);
+        $this->verifyTrigger($definition['trigger'] ?? null, $nodeDefinitions, $result, $mode);
         $this->verifyNodes($definition['nodes'] ?? [], $nodeDefinitions, $result);
         $this->verifyEdges($definition['edges'] ?? [], $graph, $result);
     }
 
-    protected function verifyTopLevelShape(array $raw, WorkflowVerificationResult $result): void
+    protected function verifyTopLevelShape(array $raw, WorkflowVerificationResult $result, VerificationMode $mode = VerificationMode::Full): void
     {
-        foreach (['trigger', 'nodes', 'edges'] as $key) {
+        $requiredKeys = $mode === VerificationMode::Segment ? ['nodes', 'edges'] : ['trigger', 'nodes', 'edges'];
+
+        foreach ($requiredKeys as $key) {
             if (! array_key_exists($key, $raw)) {
                 $result->addError("definition.{$key}_missing", "Workflow {$key} must be configured.", $key);
             }
@@ -61,8 +65,12 @@ class SyntaxVerificationRule implements VerificationRule
         }
     }
 
-    protected function verifyTrigger(?array $trigger, $nodeDefinitions, WorkflowVerificationResult $result): void
+    protected function verifyTrigger(?array $trigger, $nodeDefinitions, WorkflowVerificationResult $result, VerificationMode $mode = VerificationMode::Full): void
     {
+        if ($mode === VerificationMode::Segment) {
+            return;
+        }
+
         if ($trigger === null) {
             $result->addError('trigger.missing', 'Workflow trigger must be configured.', 'trigger');
 

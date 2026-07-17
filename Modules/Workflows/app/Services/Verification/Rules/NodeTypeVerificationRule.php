@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Services\Verification\Rules;
 
 use Modules\Auth\Models\User;
+use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\Rules\NodeType\NodeTypeRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
@@ -24,6 +25,7 @@ class NodeTypeVerificationRule implements VerificationRule
         WorkflowVerificationResult $result,
         ?Workflow $workflow = null,
         ?User $actor = null,
+        VerificationMode $mode = VerificationMode::Full,
     ): void {
         foreach ($graph->nodes() as $index => $node) {
             $type = $node['type'] ?? '';

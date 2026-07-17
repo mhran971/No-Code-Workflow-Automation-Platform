@@ -42,4 +42,26 @@ export const flowConfigs: Record<string, NodeConfigSchema> = {
       },
     ],
   },
+  'dynamic-flow': {
+    nodeType: 'dynamic-flow',
+    sections: [
+      {
+        title: 'Settings',
+        fields: [
+          {
+            key: 'message',
+            label: 'Manager Message',
+            type: 'textarea',
+            placeholder: 'Describe what sub-flow is needed...',
+          },
+          {
+            key: 'aiSuggestion',
+            label: 'Enable AI Suggestion',
+            type: 'toggle',
+            defaultValue: true,
+          },
+        ],
+      },
+    ],
+  },
 };

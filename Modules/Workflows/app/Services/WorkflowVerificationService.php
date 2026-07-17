@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Services;
 
 use Modules\Auth\Models\User;
+use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\DataFlowVerificationRule;
@@ -10,6 +11,7 @@ use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\FormTriggerVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\AiGeneratorNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\MergeNodeTypeRule;
@@ -46,6 +48,7 @@ class WorkflowVerificationService
         protected AiGeneratorNodeTypeRule $aiGeneratorNodeTypeRule,
         protected TerminationNodeTypeRule $terminationNodeTypeRule,
         protected SubWorkflowNodeTypeRule $subWorkflowNodeTypeRule,
+        protected DynamicEntryNodeTypeRule $dynamicEntryNodeTypeRule,
     ) {
         $this->nodeTypeRule->register($this->ifNodeTypeRule);
         $this->nodeTypeRule->register($this->forkNodeTypeRule);
@@ -56,16 +59,17 @@ class WorkflowVerificationService
         $this->nodeTypeRule->register($this->aiGeneratorNodeTypeRule);
         $this->nodeTypeRule->register($this->terminationNodeTypeRule);
         $this->nodeTypeRule->register($this->subWorkflowNodeTypeRule);
+        $this->nodeTypeRule->register($this->dynamicEntryNodeTypeRule);
     }
 
-    public function verify(array $definition, ?Workflow $workflow = null, ?User $actor = null): WorkflowVerificationResult
+    public function verify(array $definition, ?Workflow $workflow = null, ?User $actor = null, VerificationMode $mode = VerificationMode::Full): WorkflowVerificationResult
     {
         $normalizedDefinition = $this->normalizer->normalize($definition);
         $graph = new WorkflowDefinitionGraph($normalizedDefinition);
         $result = new WorkflowVerificationResult;
 
         foreach ($this->rules() as $rule) {
-            $rule->verify($normalizedDefinition, $graph, $result, $workflow, $actor);
+            $rule->verify($normalizedDefinition, $graph, $result, $workflow, $actor, $mode);
         }
 
         return $result;

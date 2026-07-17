@@ -20,7 +20,7 @@ abstract class AbstractOAuthDriver implements IntegrationDriver
 
         $parameters = array_merge($this->authorizationParameters($provider, $tenant, $state), [
             'state' => $state,
-            'redirect_uri' => route('api.integrations.callback', ['provider' => $provider], ["secure"=> true]),
+            'redirect_uri' => route('api.integrations.callback', ['provider' => $provider], ['secure' => true]),
             'client_id' => $this->clientId($provider),
         ]);
 

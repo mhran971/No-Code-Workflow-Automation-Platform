@@ -8,10 +8,12 @@ use Illuminate\Support\ServiceProvider;
 use Modules\Workflows\Console\Commands\AdmitPendingInstancesCommand;
 use Modules\Workflows\Console\Commands\ExpireOverdueInstancesCommand;
 use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
+use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
 use Modules\Workflows\Services\Execution\Executors\AiGeneratorExecutor;
+use Modules\Workflows\Services\Execution\Executors\DynamicFlowExecutor;
 use Modules\Workflows\Services\Execution\Executors\ForkNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\FormTriggerExecutor;
 use Modules\Workflows\Services\Execution\Executors\IfNodeExecutor;
@@ -66,7 +68,7 @@ class WorkflowsServiceProvider extends ServiceProvider
     private function bootBroadcasting(): void
     {
         Broadcast::channel('workflow-instance.{instanceId}', function ($user, string $instanceId): bool {
-            $instance = \Modules\Workflows\Models\WorkflowInstance::find((int) $instanceId);
+            $instance = WorkflowInstance::find((int) $instanceId);
 
             return $instance !== null
                 && (int) $instance->tenant_id === (int) $user->tenant_id;
@@ -121,6 +123,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(ForkNodeExecutor::class));
             $registry->register($this->app->make(TaskNodeExecutor::class));
             $registry->register($this->app->make(SubWorkflowExecutor::class));
+            $registry->register($this->app->make(DynamicFlowExecutor::class));
 
             // MergeNodeExecutor handles merge-and (its canonical type), merge-or, and the unified
             // 'merge' type (config.mergeMode selects parallel vs conditional at plan-compile time).

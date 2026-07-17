@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
+use Modules\Workflows\Http\Controllers\DynamicFlowController;
 use Modules\Workflows\Http\Controllers\NodeController;
 use Modules\Workflows\Http\Controllers\PublicFormController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
@@ -39,6 +40,10 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/instances/{instance}/failures', [WorkflowInstanceController::class, 'failures'])->name('workflows.instances.failures');
     Route::post('/instances/{instance}/cancel', [WorkflowInstanceController::class, 'cancel'])->name('workflows.instances.cancel');
     Route::post('/instances/{instance}/retry-from-node', [WorkflowInstanceController::class, 'retryFromNode'])->name('workflows.instances.retry');
+
+    // Dynamic-flow design routes.
+    Route::get('/instances/{instance}/dynamic-flow', [DynamicFlowController::class, 'show'])->name('workflows.instances.dynamic-flow.show');
+    Route::post('/instances/{instance}/dynamic-flow/definition', [DynamicFlowController::class, 'storeDefinition'])->name('workflows.instances.dynamic-flow.definition');
 
     // Human-task inbox + submission.
     Route::get('/tasks/summary', [WorkflowTaskController::class, 'summary'])->name('workflows.tasks.summary');

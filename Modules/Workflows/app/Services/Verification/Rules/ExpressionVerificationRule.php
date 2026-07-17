@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Services\Verification\Rules;
 
 use Modules\Auth\Models\User;
+use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
@@ -20,6 +21,7 @@ class ExpressionVerificationRule implements VerificationRule
         WorkflowVerificationResult $result,
         ?Workflow $workflow = null,
         ?User $actor = null,
+        VerificationMode $mode = VerificationMode::Full,
     ): void {
         $this->verifyEdgeExpressions($graph, $result);
         $this->verifyNodeExpressions($graph, $result);

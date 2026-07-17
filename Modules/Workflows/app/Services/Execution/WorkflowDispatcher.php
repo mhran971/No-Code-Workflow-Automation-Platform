@@ -36,6 +36,7 @@ class WorkflowDispatcher
 
     /**
      * @param  array<string, mixed>  $payload  trigger payload (webhook body, form fields, etc.)
+     * @param  array<string, mixed>|null  $definition  optional raw definition (bypasses version lookup for dynamic-flow segments)
      *
      * @throws ValidationException if the workflow is not published or not triggerable
      */
@@ -46,9 +47,16 @@ class WorkflowDispatcher
         ?string $correlationId = null,
         ?int $parentInstanceId = null,
         ?int $parentExecutionId = null,
+        ?array $definition = null,
     ): WorkflowInstance {
-        $version = $this->resolveVersion($workflow);
-        $plan = $this->compiler->compileVersion($version);
+        $version = null;
+
+        if ($definition !== null) {
+            $plan = $this->compiler->compile($definition);
+        } else {
+            $version = $this->resolveVersion($workflow);
+            $plan = $this->compiler->compileVersion($version);
+        }
 
         $triggerNodeKey = $plan->triggerNodeKey();
         if ($triggerNodeKey === null) {
@@ -66,7 +74,7 @@ class WorkflowDispatcher
 
             $instance = WorkflowInstance::query()->create([
                 'workflow_id' => $workflow->id,
-                'workflow_version_id' => $version->id,
+                'workflow_version_id' => $version?->id,
                 'parent_instance_id' => $parentInstanceId,
                 'parent_execution_id' => $parentExecutionId,
                 'tenant_id' => $workflow->tenant_id,

@@ -11,8 +11,8 @@ use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
-use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\Execution\WorkflowRuntime;
+use Modules\Workflows\Services\WorkflowManagementService;
 
 /**
  * Operator view of running instances: list, inspect, cancel, and retry-from-node.

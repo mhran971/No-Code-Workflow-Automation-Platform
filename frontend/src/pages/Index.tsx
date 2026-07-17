@@ -6,6 +6,7 @@ import { WorkflowCanvas, type WorkflowCanvasHandle } from '@/components/workflow
 import { ExecutionPanel } from '@/components/workflow/ExecutionPanel';
 import { WorkflowHeader } from '@/components/workflow/WorkflowHeader';
 import { ApiConnectionDialog } from '@/components/workflow/ApiConnectionDialog';
+import { DynamicFlowDesignModal } from '@/components/workflow/DynamicFlowDesignModal';
 import { ValidationResultsDialog } from '@/components/workflow/ValidationResultsDialog';
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import { useBackendExecution } from '@/hooks/useBackendExecution';
@@ -55,6 +56,10 @@ const Index = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Dynamic flow design modal
+  const [designModalOpen, setDesignModalOpen] = useState(false);
+  const [designInstanceId, setDesignInstanceId] = useState<string | null>(null);
+
   // Guard: prevent the initial canvas load from triggering "unsaved changes"
   const isLoadingDefinitionRef = useRef(false);
   // Guard: only load the workflow definition once
@@ -81,9 +86,20 @@ const Index = () => {
   const useBackend = isConnected && Boolean(workflowId);
   const activeExec = useBackend ? backendExec : mockExec;
 
-  const { execution, mode, currentStepIndex, runAll, stepForward, pause, resume, reset, nodeStatuses } = activeExec;
+  const {
+    execution,
+    mode,
+    currentStepIndex,
+    runAll,
+    stepForward,
+    pause,
+    resume,
+    reset,
+    nodeStatuses,
+  } = activeExec;
   const onCancel       = useBackend ? backendExec.cancel        : undefined;
   const runtimeContext = useBackend ? backendExec.runtimeContext : undefined;
+  const instanceId     = useBackend ? backendExec.instanceId     : null;
 
   const {
     validationOpen,
@@ -143,6 +159,15 @@ const Index = () => {
   const handleNodeSelect = useCallback((node: SelectedNodeInfo | null) => {
     setSelectedNode(node);
   }, []);
+
+  const handleWaitingDynamicFlowClick = useCallback((_nodeId: string) => {
+    if (!backendExec.instanceId) {
+      toast.error('No running instance. Run the workflow first.');
+      return;
+    }
+    setDesignInstanceId(backendExec.instanceId);
+    setDesignModalOpen(true);
+  }, [backendExec.instanceId]);
 
   const handleNodesEdgesChange = useCallback((nodes: Node[], edges: Edge[]) => {
     setCanvasNodes(nodes);
@@ -264,6 +289,7 @@ const Index = () => {
           nodeStatuses={nodeStatuses}
           onNodesEdgesChange={handleNodesEdgesChange}
           nodeDefinitions={nodeDefinitions}
+          onWaitingDynamicFlowClick={handleWaitingDynamicFlowClick}
         />
         <ExecutionPanel
           selectedNode={selectedNode}
@@ -292,6 +318,9 @@ const Index = () => {
           onCancel={onCancel}
           isBackendMode={useBackend}
           runtimeContext={runtimeContext}
+          instanceId={instanceId}
+          instanceStatus={execution?.status === 'running' ? 'running' : execution?.status === 'failed' ? 'failed' : execution?.status === 'success' ? 'succeeded' : 'paused'}
+          pausedReason={execution?.status === 'waiting' ? 'dynamic_flow:awaiting_design' : null}
         />
       </div>
 
@@ -308,6 +337,19 @@ const Index = () => {
         error={validationError}
         loading={validationLoading}
         definition={lastDefinition}
+      />
+
+      <DynamicFlowDesignModal
+        open={designModalOpen}
+        onOpenChange={setDesignModalOpen}
+        instanceId={designInstanceId ?? ''}
+        apiBaseUrl={apiBaseUrl}
+        accessToken={accessToken}
+        nodeDefinitions={nodeDefinitions}
+        workflows={workflows}
+        tenantUsers={tenantUsers}
+        kbDocuments={kbDocuments}
+        onSuccess={() => { /* workflow resumes via Echo */ }}
       />
     </div>
   );

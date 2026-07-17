@@ -201,7 +201,7 @@ export function useBackendExecution(
         steps:     [],
       });
 
-      const echo = createEcho(apiConfig.accessToken);
+      const echo = createEcho(apiConfig.accessToken, apiConfig.baseUrl);
       echoRef.current = echo;
 
       const channel = echo.private(`workflow-instance.${strId}`);

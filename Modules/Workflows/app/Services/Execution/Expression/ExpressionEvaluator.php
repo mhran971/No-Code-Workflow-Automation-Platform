@@ -2,12 +2,13 @@
 
 namespace Modules\Workflows\Services\Execution\Expression;
 
+use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
 use RuntimeException;
 
 /**
  * Runtime evaluator for the boolean/comparison expression language used by `if-node` and conditional edges.
  *
- * The grammar mirrors {@see \Modules\Workflows\Services\Verification\ExpressionLanguageValidator} exactly
+ * The grammar mirrors {@see ExpressionLanguageValidator} exactly
  * (same tokens, same precedence) so that any expression the validator accepts at authoring time is evaluable
  * here at runtime — "validated ⇒ evaluable". It is intentionally sandboxed: only the operators
  * `&& || == != >= <= > < !`, parentheses, and string/number/true/false/null literals. No function calls,

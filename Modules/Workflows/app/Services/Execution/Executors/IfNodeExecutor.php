@@ -23,7 +23,7 @@ class IfNodeExecutor implements NodeExecutor
     public function execute(NodeExecutionContext $context): NodeExecutionResult
     {
         $outgoing = $context->plan()->outgoing($context->nodeKey());
-        $config   = $context->config();
+        $config = $context->config();
 
         $nodeCondition = trim((string) ($config['conditionExpression'] ?? ''));
 
@@ -35,7 +35,7 @@ class IfNodeExecutor implements NodeExecutor
 
         // Partition outgoing edges into yes-branch and no-branch pools.
         $yesBranch = null;
-        $noBranch  = null;
+        $noBranch = null;
 
         foreach ($outgoing as $edge) {
             if ($this->isTrueBranch($edge)) {

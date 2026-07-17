@@ -6,9 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Modules\Integrations\Exceptions\IntegrationException;
 use Modules\Integrations\Models\IntegrationProvider;
 use Modules\Integrations\Services\IntegrationManager;
@@ -42,7 +41,7 @@ class IntegrationsController extends Controller
         try {
             $connection = $manager->callback($validated['state'], $validated['code']);
 
-            return redirect("http://localhost:5173/dashboard/integrations");
+            return redirect('http://localhost:5173/dashboard/integrations');
             // return view('integrations::callback-success', [
             //     'appName' => config('app.name', 'Laravel'),
             //     'connection' => $connection,

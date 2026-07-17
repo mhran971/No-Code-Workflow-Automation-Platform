@@ -179,5 +179,4 @@ class WorkflowController extends Controller
             'updated_at' => $template->updated_at,
         ];
     }
-
 }

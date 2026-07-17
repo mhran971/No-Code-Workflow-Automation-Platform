@@ -24,7 +24,7 @@ class InstanceCancelled implements ShouldBroadcastNow
     {
         return [
             'instance_id' => $this->instance->id,
-            'status'      => 'cancelled',
+            'status' => 'cancelled',
             'finished_at' => $this->instance->finished_at?->toISOString(),
         ];
     }

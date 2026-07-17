@@ -11,7 +11,8 @@ use RuntimeException;
 
 class GmailClient
 {
-    private const SEND_URL  = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
+    private const SEND_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
+
     private const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
     /**
@@ -19,8 +20,8 @@ class GmailClient
      *
      * @return array{id: string, threadId: string} Gmail API response
      *
-     * @throws IntegrationException  When the stored connection has no refresh token.
-     * @throws RuntimeException      When Gmail API returns a non-2xx response.
+     * @throws IntegrationException When the stored connection has no refresh token.
+     * @throws RuntimeException When Gmail API returns a non-2xx response.
      */
     public function send(
         IntegrationConnection $connection,
@@ -31,8 +32,8 @@ class GmailClient
         ?string $bcc = null,
         ?string $messageId = null,
     ): array {
-        $token   = $this->freshAccessToken($connection);
-        $raw     = $this->buildRfc2822($to, $subject, $body, $cc, $bcc, $messageId);
+        $token = $this->freshAccessToken($connection);
+        $raw = $this->buildRfc2822($to, $subject, $body, $cc, $bcc, $messageId);
         $encoded = rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
 
         $response = Http::withToken($token)
@@ -76,8 +77,8 @@ class GmailClient
         }
 
         $response = Http::asForm()->post(self::TOKEN_URL, [
-            'grant_type'    => 'refresh_token',
-            'client_id'     => config('integrations.providers.google.client_id'),
+            'grant_type' => 'refresh_token',
+            'client_id' => config('integrations.providers.google.client_id'),
             'client_secret' => config('integrations.providers.google.client_secret'),
             'refresh_token' => Crypt::decryptString($authConfig['refresh_token']),
         ]);
@@ -88,15 +89,15 @@ class GmailClient
             );
         }
 
-        $data          = $response->json();
-        $newToken      = (string) $data['access_token'];
-        $expiresIn     = (int) ($data['expires_in'] ?? 3600);
+        $data = $response->json();
+        $newToken = (string) $data['access_token'];
+        $expiresIn = (int) ($data['expires_in'] ?? 3600);
 
         // Persist the new token and updated expiry; leave refresh_token unchanged.
         $connection->update([
             'auth_config' => array_merge($authConfig, [
                 'access_token' => Crypt::encryptString($newToken),
-                'expires_at'   => now()->addSeconds($expiresIn)->toIso8601String(),
+                'expires_at' => now()->addSeconds($expiresIn)->toIso8601String(),
             ]),
         ]);
 
@@ -113,18 +114,18 @@ class GmailClient
         ?string $bcc,
         ?string $messageId,
     ): string {
-        $headers   = [];
-        $headers[] = 'To: ' . $to;
-        $headers[] = 'Subject: ' . mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n");
+        $headers = [];
+        $headers[] = 'To: '.$to;
+        $headers[] = 'Subject: '.mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n");
 
         if ($cc !== null) {
-            $headers[] = 'Cc: ' . $cc;
+            $headers[] = 'Cc: '.$cc;
         }
         if ($bcc !== null) {
-            $headers[] = 'Bcc: ' . $bcc;
+            $headers[] = 'Bcc: '.$bcc;
         }
         if ($messageId !== null) {
-            $headers[] = 'Message-ID: <' . $messageId . '>';
+            $headers[] = 'Message-ID: <'.$messageId.'>';
         }
 
         $headers[] = 'MIME-Version: 1.0';
@@ -133,6 +134,6 @@ class GmailClient
 
         // Body is base64-encoded within the MIME message; the entire message is
         // then base64url-encoded again for the Gmail API `raw` field.
-        return implode("\r\n", $headers) . "\r\n\r\n" . chunk_split(base64_encode($body), 76, "\r\n");
+        return implode("\r\n", $headers)."\r\n\r\n".chunk_split(base64_encode($body), 76, "\r\n");
     }
 }

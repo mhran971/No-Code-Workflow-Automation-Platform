@@ -161,6 +161,17 @@ class NodeDefinitionSeeder extends Seeder
                 ],
             ],
 
+            // ── Dynamic Entry ─────────────────────────────────────────────────
+            [
+                'type' => 'dynamic-entry',
+                'label' => 'Entry Point',
+                'category' => 'trigger',
+                'description' => 'Sub-flow entry point — receives parent context',
+                'color' => 'node-trigger',
+                'icon' => 'LogIn',
+                'configFields' => [],
+            ],
+
             // ── Actions ──────────────────────────────────────────────────────
             [
                 'type' => 'send-email',

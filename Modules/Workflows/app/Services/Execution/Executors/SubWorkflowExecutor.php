@@ -5,7 +5,6 @@ namespace Modules\Workflows\Services\Execution\Executors;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WaitType;
-use Modules\Workflows\Enums\WorkflowInstanceStatus;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;

@@ -38,6 +38,9 @@ export const NODE_TYPES: NodeTypeDefinition[] = [
   { type: 'sub-workflow', label: 'Sub Workflow', category: 'flows', icon: 'Workflow', color: 'teal', description: 'Execute another workflow as a step', inputs: 1, outputs: 1 },
   { type: 'dynamic-flow', label: 'Dynamic Flow', category: 'flows', icon: 'Shuffle', color: 'teal', description: 'Runtime sub-flow creation', inputs: 1, outputs: 1 },
 
+  // Dynamic Entry
+  { type: 'dynamic-entry', label: 'Entry Point', category: 'triggers', icon: 'LogIn', color: 'emerald', description: 'Sub-flow entry point', inputs: 0, outputs: 1 },
+
   // Actions
   { type: 'send-email', label: 'Send Email', category: 'actions', icon: 'Send', color: 'rose', description: 'Send email message', inputs: 1, outputs: 1 },
   { type: 'task-node', label: 'Task Node', category: 'actions', icon: 'UserCheck', color: 'rose', description: 'Assign a task for review or approval', inputs: 1, outputs: 1 },

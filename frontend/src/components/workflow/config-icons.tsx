@@ -5,7 +5,7 @@ import {
   Signpost, Tags, FileText, Bot, Search, Heart, Wand2, ShieldCheck,
   Mail, MailOpen, UserPlus, Handshake, CheckSquare, HardDrive, Sheet, FileEdit,
   Variable, Braces, Calendar,
-  Globe, Send, ExternalLink, UserCheck, Workflow,
+  Globe, Send, ExternalLink, UserCheck, Workflow, LogIn,
 } from 'lucide-react';
 
 // Icon + color lookup tables shared by the config panel (and any node-type display).
@@ -26,7 +26,7 @@ export const iconMap: Record<string, React.ElementType> = {
   Signpost, Tags, FileText, Bot, Search, Heart, Wand2, ShieldCheck,
   Mail, MailOpen, UserPlus, Handshake, CheckSquare, HardDrive, Sheet, FileEdit,
   Variable, Braces, Calendar,
-  Globe, Send, ExternalLink, UserCheck, Workflow,
+  Globe, Send, ExternalLink, UserCheck, Workflow, LogIn,
   Gmail: GmailIcon,
 };
 

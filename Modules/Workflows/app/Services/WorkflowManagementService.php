@@ -81,7 +81,7 @@ class WorkflowManagementService
             $team = $this->resolveManagedTeam($actor);
         } else {
             if (empty($data['team_id'])) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'team_id' => 'The team id is required to assign workflow to cause you are a Business Owners.',
                 ]);
             }
@@ -92,7 +92,7 @@ class WorkflowManagementService
                 ->first();
 
             if ($team === null) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'team_id' => 'The selected team is invalid or does not belong to your tenant.',
                 ]);
             }
@@ -233,6 +233,7 @@ class WorkflowManagementService
 
         if ($changeType === 'none') {
             $workflow->update(['status' => WorkflowStatus::Active]);
+
             return $workflow->currentVersion->load('publishedBy:id,first_name,last_name,name,email');
         }
 

@@ -4,6 +4,7 @@ namespace Tests\Unit\Execution;
 
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Services\Execution\Executors\SubWorkflowExecutor;
+use Modules\Workflows\Services\Execution\WorkflowDispatcher;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -14,7 +15,7 @@ class SubWorkflowExecutorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->executor = new SubWorkflowExecutor(app(\Modules\Workflows\Services\Execution\WorkflowDispatcher::class));
+        $this->executor = new SubWorkflowExecutor(app(WorkflowDispatcher::class));
     }
 
     #[Test]

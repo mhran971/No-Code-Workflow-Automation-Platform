@@ -27,8 +27,8 @@ class InstancePaused implements ShouldBroadcastNow
     {
         return [
             'instance_id' => $this->instance->id,
-            'status'      => 'paused',
-            'reason'      => $this->reason,
+            'status' => 'paused',
+            'reason' => $this->reason,
         ];
     }
 }

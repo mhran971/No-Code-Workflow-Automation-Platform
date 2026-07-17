@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log as FacadesLog;
-use Log;
 use Modules\KnowledgeBase\Http\Requests\StoreDocumentRequest;
 use Modules\KnowledgeBase\Http\Requests\UpdateDocumentRequest;
 use Modules\KnowledgeBase\Http\Resources\DocumentResource;
@@ -102,9 +101,9 @@ class DocumentController extends Controller
         return $this->documentService->getFileResponse($document, false);
     }
 
-    public function setActive(int $id,  $is_active)
+    public function setActive(int $id, $is_active)
     {
-        FacadesLog::debug("activity",[ $is_active]);
+        FacadesLog::debug('activity', [$is_active]);
         $document = $this->documentService->getForCurrentUser($id);
 
         if (! $document) {

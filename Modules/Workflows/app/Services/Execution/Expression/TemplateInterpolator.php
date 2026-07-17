@@ -33,10 +33,10 @@ class TemplateInterpolator
 
                     if ($value === null) {
                         Log::warning('workflow.template.unresolved', [
-                            'expression'     => $expression,
-                            'context_keys'   => array_keys((array) ($data['context'] ?? [])),
-                            'trigger_keys'   => array_keys((array) ($data['trigger'] ?? [])),
-                            'input_keys'     => array_keys((array) ($data['input'] ?? [])),
+                            'expression' => $expression,
+                            'context_keys' => array_keys((array) ($data['context'] ?? [])),
+                            'trigger_keys' => array_keys((array) ($data['trigger'] ?? [])),
+                            'input_keys' => array_keys((array) ($data['input'] ?? [])),
                         ]);
                     }
 
@@ -44,10 +44,10 @@ class TemplateInterpolator
                 } catch (Throwable $e) {
                     Log::warning('workflow.template.eval_error', [
                         'expression' => $expression,
-                        'error'      => $e->getMessage(),
+                        'error' => $e->getMessage(),
                         'context_keys' => array_keys((array) ($data['context'] ?? [])),
                         'trigger_keys' => array_keys((array) ($data['trigger'] ?? [])),
-                        'input_keys'   => array_keys((array) ($data['input'] ?? [])),
+                        'input_keys' => array_keys((array) ($data['input'] ?? [])),
                     ]);
 
                     return '';

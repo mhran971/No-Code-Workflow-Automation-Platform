@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Modules\Workflows\app\Enums\ResultKind;
+use Modules\Workflows\Enums\DynamicFlowStatus;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\WaitType;
@@ -19,6 +20,7 @@ use Modules\Workflows\Events\NodeRetrying;
 use Modules\Workflows\Events\NodeStarted;
 use Modules\Workflows\Events\NodeWaiting;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
+use Modules\Workflows\Models\WorkflowDynamicFlow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
 use Modules\Workflows\Models\WorkflowTask;
@@ -81,13 +83,13 @@ class WorkflowRuntime
             Log::error('workflow.node.exception', [
                 'instance_id' => $instance->id,
                 'execution_id' => $executionId,
-                'node_key'    => $execution->node_key,
-                'node_type'   => $execution->node_type,
-                'attempt'     => $execution->attempt,
-                'exception'   => get_class($e),
-                'message'     => $e->getMessage(),
-                'file'        => $e->getFile().':'.$e->getLine(),
-                'trace'       => $e->getTraceAsString(),
+                'node_key' => $execution->node_key,
+                'node_type' => $execution->node_type,
+                'attempt' => $execution->attempt,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile().':'.$e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
             $result = NodeExecutionResult::fail($e, $this->classifier->isRetryable($e));
         }
@@ -287,22 +289,22 @@ class WorkflowRuntime
         NodeExecutionResult $result,
     ): void {
         $errorPayload = [
-            'message'   => $result->errorMessage ?? 'Unknown error',
-            'node_key'  => $execution->node_key,
+            'message' => $result->errorMessage ?? 'Unknown error',
+            'node_key' => $execution->node_key,
             'node_type' => $execution->node_type,
-            'attempt'   => $execution->attempt,
+            'attempt' => $execution->attempt,
         ];
 
         if ($result->error !== null) {
             $errorPayload['exception'] = get_class($result->error);
-            $errorPayload['file']      = $result->error->getFile().':'.$result->error->getLine();
+            $errorPayload['file'] = $result->error->getFile().':'.$result->error->getLine();
         }
 
         Log::error('workflow.node.failed', array_merge($errorPayload, [
-            'instance_id'  => $instance->id,
+            'instance_id' => $instance->id,
             'execution_id' => $execution->id,
-            'retryable'    => $result->retryable,
-            'trace'        => $result->error?->getTraceAsString(),
+            'retryable' => $result->retryable,
+            'trace' => $result->error?->getTraceAsString(),
         ]));
 
         $execution->update([
@@ -527,7 +529,20 @@ class WorkflowRuntime
      */
     protected function wakeParentExecution(WorkflowInstance $instance): void
     {
+        // Path 1: Sub-workflow — parent_execution_id set directly on instance.
         $parentExecutionId = $instance->parent_execution_id;
+
+        // Path 2: Dynamic-flow — look up via workflow_dynamic_flows table.
+        if ($parentExecutionId === null) {
+            $dynamicFlow = WorkflowDynamicFlow::query()
+                ->where('child_instance_id', $instance->id)
+                ->where('status', DynamicFlowStatus::Executing)
+                ->first();
+            if ($dynamicFlow !== null) {
+                $parentExecutionId = $dynamicFlow->execution_id;
+            }
+        }
+
         if ($parentExecutionId === null) {
             return;
         }

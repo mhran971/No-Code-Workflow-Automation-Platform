@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { WorkflowExecution } from '@/types/workflow';
 import type { ApiConfigField, KnowledgeBaseDocument, TenantUser, ValidationIssue, WorkflowSummary } from '@/lib/api/types';
-import { Zap, AlertCircle } from 'lucide-react';
+import { Zap, AlertCircle, Shuffle } from 'lucide-react';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import type { SelectedNodeInfo } from '@/pages/Index';
 import type { ExecutionMode } from '@/hooks/useWorkflowExecution';
@@ -33,6 +34,9 @@ interface ExecutionPanelProps {
   onResume?: () => void;
   onReset?: () => void;
   onCancel?: () => void;
+  instanceId?: string | null;
+  instanceStatus?: string | null;
+  pausedReason?: string | null;
 }
 
 export function ExecutionPanel({
@@ -58,12 +62,17 @@ export function ExecutionPanel({
   onResume,
   onReset,
   onCancel,
+  instanceId,
+  instanceStatus,
+  pausedReason,
 }: ExecutionPanelProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'execution' | 'configuration'>('execution');
 
   const effectiveTab = selectedNode ? 'configuration' : activeTab;
   const isRunning = executionMode === 'running';
   const isCompleted = executionMode === 'completed';
+  const isPausedForDesign = instanceStatus === 'paused' && pausedReason === 'dynamic_flow:awaiting_design';
 
   return (
     <div className="w-[320px] h-full bg-background border-l border-border flex flex-col">
@@ -119,6 +128,17 @@ export function ExecutionPanel({
               onReset={onReset}
               onCancel={onCancel}
             />
+
+            {/* Dynamic Flow Design Entry Point */}
+            {isPausedForDesign && instanceId && (
+              <button
+                onClick={() => navigate(`/instances/${instanceId}/dynamic-flow`)}
+                className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-teal-500/10 text-teal-600 border border-teal-500/20 rounded-md hover:bg-teal-500/20 transition-colors"
+              >
+                <Shuffle className="h-3.5 w-3.5" />
+                Design Sub-Flow
+              </button>
+            )}
 
             {/* Execution Header */}
             {execution && (

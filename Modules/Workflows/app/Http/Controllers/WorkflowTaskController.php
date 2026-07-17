@@ -2,6 +2,7 @@
 
 namespace Modules\Workflows\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
@@ -71,9 +72,9 @@ class WorkflowTaskController extends Controller
         }
 
         match ($request->string('sort', 'due_asc')->toString()) {
-            'due_desc'    => $query->orderBy('due_at', 'desc'),
+            'due_desc' => $query->orderBy('due_at', 'desc'),
             'created_asc' => $query->orderBy('created_at', 'asc'),
-            default       => $query->orderBy('due_at', 'asc'),
+            default => $query->orderBy('due_at', 'asc'),
         };
 
         return WorkflowTaskResource::collection($query->with('assignee')->paginate(20));
@@ -138,14 +139,14 @@ class WorkflowTaskController extends Controller
      * Manager: constrained to their team members.
      * Employee: constrained to themselves.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<WorkflowTask>  $query
+     * @param  Builder<WorkflowTask>  $query
      */
-    private function scopeToRole(\Illuminate\Database\Eloquent\Builder $query, User $user): void
+    private function scopeToRole(Builder $query, User $user): void
     {
         match ($user->role) {
             Role::BusinessOwner => null,
-            Role::Manager       => $query->whereIn('assignee_id', $this->teamMemberIds($user)),
-            default             => $query->where('assignee_id', $user->id),
+            Role::Manager => $query->whereIn('assignee_id', $this->teamMemberIds($user)),
+            default => $query->where('assignee_id', $user->id),
         };
     }
 

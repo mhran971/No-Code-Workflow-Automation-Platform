@@ -9,14 +9,13 @@ use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\Tenant;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
-use Modules\Team\Models\TeamMembership;
 use Modules\Workflows\Database\Seeders\NodeDefinitionSeeder;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowVersion;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SubWorkflowNodeTypeRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
-use Modules\Workflows\Services\Verification\Rules\NodeType\SubWorkflowNodeTypeRule;
 use Tests\TestCase;
 
 class SubWorkflowNodeTypeRuleTest extends TestCase
@@ -546,7 +545,7 @@ class SubWorkflowNodeTypeRuleTest extends TestCase
 
         $this->rule->verify($node, 0, $graph, $result, $parentWorkflow);
 
-        $templateErrors = array_filter($result->issues(), fn($i) => in_array($i['code'], ['sub_workflow.unclosed_template', 'sub_workflow.invalid_template_variable', 'sub_workflow.variable_invalid_namespace', 'sub_workflow.variable_undefined']));
+        $templateErrors = array_filter($result->issues(), fn ($i) => in_array($i['code'], ['sub_workflow.unclosed_template', 'sub_workflow.invalid_template_variable', 'sub_workflow.variable_invalid_namespace', 'sub_workflow.variable_undefined']));
         $this->assertEmpty($templateErrors);
     }
 }

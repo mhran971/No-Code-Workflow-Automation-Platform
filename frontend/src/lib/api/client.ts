@@ -1,4 +1,4 @@
-import type { ApiNodeDefinition, InstanceSummary, KnowledgeBaseDocument, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
+import type { ApiNodeDefinition, DynamicFlowDesignResponse, DynamicFlowSummary, InstanceSummary, KnowledgeBaseDocument, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
 import { normalizeToken } from './utils';
 
 export class ApiError extends Error {
@@ -288,4 +288,26 @@ export function listInstances(
     : `/workflows/${workflowId}/instances`;
 
   return request(baseUrl, token, path);
+}
+
+// ─── Dynamic Flow ──────────────────────────────────────────────────────────────
+
+export function fetchDynamicFlow(
+  baseUrl: string,
+  token: string,
+  instanceId: string,
+): Promise<DynamicFlowDesignResponse> {
+  return request(baseUrl, token, `/workflows/instances/${instanceId}/dynamic-flow`);
+}
+
+export function submitDynamicFlowDefinition(
+  baseUrl: string,
+  token: string,
+  instanceId: string,
+  definition: WorkflowDefinition,
+): Promise<{ dynamic_flow: DynamicFlowSummary }> {
+  return request(baseUrl, token, `/workflows/instances/${instanceId}/dynamic-flow/definition`, {
+    method: 'POST',
+    body: JSON.stringify({ definition }),
+  });
 }
