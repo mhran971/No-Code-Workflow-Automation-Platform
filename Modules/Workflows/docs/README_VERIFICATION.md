@@ -310,7 +310,7 @@ Modules/Workflows/tests/Feature/WorkflowVerificationTest.php
 
 ## Related Documentation
 
-- [Workflow System Overview](../../README.md) (if exists)
+- [Workflow System Overview](../../../README.md) (if exists)
 - [Workflow Models](../../app/Models/README.md) (if exists)
 - [API Documentation](../../API.md) (if exists)
 

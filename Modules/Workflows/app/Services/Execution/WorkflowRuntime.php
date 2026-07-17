@@ -5,6 +5,7 @@ namespace Modules\Workflows\Services\Execution;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Modules\Workflows\app\Enums\ResultKind;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\WaitType;

@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Services\Execution;
 
 use DateTimeInterface;
+use Modules\Workflows\app\Enums\ResultKind;
 use Modules\Workflows\Enums\WaitType;
 use Throwable;
 

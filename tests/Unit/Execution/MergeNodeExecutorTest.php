@@ -3,12 +3,12 @@
 namespace Tests\Unit\Execution;
 
 use Mockery;
+use Modules\Workflows\app\Enums\ResultKind;
 use Modules\Workflows\Models\WorkflowNodeExecution;
 use Modules\Workflows\Services\Execution\ExecutionPlan;
 use Modules\Workflows\Services\Execution\Executors\MergeNodeExecutor;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
 use Modules\Workflows\Services\Execution\PlanEdge;
-use Modules\Workflows\Services\Execution\ResultKind;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 

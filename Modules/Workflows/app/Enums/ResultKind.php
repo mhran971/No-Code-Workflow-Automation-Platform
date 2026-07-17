@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Workflows\Services\Execution;
+namespace Modules\Workflows\app\Enums;
 
 enum ResultKind
 {
