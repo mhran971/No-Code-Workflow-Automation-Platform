@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Workflow, Plus, ChevronRight, Loader2, LayoutTemplate } from 'lucide-react';
-import { ApiConnectionDialog } from '@/components/workflow/ApiConnectionDialog';
+import { Workflow, Plus, ChevronRight, Loader2, LayoutTemplate, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { ApiError, listWorkflows } from '@/lib/api/client';
 import type { WorkflowSummary } from '@/lib/api/types';
-import { normalizeToken } from '@/lib/api/utils';
 
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-success/15 text-success',
@@ -15,43 +14,42 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function WorkflowList() {
   const navigate = useNavigate();
-  const apiConfig = useApiConfig();
-  const { isConnected, dialogOpen, setDialogOpen, accessToken, apiBaseUrl } = apiConfig;
+  const { user, apiBaseUrl, token, logout } = useAuth();
+  const { isConnected } = useApiConfig();
 
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isConnected && !normalizeToken(accessToken)) {
-      setDialogOpen(true);
-    }
-  }, [isConnected, accessToken, setDialogOpen]);
-
-  useEffect(() => {
     if (!isConnected) return;
     setLoading(true);
     setError(null);
-    listWorkflows(apiBaseUrl, accessToken)
+    listWorkflows(apiBaseUrl, token)
       .then((res) => setWorkflows(res.data))
       .catch((e) => setError(e instanceof ApiError ? e.message : 'Failed to load workflows'))
       .finally(() => setLoading(false));
-  }, [isConnected, apiBaseUrl, accessToken]);
+  }, [isConnected, apiBaseUrl, token]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="h-12 border-b border-border flex items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <Workflow className="h-5 w-5 text-primary" />
           <span className="text-sm font-semibold text-foreground tracking-tight">FlowEngine</span>
         </div>
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="h-8 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-        >
-          {isConnected ? 'API Connected' : 'Connect API'}
-        </button>
+        <div className="flex items-center gap-3">
+          {user && (
+            <span className="text-xs text-muted-foreground">{user.email}</span>
+          )}
+          <button
+            onClick={logout}
+            className="h-8 px-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-10">
@@ -148,8 +146,6 @@ export default function WorkflowList() {
           </div>
         )}
       </main>
-
-      <ApiConnectionDialog open={dialogOpen} onOpenChange={setDialogOpen} apiConfig={apiConfig} />
     </div>
   );
 }

@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Workflow, ArrowLeft, Loader2 } from 'lucide-react';
-import { ApiConnectionDialog } from '@/components/workflow/ApiConnectionDialog';
+import { Workflow, ArrowLeft, Loader2, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { ApiError, createWorkflow, listTeams } from '@/lib/api/client';
-import { normalizeToken } from '@/lib/api/utils';
 
 export default function WorkflowCreate() {
   const navigate = useNavigate();
-  const apiConfig = useApiConfig();
-  const { isConnected, dialogOpen, setDialogOpen, accessToken, apiBaseUrl } = apiConfig;
+  const { user, apiBaseUrl, token, logout } = useAuth();
+  const { isConnected } = useApiConfig();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -19,26 +18,23 @@ export default function WorkflowCreate() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!normalizeToken(accessToken)) return;
-    listTeams(apiBaseUrl, accessToken)
+    if (!isConnected) return;
+    listTeams(apiBaseUrl, token)
       .then((res) => setTeams(res.data))
       .catch(() => { /* non-critical */ });
-  }, [apiBaseUrl, accessToken]);
+  }, [isConnected, apiBaseUrl, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    if (!isConnected) {
-      setDialogOpen(true);
-      return;
-    }
+    if (!isConnected) return;
 
     setSubmitting(true);
     setError(null);
 
     try {
-      const res = await createWorkflow(apiBaseUrl, accessToken, {
+      const res = await createWorkflow(apiBaseUrl, token, {
         name: name.trim(),
         description: description.trim() || undefined,
         team_id: teamId !== '' ? teamId : undefined,
@@ -53,18 +49,23 @@ export default function WorkflowCreate() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="h-12 border-b border-border flex items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <Workflow className="h-5 w-5 text-primary" />
           <span className="text-sm font-semibold text-foreground tracking-tight">FlowEngine</span>
         </div>
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="h-8 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-        >
-          {isConnected ? 'API Connected' : 'Connect API'}
-        </button>
+        <div className="flex items-center gap-3">
+          {user && (
+            <span className="text-xs text-muted-foreground">{user.email}</span>
+          )}
+          <button
+            onClick={logout}
+            className="h-8 px-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="max-w-lg mx-auto px-6 py-12">
@@ -148,8 +149,6 @@ export default function WorkflowCreate() {
           </div>
         </form>
       </main>
-
-      <ApiConnectionDialog open={dialogOpen} onOpenChange={setDialogOpen} apiConfig={apiConfig} />
     </div>
   );
 }

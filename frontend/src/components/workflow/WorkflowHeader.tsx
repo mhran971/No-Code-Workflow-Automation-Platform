@@ -1,4 +1,4 @@
-import { Workflow, Save, PlayCircle, Settings, ChevronDown, Loader2, ShieldCheck, Plug, Upload, Link2 } from 'lucide-react';
+import { Workflow, Save, PlayCircle, Settings, ChevronDown, Loader2, ShieldCheck, Upload, Link2, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ExecutionMode } from '@/hooks/useWorkflowExecution';
 
@@ -10,8 +10,7 @@ interface WorkflowHeaderProps {
   onVerify?: () => void;
   isVerifying?: boolean;
   canVerify?: boolean;
-  isApiConnected?: boolean;
-  onApiSettingsClick?: () => void;
+  onSignOut?: () => void;
   onSave?: () => void;
   isSaving?: boolean;
   saveDisabled?: boolean;
@@ -29,8 +28,7 @@ export function WorkflowHeader({
   onVerify,
   isVerifying = false,
   canVerify = false,
-  isApiConnected = false,
-  onApiSettingsClick,
+  onSignOut,
   onSave,
   isSaving = false,
   saveDisabled = false,
@@ -80,15 +78,11 @@ export function WorkflowHeader({
           </button>
         )}
         <button
-          onClick={onApiSettingsClick}
-          className={`h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium transition-colors ${
-            isApiConnected
-              ? 'text-success hover:bg-success/10'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-          }`}
+          onClick={onSignOut}
+          className="h-8 px-3 flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
-          <Plug className="h-3.5 w-3.5" />
-          {isApiConnected ? 'API Connected' : 'Connect API'}
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
         </button>
         <button
           onClick={onSave}

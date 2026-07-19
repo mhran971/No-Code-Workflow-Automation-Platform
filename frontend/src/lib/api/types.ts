@@ -164,3 +164,27 @@ export interface DynamicFlowDesignResponse {
   dynamic_flow: DynamicFlowSummary;
   parent_definition: WorkflowDefinition | null;
 }
+
+export interface LoginResponse {
+  message: string;
+  token: string;
+  expires_in_minutes: number;
+  user: CurrentUser;
+}
+
+export interface CurrentUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  position?: string;
+  role: string;
+  tenant?: {
+    id: number;
+    business_name: string;
+  } | null;
+  team?: {
+    id: number;
+    name: string;
+  } | null;
+}

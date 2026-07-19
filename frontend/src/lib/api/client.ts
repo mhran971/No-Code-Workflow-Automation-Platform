@@ -1,4 +1,4 @@
-import type { ApiNodeDefinition, DynamicFlowDesignResponse, DynamicFlowSummary, InstanceSummary, KnowledgeBaseDocument, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
+import type { ApiNodeDefinition, CurrentUser, DynamicFlowDesignResponse, DynamicFlowSummary, InstanceSummary, KnowledgeBaseDocument, LoginResponse, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
 import { normalizeToken } from './utils';
 
 export class ApiError extends Error {
@@ -310,4 +310,31 @@ export function submitDynamicFlowDefinition(
     method: 'POST',
     body: JSON.stringify({ definition }),
   });
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export function loginUser(
+  baseUrl: string,
+  email: string,
+  password: string,
+): Promise<LoginResponse> {
+  return publicRequest(baseUrl, '/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function fetchCurrentUser(
+  baseUrl: string,
+  token: string,
+): Promise<CurrentUser> {
+  return request(baseUrl, token, '/me');
+}
+
+export function logoutUser(
+  baseUrl: string,
+  token: string,
+): Promise<{ message: string }> {
+  return request(baseUrl, token, '/logout', { method: 'POST' });
 }
