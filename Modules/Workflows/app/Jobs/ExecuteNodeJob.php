@@ -30,7 +30,12 @@ class ExecuteNodeJob implements ShouldQueue
 
     public function handle(WorkflowRuntime $runtime): void
     {
-        $runtime->advance($this->executionId);
+        try {
+            $runtime->advance($this->executionId);
+        } catch (\Throwable $e) {
+            $runtime->handleAdvanceFailure($this->executionId, $e);
+            throw $e;
+        }
     }
 
     public function timeout(): int

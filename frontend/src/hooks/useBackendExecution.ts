@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { Node } from '@xyflow/react';
-import { cancelInstance, triggerManual } from '@/lib/api/client';
+import { cancelInstance, fetchInstance, triggerManual } from '@/lib/api/client';
+import type { InstanceDetail, NodeExecutionSummary } from '@/lib/api/types';
 import { normalizeToken } from '@/lib/api/utils';
 import { createEcho } from '@/lib/echo';
 import type { ExecutionStep, ExecutionStatus, WorkflowExecution } from '@/types/workflow';
@@ -12,6 +13,7 @@ export interface UseBackendExecutionReturn extends UseWorkflowExecutionReturn {
   cancel: () => void;
   instanceId: string | null;
   runtimeContext: Record<string, unknown>;
+  loadInstance: (instanceId: string) => Promise<void>;
 }
 
 interface ApiConfig {
@@ -34,6 +36,10 @@ interface NodeEventPayload {
   wait_until?: string | null;
   started_at: string | null;
   finished_at: string | null;
+}
+
+interface ChildNodeEventPayload extends NodeEventPayload {
+  child_instance_id: number;
 }
 
 interface InstanceEventPayload {
@@ -130,6 +136,15 @@ export function useBackendExecution(
       const step = buildStep(payload, nodes);
       setExecution((prev) => {
         if (!prev) return prev;
+
+        // Find the existing step being replaced — preserve its childInstanceId if any
+        const existing = prev.steps.find(
+          (s) => s.nodeId === payload.node_key && s.id === step.id,
+        );
+        if (existing?.childInstanceId) {
+          step.childInstanceId = existing.childInstanceId;
+        }
+
         const others = prev.steps.filter(
           (s) => !(s.nodeId === payload.node_key && s.id === step.id),
         );
@@ -142,6 +157,63 @@ export function useBackendExecution(
     [nodes],
   );
 
+  const handleChildNodeEvent = useCallback(
+    (payload: ChildNodeEventPayload) => {
+      console.log('[DynamicFlow] Child event received:', payload.child_instance_id, payload.node_key, payload.status);
+      const childKey = `child:${payload.child_instance_id}:${payload.node_key}`;
+      const fs = mapBackendStatus(payload.status);
+      setNodeStatuses((prev) => new Map(prev).set(childKey, fs));
+
+      // Instance-level events (child.instance.started/failed/completed) don't have node_key
+      if (!payload.node_key) return;
+
+      const step = buildStep(payload, nodes);
+      step.childInstanceId = payload.child_instance_id;
+      step.id = `child-${payload.child_instance_id}-${payload.node_key}-${payload.attempt}`;
+
+      setExecution((prev) => {
+        if (!prev) return prev;
+
+        // Find the dynamic-flow parent step and attach childInstanceId
+        const updatedSteps = prev.steps.map((s) => {
+          if (s.nodeType === 'dynamic-flow' && s.status === 'waiting' && !s.childInstanceId) {
+            return { ...s, childInstanceId: payload.child_instance_id };
+          }
+          return s;
+        });
+
+        const others = updatedSteps.filter(
+          (s) => !(s.childInstanceId === payload.child_instance_id && s.nodeId === payload.node_key && s.id === step.id),
+        );
+        const sorted = [...others, step].sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        );
+        return { ...prev, steps: sorted };
+      });
+    },
+    [nodes],
+  );
+
+  const handleChildInstanceTerminal = useCallback(
+    (childInstanceId: number, finalStatus: ExecutionStatus) => {
+      console.log('[DynamicFlow] Child instance terminal:', childInstanceId, finalStatus);
+      setExecution((prev) => {
+        if (!prev) return prev;
+
+        // Update the parent dynamic-flow step to reflect the child's terminal status
+        const updatedSteps = prev.steps.map((s) => {
+          if (s.nodeType === 'dynamic-flow' && s.childInstanceId === childInstanceId) {
+            return { ...s, status: finalStatus };
+          }
+          return s;
+        });
+
+        return { ...prev, steps: updatedSteps };
+      });
+    },
+    [],
+  );
+
   const handleInstanceTerminal = useCallback(
     (finalStatus: ExecutionStatus, ctx?: Record<string, unknown>) => {
       setMode('completed');
@@ -152,6 +224,179 @@ export function useBackendExecution(
       teardownEcho();
     },
     [teardownEcho],
+  );
+
+  const buildStepFromApi = useCallback(
+    (ne: NodeExecutionSummary, childInstanceId?: number): ExecutionStep => {
+      const node = nodes.find((n) => n.id === ne.node_key);
+      const label = (node?.data?.label as string | undefined) ?? ne.node_key;
+
+      const duration =
+        ne.finished_at && ne.started_at
+          ? new Date(ne.finished_at).getTime() - new Date(ne.started_at).getTime()
+          : undefined;
+
+      const variables: Record<string, unknown> = {};
+      if (ne.input && Object.keys(ne.input).length > 0)  variables.input  = ne.input;
+      if (ne.output && Object.keys(ne.output).length > 0) variables.output = ne.output;
+
+      const errorMessage =
+        typeof ne.error?.message === 'string' ? ne.error.message : undefined;
+
+      const step: ExecutionStep = {
+        id:      childInstanceId
+          ? `child-${childInstanceId}-${ne.node_key}-${ne.attempt}`
+          : `${ne.node_key}-${ne.attempt}`,
+        nodeId:    ne.node_key,
+        nodeLabel: label,
+        nodeType:  ne.node_type,
+        status:    mapBackendStatus(ne.status),
+        timestamp: ne.started_at ?? new Date().toISOString(),
+        duration,
+        variables,
+        message:   errorMessage ?? (ne.error ? 'Node failed' : undefined),
+        error:     ne.error ? JSON.stringify(ne.error) : undefined,
+      };
+
+      if (childInstanceId !== undefined) {
+        step.childInstanceId = childInstanceId;
+      }
+
+      return step;
+    },
+    [nodes],
+  );
+
+  const loadInstance = useCallback(
+    async (targetInstanceId: string) => {
+      if (!normalizeToken(apiConfig.accessToken)) {
+        toast.error('API not connected.');
+        return;
+      }
+
+      try {
+        const instanceData: InstanceDetail = await fetchInstance(
+          apiConfig.baseUrl, apiConfig.accessToken, targetInstanceId,
+        );
+
+        setInstanceId(targetInstanceId);
+        instanceRef.current = targetInstanceId;
+
+        const allSteps: ExecutionStep[] = [];
+
+        // Build parent node execution steps
+        for (const ne of instanceData.node_executions) {
+          // Skip consumed merge-coordination rows
+          if (ne.status === 'consumed') continue;
+          allSteps.push(buildStepFromApi(ne));
+        }
+
+        // Build child instance steps from dynamic flows
+        const dynamicFlows = instanceData.dynamic_flows ?? [];
+        for (const df of dynamicFlows) {
+          // Attach childInstanceId to the parent dynamic-flow step
+          if (df.child_instance_id) {
+            const parentStep = allSteps.find(
+              (s) => s.nodeId === df.node_key && s.nodeType === 'dynamic-flow',
+            );
+            if (parentStep) {
+              parentStep.childInstanceId = df.child_instance_id;
+            }
+          }
+
+          // Build child steps
+          if (df.child_instance?.node_executions) {
+            for (const ne of df.child_instance.node_executions) {
+              if (ne.status === 'consumed') continue;
+              allSteps.push(buildStepFromApi(ne, df.child_instance_id ?? undefined));
+            }
+          }
+        }
+
+        allSteps.sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        );
+
+        const mapInstanceStatus = (s: string): ExecutionStatus => {
+          switch (s) {
+            case 'running':   return 'running';
+            case 'completed': return 'success';
+            case 'failed':    return 'failed';
+            case 'paused':    return 'waiting';
+            case 'waiting':   return 'waiting';
+            default:          return 'idle';
+          }
+        };
+
+        const execStatus = mapInstanceStatus(instanceData.status);
+
+        setExecution({
+          id:          targetInstanceId,
+          status:      execStatus,
+          startedAt:   instanceData.started_at ?? new Date().toISOString(),
+          completedAt: instanceData.finished_at ?? undefined,
+          steps:       allSteps,
+        });
+
+        if (execStatus === 'running') {
+          setMode('running');
+        } else {
+          setMode('completed');
+        }
+
+        if (instanceData.context) {
+          setRuntimeContext(instanceData.context);
+        }
+
+        // Build node statuses
+        const statuses = new Map<string, ExecutionStatus>();
+        nodes.forEach((n) => statuses.set(n.id, 'idle'));
+        for (const step of allSteps) {
+          statuses.set(step.nodeId, step.status);
+        }
+        setNodeStatuses(statuses);
+
+        // If instance is still running, connect to WebSocket for live updates
+        if (execStatus === 'running' || execStatus === 'waiting') {
+          const echo = createEcho(apiConfig.accessToken, apiConfig.baseUrl);
+          echoRef.current = echo;
+
+          const channel = echo.private(`workflow-instance.${targetInstanceId}`);
+
+          channel
+            .listen('.node.started',   (p: NodeEventPayload)     => handleNodeEvent(p))
+            .listen('.node.completed', (p: NodeEventPayload)     => handleNodeEvent(p))
+            .listen('.node.failed',    (p: NodeEventPayload)     => handleNodeEvent(p))
+            .listen('.node.waiting',   (p: NodeEventPayload)     => handleNodeEvent(p))
+            .listen('.node.retrying',  (p: NodeEventPayload)     => handleNodeEvent(p))
+            .listen('.instance.completed', (p: InstanceEventPayload) =>
+              handleInstanceTerminal('success', p.context),
+            )
+            .listen('.instance.failed', (p: InstanceEventPayload) =>
+              handleInstanceTerminal('failed', p.context),
+            )
+            .listen('.instance.cancelled', () =>
+              handleInstanceTerminal('failed'),
+            )
+            .listen('.child.node.started',   (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+            .listen('.child.node.completed', (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+            .listen('.child.node.failed',    (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+            .listen('.child.node.waiting',   (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+            .listen('.child.node.retrying',  (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+            .listen('.child.instance.started',   () => {})
+            .listen('.child.instance.failed',    (p: InstanceEventPayload & { child_instance_id: number }) =>
+              handleChildInstanceTerminal(p.child_instance_id, 'failed'),
+            )
+            .listen('.child.instance.completed', (p: InstanceEventPayload & { child_instance_id: number }) =>
+              handleChildInstanceTerminal(p.child_instance_id, 'success'),
+            );
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to load instance.';
+        toast.error(message);
+      }
+    },
+    [apiConfig, nodes, buildStepFromApi, handleNodeEvent, handleChildNodeEvent, handleChildInstanceTerminal, handleInstanceTerminal],
   );
 
   const cancel = useCallback(() => {
@@ -220,6 +465,20 @@ export function useBackendExecution(
         )
         .listen('.instance.cancelled', () =>
           handleInstanceTerminal('failed'),
+        )
+        // Child instance events (forwarded from child workflow)
+        .listen('.child.node.started',   (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+        .listen('.child.node.completed', (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+        .listen('.child.node.failed',    (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+        .listen('.child.node.waiting',   (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+        .listen('.child.node.retrying',  (p: ChildNodeEventPayload) => handleChildNodeEvent(p))
+        // Child instance-level events — update the parent dynamic-flow step status
+        .listen('.child.instance.started',   () => {})
+        .listen('.child.instance.failed',    (p: InstanceEventPayload & { child_instance_id: number }) =>
+          handleChildInstanceTerminal(p.child_instance_id, 'failed'),
+        )
+        .listen('.child.instance.completed', (p: InstanceEventPayload & { child_instance_id: number }) =>
+          handleChildInstanceTerminal(p.child_instance_id, 'success'),
         );
     };
 
@@ -233,7 +492,7 @@ export function useBackendExecution(
       );
       teardownEcho();
     });
-  }, [workflowId, nodes, apiConfig, reset, handleNodeEvent, handleInstanceTerminal, teardownEcho]);
+  }, [workflowId, nodes, apiConfig, reset, handleNodeEvent, handleChildNodeEvent, handleChildInstanceTerminal, handleInstanceTerminal, teardownEcho]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -253,5 +512,6 @@ export function useBackendExecution(
     cancel,
     instanceId,
     runtimeContext,
+    loadInstance,
   };
 }

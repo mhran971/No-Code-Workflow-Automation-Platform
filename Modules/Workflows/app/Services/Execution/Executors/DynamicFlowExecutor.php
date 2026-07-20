@@ -100,7 +100,18 @@ class DynamicFlowExecutor implements NodeExecutor
             return NodeExecutionResult::wait(null, WaitType::DynamicFlowDesign, 'Waiting for child dynamic flow to complete');
         }
 
-        // Child finished — merge output into parent context.
+        // Child failed — propagate failure to parent.
+        if ($childInstance->status === WorkflowInstanceStatus::Failed) {
+            $childError = $childInstance->error ?? ['message' => 'Dynamic sub-flow failed'];
+            $dynamicFlow->update(['status' => DynamicFlowStatus::Cancelled]);
+
+            return NodeExecutionResult::fail(
+                new \RuntimeException($childError['message'] ?? 'Dynamic sub-flow failed'),
+                false,
+            );
+        }
+
+        // Child finished successfully — merge output into parent context.
         $childContext = $childInstance->context ?? [];
         $outputVariable = $config['outputVariable'] ?? null;
 

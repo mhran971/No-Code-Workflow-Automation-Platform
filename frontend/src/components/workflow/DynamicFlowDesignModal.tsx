@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Shuffle, Play, CheckCircle } from 'lucide-react';
+import { Shuffle, Play, CheckCircle, Copy, Variable } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { NodeLibrary } from '@/components/workflow/NodeLibrary';
 import { WorkflowCanvas, type WorkflowCanvasHandle } from '@/components/workflow/WorkflowCanvas';
-import { ExecutionPanel } from '@/components/workflow/ExecutionPanel';
 import { NodeConfigPanel } from '@/components/workflow/NodeConfigPanel';
 import { ValidationResultsDialog } from '@/components/workflow/ValidationResultsDialog';
 import { useWorkflowValidation } from '@/hooks/useWorkflowValidation';
@@ -147,7 +146,9 @@ export function DynamicFlowDesignModal({
     validationError,
     validationLoading,
     handleVerify,
-  } = useWorkflowValidation({ canvasRef, canvasNodes, canvasEdges, nodeDefinitions, apiBaseUrl, accessToken });
+  } = useWorkflowValidation({ canvasRef, canvasNodes, canvasEdges, nodeDefinitions, apiBaseUrl, accessToken,
+    extraTriggerVariables: Object.keys(designData?.parent_context ?? {}),
+  });
 
   const handleSubmit = useCallback(async () => {
     if (!instanceId || !canvasRef.current) return;
@@ -241,7 +242,7 @@ export function DynamicFlowDesignModal({
                 {selectedNode ? 'Node Config' : 'Configuration'}
               </div>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
               {selectedNode ? (
                 <NodeConfigPanel
                   node={selectedNode}
@@ -258,12 +259,59 @@ export function DynamicFlowDesignModal({
                   accessToken={accessToken}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <Shuffle className="h-8 w-8 text-muted-foreground/30 mb-3" />
-                  <p className="text-xs text-muted-foreground">Select a node to configure</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-1">
-                    Drag nodes from the library to build your sub-flow
-                  </p>
+                <div className="p-3 space-y-4">
+                  <div className="flex flex-col items-center text-center mb-2">
+                    <Shuffle className="h-8 w-8 text-muted-foreground/30 mb-3" />
+                    <p className="text-xs text-muted-foreground">Select a node to configure</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                      Drag nodes from the library to build your sub-flow
+                    </p>
+                  </div>
+
+                  {/* Parent Context Variables */}
+                  {designData?.parent_context && Object.keys(designData.parent_context).length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Variable className="h-3 w-3 text-teal-500" />
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                          Available Context Variables
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/60 mb-2">
+                        Use <code className="text-teal-600">{'{{context.variableName}}'}</code> in node configs
+                      </p>
+                      <div className="space-y-1">
+                        {Object.entries(designData.parent_context).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between gap-2 px-2 py-1.5 bg-muted/40 rounded-md border border-border/50 group"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[11px] font-mono text-teal-600 block truncate">
+                                {`{{context.${key}}}`}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground truncate block">
+                                {typeof value === 'string'
+                                  ? value.length > 30 ? `${value.substring(0, 30)}...` : value
+                                  : JSON.stringify(value)}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`{{context.${key}}}`);
+                                toast.success(`Copied {{context.${key}}}`);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"
+                              title="Copy variable reference"
+                            >
+                              <Copy className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

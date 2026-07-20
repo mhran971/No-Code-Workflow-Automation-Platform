@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { WorkflowExecution } from '@/types/workflow';
 import type { ApiConfigField, KnowledgeBaseDocument, TenantUser, ValidationIssue, WorkflowSummary } from '@/lib/api/types';
 import { Zap, AlertCircle, Shuffle } from 'lucide-react';
@@ -9,6 +8,7 @@ import type { ExecutionMode } from '@/hooks/useWorkflowExecution';
 import { StepRow, statusIcon } from './execution/StepRow';
 import { VariableTree } from './execution/VariableTree';
 import { ExecutionControls } from './execution/ExecutionControls';
+import { ChildInstanceTimeline } from './execution/ChildInstanceTimeline';
 import { WorkflowSettingsTab } from './execution/WorkflowSettingsTab';
 
 interface ExecutionPanelProps {
@@ -34,6 +34,7 @@ interface ExecutionPanelProps {
   onResume?: () => void;
   onReset?: () => void;
   onCancel?: () => void;
+  onDesignSubFlow?: () => void;
   instanceId?: string | null;
   instanceStatus?: string | null;
   pausedReason?: string | null;
@@ -62,11 +63,11 @@ export function ExecutionPanel({
   onResume,
   onReset,
   onCancel,
+  onDesignSubFlow,
   instanceId,
   instanceStatus,
   pausedReason,
 }: ExecutionPanelProps) {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'execution' | 'configuration'>('execution');
 
   const effectiveTab = selectedNode ? 'configuration' : activeTab;
@@ -130,9 +131,9 @@ export function ExecutionPanel({
             />
 
             {/* Dynamic Flow Design Entry Point */}
-            {isPausedForDesign && instanceId && (
+            {isPausedForDesign && instanceId && onDesignSubFlow && (
               <button
-                onClick={() => navigate(`/instances/${instanceId}/dynamic-flow`)}
+                onClick={onDesignSubFlow}
                 className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-teal-500/10 text-teal-600 border border-teal-500/20 rounded-md hover:bg-teal-500/20 transition-colors"
               >
                 <Shuffle className="h-3.5 w-3.5" />
@@ -169,9 +170,32 @@ export function ExecutionPanel({
 
                 {/* Steps */}
                 <div className="space-y-0">
-                  {execution.steps.map((step, i) => (
-                    <StepRow key={step.id} step={step} isActive={i === currentStepIndex} />
-                  ))}
+                  {(() => {
+                    const childStepsByParent = new Map<number, typeof execution.steps>();
+                    execution.steps
+                      .filter((s) => s.childInstanceId && s.nodeType !== 'dynamic-flow')
+                      .forEach((s) => {
+                        const list = childStepsByParent.get(s.childInstanceId!) ?? [];
+                        list.push(s);
+                        childStepsByParent.set(s.childInstanceId!, list);
+                      });
+
+                    const parentSteps = execution.steps.filter(
+                      (s) => !s.childInstanceId || s.nodeType === 'dynamic-flow',
+                    );
+
+                    return parentSteps.map((step, i) => (
+                      <div key={step.id}>
+                        <StepRow step={step} isActive={i === currentStepIndex} />
+                        {step.childInstanceId && childStepsByParent.has(step.childInstanceId) && (
+                          <ChildInstanceTimeline
+                            steps={childStepsByParent.get(step.childInstanceId)!}
+                            childInstanceId={step.childInstanceId}
+                          />
+                        )}
+                      </div>
+                    ));
+                  })()}
                 </div>
 
                 {/* Runtime Context — live variable store, backend mode only */}

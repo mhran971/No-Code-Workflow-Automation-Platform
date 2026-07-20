@@ -292,6 +292,10 @@ const Index = () => {
           onResume={resume}
           onReset={reset}
           onCancel={onCancel}
+          onDesignSubFlow={instanceId ? () => {
+            setDesignInstanceId(instanceId);
+            setDesignModalOpen(true);
+          } : undefined}
           isBackendMode={useBackend}
           runtimeContext={runtimeContext}
           instanceId={instanceId}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, XCircle, Clock, Loader2, ChevronDown, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Loader2, ChevronDown, AlertCircle, Workflow } from 'lucide-react';
 import type { ExecutionStep } from '@/types/workflow';
 import { VariableTree } from './VariableTree';
 
@@ -56,6 +56,12 @@ export function StepRow({ step, isActive }: { step: ExecutionStep; isActive?: bo
           {statusIcon[step.status]}
           <span className="text-[10px] font-mono text-muted-foreground">[{step.timestamp}]</span>
           <span className="text-xs font-medium text-foreground flex-1 truncate">{step.nodeLabel}</span>
+          {step.childInstanceId && step.nodeType === 'dynamic-flow' && (
+            <span className="flex items-center gap-1 text-[10px] text-teal-600 bg-teal-500/10 px-1.5 py-0.5 rounded">
+              <Workflow className="h-2.5 w-2.5" />
+              #{step.childInstanceId}
+            </span>
+          )}
           {step.duration != null && step.status !== 'idle' && (
             <span className="text-[10px] text-muted-foreground">{step.duration}ms</span>
           )}

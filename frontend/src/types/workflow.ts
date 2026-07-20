@@ -59,6 +59,7 @@ export interface ExecutionStep {
   variables: Record<string, unknown>;
   message?: string;
   error?: string;
+  childInstanceId?: number;
 }
 
 export interface WorkflowExecution {

@@ -1,4 +1,4 @@
-import type { ApiNodeDefinition, CurrentUser, DynamicFlowDesignResponse, DynamicFlowSummary, InstanceSummary, KnowledgeBaseDocument, LoginResponse, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
+import type { ApiNodeDefinition, CurrentUser, DynamicFlowDesignResponse, DynamicFlowSummary, InstanceDetail, InstanceSummary, KnowledgeBaseDocument, LoginResponse, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
 import { normalizeToken } from './utils';
 
 export class ApiError extends Error {
@@ -258,6 +258,14 @@ export function cancelInstance(
   return request(baseUrl, token, `/workflows/instances/${instanceId}/cancel`, {
     method: 'POST',
   });
+}
+
+export function fetchInstance(
+  baseUrl: string,
+  token: string,
+  instanceId: string,
+): Promise<InstanceDetail> {
+  return request(baseUrl, token, `/workflows/instances/${instanceId}`);
 }
 
 export interface ListInstancesFilters {

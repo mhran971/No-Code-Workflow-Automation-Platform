@@ -47,6 +47,7 @@ class DynamicFlowController extends Controller
                 'instance_id' => $dynamicFlow->instance_id,
             ],
             'parent_definition' => $parentDefinition,
+            'parent_context' => $instance->context ?? [],
         ]);
     }
 
@@ -69,6 +70,18 @@ class DynamicFlowController extends Controller
         $definition = $request->input('definition');
         $workflow = $instance->workflow;
 
+        // Inject parent context variables as trigger variables so the verifier
+        // knows they will be available at runtime via {{context.<key>}}.
+        $parentContext = $instance->context ?? [];
+        if ($parentContext !== []) {
+            $definition['trigger'] = $definition['trigger'] ?? ['type' => 'manual-trigger', 'config' => []];
+            $definition['trigger']['config'] = $definition['trigger']['config'] ?? [];
+            $definition['trigger']['config']['variables'] = array_map(
+                fn (string $key) => ['key' => $key],
+                array_keys($parentContext),
+            );
+        }
+
         $errors = $this->validator->validate($definition, $workflow, $actor, VerificationMode::Segment);
 
         if (! empty($errors['errors'])) {
@@ -80,10 +93,12 @@ class DynamicFlowController extends Controller
         ]);
 
         try {
+            $parentContext = $instance->context ?? [];
+
             $childInstance = $this->dispatcher->dispatch(
                 $workflow,
                 TriggerType::SubWorkflow,
-                [],
+                $parentContext,
                 null,
                 (int) $instance->id,
                 (int) $dynamicFlow->execution_id,

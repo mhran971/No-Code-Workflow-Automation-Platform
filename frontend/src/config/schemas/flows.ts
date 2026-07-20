@@ -62,6 +62,17 @@ export const flowConfigs: Record<string, NodeConfigSchema> = {
           },
         ],
       },
+      {
+        title: 'Output',
+        fields: [
+          {
+            key: 'outputVariable',
+            label: 'Output Variable',
+            type: 'workflowoutput',
+            description: 'Variable name where the child sub-flow context will be stored',
+          },
+        ],
+      },
     ],
   },
 };

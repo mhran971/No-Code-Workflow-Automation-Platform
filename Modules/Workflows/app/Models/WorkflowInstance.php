@@ -93,4 +93,14 @@ class WorkflowInstance extends Model
     {
         return $this->belongsTo(WorkflowDynamicFlow::class, 'dynamic_flow_id');
     }
+
+    public function dynamicFlows(): HasMany
+    {
+        return $this->hasMany(WorkflowDynamicFlow::class, 'instance_id');
+    }
+
+    public function childInstances(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_instance_id');
+    }
 }

@@ -11,6 +11,7 @@ use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\WaitType;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
+use Modules\Workflows\Events\ChildInstanceEventForwarded;
 use Modules\Workflows\Events\InstanceCancelled;
 use Modules\Workflows\Events\InstanceCompleted;
 use Modules\Workflows\Events\InstanceFailed;
@@ -47,13 +48,53 @@ class WorkflowRuntime
     ) {}
 
     /**
+     * Resolve the execution plan for an instance.
+     *
+     * Normal instances compile from their published version. Dynamic-flow children have no
+     * version — look up the user-defined definition stored on the WorkflowDynamicFlow row.
+     */
+    protected function resolvePlan(WorkflowInstance $instance): ExecutionPlan
+    {
+        if ($instance->workflowVersion) {
+            return $this->compiler->compileVersion($instance->workflowVersion);
+        }
+
+        $dynamicFlow = WorkflowDynamicFlow::where('child_instance_id', $instance->id)
+            ->where('status', DynamicFlowStatus::Executing)
+            ->firstOrFail();
+
+        return $this->compiler->compile($dynamicFlow->definition ?? []);
+    }
+
+    /**
      * Broadcast events now fire synchronously (ShouldBroadcastNow), so defer dispatch until
      * the enclosing transaction commits — otherwise clients could see a status over the socket
      * before it's visible via the API, or see one that gets rolled back.
      */
     protected function broadcast(object $event): void
     {
-        DB::afterCommit(fn () => Event::dispatch($event));
+        DB::afterCommit(function () use ($event) {
+            Event::dispatch($event);
+
+            // Forward child instance events to parent's channel
+            $instance = $event->instance ?? null;
+            if ($instance instanceof WorkflowInstance && $instance->parent_instance_id) {
+                $parentInstance = WorkflowInstance::find($instance->parent_instance_id);
+                if ($parentInstance) {
+                    Log::info('workflow.child_event.forwarding', [
+                        'child_instance_id' => $instance->id,
+                        'parent_instance_id' => $parentInstance->id,
+                        'event' => $event->broadcastAs(),
+                    ]);
+                    Event::dispatch(new ChildInstanceEventForwarded(
+                        $instance,
+                        $parentInstance,
+                        $event->broadcastAs(),
+                        $event->broadcastWith(),
+                    ));
+                }
+            }
+        });
     }
 
     /**
@@ -70,7 +111,7 @@ class WorkflowRuntime
             ->with('workflowVersion')
             ->findOrFail($execution->instance_id);
 
-        $plan = $this->compiler->compileVersion($instance->workflowVersion);
+        $plan = $this->resolvePlan($instance);
         $context = new NodeExecutionContext($instance, $execution, $plan, $this->evaluator, $this->interpolator);
 
         $this->broadcast(new NodeStarted($instance, $execution));
@@ -140,7 +181,7 @@ class WorkflowRuntime
     public function retryFromNode(WorkflowInstance $instance, string $nodeKey): void
     {
         DB::transaction(function () use ($instance, $nodeKey): void {
-            $plan = $this->compiler->compileVersion($instance->workflowVersion);
+            $plan = $this->resolvePlan($instance);
             $nodeType = $plan->nodeType($nodeKey) ?? 'unknown';
 
             $lastExecution = WorkflowNodeExecution::query()
@@ -583,6 +624,37 @@ class WorkflowRuntime
                 NodeExecutionStatus::Running->value,
             ])
             ->exists();
+    }
+
+    /**
+     * Called by ExecuteNodeJob when advance() throws an unhandled exception.
+     * Ensures the child instance is marked failed and the parent is woken,
+     * so failures are never silently swallowed.
+     */
+    public function handleAdvanceFailure(int $executionId, Throwable $exception): void
+    {
+        try {
+            $execution = WorkflowNodeExecution::find($executionId);
+            if ($execution === null || $execution->status !== NodeExecutionStatus::Running) {
+                return;
+            }
+
+            $instance = WorkflowInstance::find($execution->instance_id);
+            if ($instance === null || $instance->isTerminal()) {
+                return;
+            }
+
+            $this->failInstance($instance, [
+                'message' => $exception->getMessage(),
+                'exception' => get_class($exception),
+            ]);
+        } catch (Throwable $inner) {
+            Log::error('workflow.advance_failure_handler_error', [
+                'execution_id' => $executionId,
+                'original' => $exception->getMessage(),
+                'handler_error' => $inner->getMessage(),
+            ]);
+        }
     }
 
     protected function resolveCategory(string $nodeType): NodeCategory

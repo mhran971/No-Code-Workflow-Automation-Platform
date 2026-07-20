@@ -13,6 +13,7 @@ use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
 use Modules\Workflows\Services\Execution\Executors\AiGeneratorExecutor;
+use Modules\Workflows\Services\Execution\Executors\DynamicEntryExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicFlowExecutor;
 use Modules\Workflows\Services\Execution\Executors\ForkNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\FormTriggerExecutor;
@@ -124,6 +125,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(TaskNodeExecutor::class));
             $registry->register($this->app->make(SubWorkflowExecutor::class));
             $registry->register($this->app->make(DynamicFlowExecutor::class));
+            $registry->register($this->app->make(DynamicEntryExecutor::class));
 
             // MergeNodeExecutor handles merge-and (its canonical type), merge-or, and the unified
             // 'merge' type (config.mergeMode selects parallel vs conditional at plan-compile time).

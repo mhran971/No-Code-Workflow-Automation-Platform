@@ -4,11 +4,13 @@ namespace Modules\Workflows\Services\Execution;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
+use Modules\Workflows\Events\ChildInstanceEventForwarded;
 use Modules\Workflows\Events\InstanceStarted;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
 use Modules\Workflows\Models\Workflow;
@@ -112,7 +114,27 @@ class WorkflowDispatcher
                     ->onQueue($this->queueFor($category));
             }
 
-            DB::afterCommit(fn () => Event::dispatch(new InstanceStarted($instance)));
+            DB::afterCommit(function () use ($instance) {
+                $startedEvent = new InstanceStarted($instance);
+                Event::dispatch($startedEvent);
+
+                // Forward to parent instance channel if this is a child
+                if ($instance->parent_instance_id) {
+                    $parentInstance = WorkflowInstance::find($instance->parent_instance_id);
+                    if ($parentInstance) {
+                        Log::info('workflow.child_event.forwarding_instance_started', [
+                            'child_instance_id' => $instance->id,
+                            'parent_instance_id' => $parentInstance->id,
+                        ]);
+                        Event::dispatch(new ChildInstanceEventForwarded(
+                            $instance,
+                            $parentInstance,
+                            $startedEvent->broadcastAs(),
+                            $startedEvent->broadcastWith(),
+                        ));
+                    }
+                }
+            });
 
             return $instance;
         });
