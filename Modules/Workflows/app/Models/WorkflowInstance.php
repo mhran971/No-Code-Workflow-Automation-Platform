@@ -15,6 +15,9 @@ class WorkflowInstance extends Model
         'workflow_id',
         'workflow_version_id',
         'parent_instance_id',
+        'parent_execution_id',
+        'is_dynamic',
+        'dynamic_flow_id',
         'tenant_id',
         'status',
         'trigger_type',
@@ -32,6 +35,7 @@ class WorkflowInstance extends Model
         return [
             'status' => WorkflowInstanceStatus::class,
             'trigger_type' => TriggerType::class,
+            'is_dynamic' => 'boolean',
             'payload' => 'array',
             'context' => 'array',
             'error' => 'array',
@@ -65,6 +69,11 @@ class WorkflowInstance extends Model
         return $this->belongsTo(self::class, 'parent_instance_id');
     }
 
+    public function parentExecution(): BelongsTo
+    {
+        return $this->belongsTo(WorkflowNodeExecution::class, 'parent_execution_id');
+    }
+
     public function nodeExecutions(): HasMany
     {
         return $this->hasMany(WorkflowNodeExecution::class, 'instance_id');
@@ -78,5 +87,20 @@ class WorkflowInstance extends Model
     public function events(): HasMany
     {
         return $this->hasMany(WorkflowEvent::class, 'instance_id');
+    }
+
+    public function dynamicFlow(): BelongsTo
+    {
+        return $this->belongsTo(WorkflowDynamicFlow::class, 'dynamic_flow_id');
+    }
+
+    public function dynamicFlows(): HasMany
+    {
+        return $this->hasMany(WorkflowDynamicFlow::class, 'instance_id');
+    }
+
+    public function childInstances(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_instance_id');
     }
 }

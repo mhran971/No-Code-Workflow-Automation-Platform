@@ -1,6 +1,6 @@
 import { ChevronDown, Info } from 'lucide-react';
 import type { NodeConfigSchema } from '@/config/types';
-import type { KnowledgeBaseDocument, TenantUser } from '@/lib/api/types';
+import type { KnowledgeBaseDocument, TenantUser, WorkflowSummary } from '@/lib/api/types';
 import type { NestedFieldErrors } from '@/hooks/useFieldValidationErrors';
 import { FieldRenderer } from './FieldRenderer';
 
@@ -17,11 +17,14 @@ interface ConfigSectionProps {
   onValueChange: (key: string, val: unknown) => void;
   users: TenantUser[];
   kbDocuments?: KnowledgeBaseDocument[];
+  workflows?: WorkflowSummary[];
+  apiBaseUrl?: string;
+  accessToken?: string;
 }
 
 // One collapsible config section: header toggle + its fields (each via FieldRenderer).
 export function ConfigSection({
-  section, index, expanded, onToggle, values, fieldErrors, nestedErrors, onValueChange, users, kbDocuments,
+  section, index, expanded, onToggle, values, fieldErrors, nestedErrors, onValueChange, users, kbDocuments, workflows, apiBaseUrl, accessToken,
 }: ConfigSectionProps) {
   return (
     <div>
@@ -63,6 +66,10 @@ export function ConfigSection({
                   onChange={v => onValueChange(field.key, v)}
                   users={users}
                   kbDocuments={kbDocuments}
+                  workflows={workflows}
+                  allValues={values}
+                  apiBaseUrl={apiBaseUrl}
+                  accessToken={accessToken}
                   nestedErrors={nestedErrors[field.key]}
                 />
                 {fieldError && (

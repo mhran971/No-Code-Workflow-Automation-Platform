@@ -29,15 +29,15 @@ class NodeFailed implements ShouldBroadcastNow
     {
         return [
             'instance_id' => $this->instance->id,
-            'node_key'    => $this->execution->node_key,
-            'node_type'   => $this->execution->node_type,
-            'status'      => 'failed',
-            'attempt'     => $this->execution->attempt,
-            'input'       => $this->execution->input ?? [],
-            'output'      => null,
-            'error'       => $this->execution->error,
-            'will_retry'  => $this->willRetry,
-            'started_at'  => $this->execution->started_at?->toISOString(),
+            'node_key' => $this->execution->node_key,
+            'node_type' => $this->execution->node_type,
+            'status' => 'failed',
+            'attempt' => $this->execution->attempt,
+            'input' => $this->execution->input ?? [],
+            'output' => null,
+            'error' => $this->execution->error,
+            'will_retry' => $this->willRetry,
+            'started_at' => $this->execution->started_at?->toISOString(),
             'finished_at' => $this->execution->finished_at?->toISOString(),
         ];
     }

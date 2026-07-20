@@ -11,8 +11,8 @@ use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
-use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\Execution\WorkflowRuntime;
+use Modules\Workflows\Services\WorkflowManagementService;
 
 /**
  * Operator view of running instances: list, inspect, cancel, and retry-from-node.
@@ -72,10 +72,41 @@ class WorkflowInstanceController extends Controller
             'nodeExecutions',
             'workflow.team:id,name',
             'workflow.createdBy:id,first_name,last_name,name,email',
+            'dynamicFlows.childInstance.nodeExecutions',
         ]);
 
         $payload = $instance->toArray();
         $payload['workflow'] = $this->workflowManagementService->serializeWorkflow($instance->workflow, $this->actor());
+
+        if ($instance->dynamicFlows->isNotEmpty()) {
+            $payload['dynamic_flows'] = $instance->dynamicFlows->map(function ($df) {
+                $child = $df->childInstance;
+
+                return [
+                    'id' => $df->id,
+                    'node_key' => $df->node_key,
+                    'status' => $df->status->value,
+                    'child_instance_id' => $df->child_instance_id,
+                    'child_instance' => $child ? [
+                        'id' => $child->id,
+                        'status' => $child->status->value,
+                        'error' => $child->error,
+                        'node_executions' => $child->nodeExecutions->map(fn ($ne) => [
+                            'id' => $ne->id,
+                            'node_key' => $ne->node_key,
+                            'node_type' => $ne->node_type,
+                            'status' => $ne->status->value,
+                            'attempt' => $ne->attempt,
+                            'input' => $ne->input,
+                            'output' => $ne->output,
+                            'error' => $ne->error,
+                            'started_at' => $ne->started_at?->toISOString(),
+                            'finished_at' => $ne->finished_at?->toISOString(),
+                        ])->values(),
+                    ] : null,
+                ];
+            })->values();
+        }
 
         return response()->json($payload);
     }

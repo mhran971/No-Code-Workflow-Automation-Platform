@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Console\Commands;
 
 use Illuminate\Console\Command;
+use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
@@ -70,10 +71,10 @@ class AdmitPendingInstancesCommand extends Command
 
         $category = $this->registry->has($firstExecution->node_type)
             ? $this->registry->for($firstExecution->node_type)->category()
-            : \Modules\Workflows\Enums\NodeCategory::Logic;
+            : NodeCategory::Logic;
 
-        $queue = $category === \Modules\Workflows\Enums\NodeCategory::Action
-            || $category === \Modules\Workflows\Enums\NodeCategory::Ai
+        $queue = $category === NodeCategory::Action
+            || $category === NodeCategory::Ai
             ? (string) config('workflows.execution.queues.actions', 'workflow-actions')
             : (string) config('workflows.execution.queues.control', 'workflow-control');
 

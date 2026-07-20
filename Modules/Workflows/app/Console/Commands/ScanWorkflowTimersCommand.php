@@ -4,6 +4,7 @@ namespace Modules\Workflows\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
 use Modules\Workflows\Models\WorkflowNodeExecution;
@@ -60,10 +61,10 @@ class ScanWorkflowTimersCommand extends Command
 
             $category = $this->registry->has($locked->node_type)
                 ? $this->registry->for($locked->node_type)->category()
-                : \Modules\Workflows\Enums\NodeCategory::Logic;
+                : NodeCategory::Logic;
 
-            $queue = $category === \Modules\Workflows\Enums\NodeCategory::Action
-                || $category === \Modules\Workflows\Enums\NodeCategory::Ai
+            $queue = $category === NodeCategory::Action
+                || $category === NodeCategory::Ai
                 ? (string) config('workflows.execution.queues.actions', 'workflow-actions')
                 : (string) config('workflows.execution.queues.control', 'workflow-control');
 

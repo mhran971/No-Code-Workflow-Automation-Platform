@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use Modules\Workflows\Services\Verification\DataFlowAnalyzer;
+use Modules\Workflows\Services\Verification\DataFlowResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use PHPUnit\Framework\TestCase;
 
@@ -15,7 +16,7 @@ class DataFlowAnalyzerTest extends TestCase
      * @param  list<array{id:string,type:string,config?:array}>  $nodes
      * @param  list<array{source:string,target:string}>  $edges
      */
-    private function analyze(array $nodes, array $edges): \Modules\Workflows\Services\Verification\DataFlowResult
+    private function analyze(array $nodes, array $edges): DataFlowResult
     {
         $definition = [
             'trigger' => ['type' => 'manual-trigger', 'config' => []],

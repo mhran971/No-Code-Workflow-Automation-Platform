@@ -21,7 +21,10 @@ export type ConfigFieldType =
   | 'templatetextarea'
   | 'emailtemplate'
   | 'branchlist'
-  | 'kbdocuments';
+  | 'kbdocuments'
+  | 'workflowselect'
+  | 'triggermapping'
+  | 'workflowoutput';
 
 export interface ConfigFieldOption {
   label: string;

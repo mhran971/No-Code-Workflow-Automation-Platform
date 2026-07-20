@@ -28,11 +28,11 @@ class NodeRetrying implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'instance_id'    => $this->instance->id,
-            'node_key'       => $this->retryExecution->node_key,
-            'node_type'      => $this->retryExecution->node_type,
-            'status'         => 'pending',
-            'attempt'        => $this->retryExecution->attempt,
+            'instance_id' => $this->instance->id,
+            'node_key' => $this->retryExecution->node_key,
+            'node_type' => $this->retryExecution->node_type,
+            'status' => 'pending',
+            'attempt' => $this->retryExecution->attempt,
             'failed_attempt' => $this->failedExecution->attempt,
         ];
     }

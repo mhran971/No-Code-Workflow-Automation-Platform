@@ -3,6 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Login from "./pages/Login.tsx";
 import Index from "./pages/Index.tsx";
 import WorkflowList from "./pages/WorkflowList.tsx";
 import WorkflowCreate from "./pages/WorkflowCreate.tsx";
@@ -18,16 +21,54 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/workflows" replace />} />
-          <Route path="/workflows" element={<WorkflowList />} />
-          <Route path="/workflows/new" element={<WorkflowCreate />} />
-          <Route path="/workflows/templates" element={<WorkflowTemplates />} />
-          <Route path="/workflows/:id/canvas" element={<Index />} />
-          <Route path="/forms/:publicToken" element={<PublicForm />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/forms/:publicToken" element={<PublicForm />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/workflows" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workflows"
+              element={
+                <ProtectedRoute>
+                  <WorkflowList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workflows/new"
+              element={
+                <ProtectedRoute>
+                  <WorkflowCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workflows/templates"
+              element={
+                <ProtectedRoute>
+                  <WorkflowTemplates />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workflows/:id/canvas"
+              element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              }
+            />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

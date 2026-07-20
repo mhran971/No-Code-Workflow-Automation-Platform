@@ -1,4 +1,4 @@
-import type { ApiNodeDefinition, InstanceSummary, KnowledgeBaseDocument, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
+import type { ApiNodeDefinition, CurrentUser, DynamicFlowDesignResponse, DynamicFlowSummary, InstanceDetail, InstanceSummary, KnowledgeBaseDocument, LoginResponse, PublicFormSchema, TenantUser, TriggerManualResponse, ValidationResult, WorkflowDefinition, WorkflowDetail, WorkflowSummary, WorkflowTemplate } from './types';
 import { normalizeToken } from './utils';
 
 export class ApiError extends Error {
@@ -260,6 +260,14 @@ export function cancelInstance(
   });
 }
 
+export function fetchInstance(
+  baseUrl: string,
+  token: string,
+  instanceId: string,
+): Promise<InstanceDetail> {
+  return request(baseUrl, token, `/workflows/instances/${instanceId}`);
+}
+
 export interface ListInstancesFilters {
   status?: string;
   started_from?: string;
@@ -288,4 +296,53 @@ export function listInstances(
     : `/workflows/${workflowId}/instances`;
 
   return request(baseUrl, token, path);
+}
+
+// ─── Dynamic Flow ──────────────────────────────────────────────────────────────
+
+export function fetchDynamicFlow(
+  baseUrl: string,
+  token: string,
+  instanceId: string,
+): Promise<DynamicFlowDesignResponse> {
+  return request(baseUrl, token, `/workflows/instances/${instanceId}/dynamic-flow`);
+}
+
+export function submitDynamicFlowDefinition(
+  baseUrl: string,
+  token: string,
+  instanceId: string,
+  definition: WorkflowDefinition,
+): Promise<{ dynamic_flow: DynamicFlowSummary }> {
+  return request(baseUrl, token, `/workflows/instances/${instanceId}/dynamic-flow/definition`, {
+    method: 'POST',
+    body: JSON.stringify({ definition }),
+  });
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export function loginUser(
+  baseUrl: string,
+  email: string,
+  password: string,
+): Promise<LoginResponse> {
+  return publicRequest(baseUrl, '/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function fetchCurrentUser(
+  baseUrl: string,
+  token: string,
+): Promise<CurrentUser> {
+  return request(baseUrl, token, '/me');
+}
+
+export function logoutUser(
+  baseUrl: string,
+  token: string,
+): Promise<{ message: string }> {
+  return request(baseUrl, token, '/logout', { method: 'POST' });
 }

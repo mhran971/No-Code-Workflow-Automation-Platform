@@ -6,14 +6,14 @@ import {
 } from './collections';
 import { InputFieldListField, BranchListField } from './lists';
 import {
-  TemplateTextField, TemplateTextareaField, EmailTemplateField, IdentifierField, UserSelectField, KbDocumentsField,
+  TemplateTextField, TemplateTextareaField, EmailTemplateField, IdentifierField, UserSelectField, KbDocumentsField, WorkflowSelectField, TriggerMappingField, WorkflowOutputField,
 } from './templates';
 import type { FieldRendererProps, InputFieldItem, BranchItem } from './types';
 
 // Central dispatcher: maps a field's `type` to its renderer.
 // To support a new field type: add it to ConfigFieldType (config/types.ts),
 // write a renderer in basic/collections/templates, then add a `case` here.
-export function FieldRenderer({ field, value, onChange, users, kbDocuments, nestedErrors }: FieldRendererProps) {
+export function FieldRenderer({ field, value, onChange, users, kbDocuments, workflows, allValues, apiBaseUrl, accessToken, nestedErrors }: FieldRendererProps) {
   switch (field.type) {
     case 'text': return <TextField field={field} value={value as string} onChange={onChange} />;
     case 'textarea': return <TextareaField field={field} value={value as string} onChange={onChange} />;
@@ -33,6 +33,9 @@ export function FieldRenderer({ field, value, onChange, users, kbDocuments, nest
     case 'templatetextarea': return <TemplateTextareaField field={field} value={value as string} onChange={onChange} />;
     case 'emailtemplate': return <EmailTemplateField field={field} value={value as string} onChange={onChange} />;
     case 'branchlist': return <BranchListField field={field} value={value as BranchItem[]} onChange={v => onChange(v)} />;
+    case 'workflowselect': return <WorkflowSelectField field={field} value={value as string | number} onChange={onChange} workflows={workflows ?? []} />;
+    case 'triggermapping': return <TriggerMappingField field={field} value={value as Record<string, string>} onChange={v => onChange(v)} apiBaseUrl={apiBaseUrl} accessToken={accessToken} allValues={allValues} />;
+    case 'workflowoutput': return <WorkflowOutputField field={field} value={value as string} onChange={onChange} apiBaseUrl={apiBaseUrl} accessToken={accessToken} allValues={allValues} />;
     default: return null;
   }
 }

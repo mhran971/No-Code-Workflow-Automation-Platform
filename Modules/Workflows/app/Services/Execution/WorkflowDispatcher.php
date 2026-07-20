@@ -4,11 +4,13 @@ namespace Modules\Workflows\Services\Execution;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
+use Modules\Workflows\Events\ChildInstanceEventForwarded;
 use Modules\Workflows\Events\InstanceStarted;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
 use Modules\Workflows\Models\Workflow;
@@ -36,6 +38,7 @@ class WorkflowDispatcher
 
     /**
      * @param  array<string, mixed>  $payload  trigger payload (webhook body, form fields, etc.)
+     * @param  array<string, mixed>|null  $definition  optional raw definition (bypasses version lookup for dynamic-flow segments)
      *
      * @throws ValidationException if the workflow is not published or not triggerable
      */
@@ -44,9 +47,18 @@ class WorkflowDispatcher
         TriggerType $triggerType,
         array $payload = [],
         ?string $correlationId = null,
+        ?int $parentInstanceId = null,
+        ?int $parentExecutionId = null,
+        ?array $definition = null,
     ): WorkflowInstance {
-        $version = $this->resolveVersion($workflow);
-        $plan = $this->compiler->compileVersion($version);
+        $version = null;
+
+        if ($definition !== null) {
+            $plan = $this->compiler->compile($definition);
+        } else {
+            $version = $this->resolveVersion($workflow);
+            $plan = $this->compiler->compileVersion($version);
+        }
 
         $triggerNodeKey = $plan->triggerNodeKey();
         if ($triggerNodeKey === null) {
@@ -58,13 +70,15 @@ class WorkflowDispatcher
         $admitted = $this->admission->canAdmit((int) $workflow->tenant_id);
 
         return DB::transaction(function () use (
-            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey, $admitted
+            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey, $admitted, $parentInstanceId, $parentExecutionId
         ): WorkflowInstance {
             $instanceStatus = $admitted ? WorkflowInstanceStatus::Running : WorkflowInstanceStatus::Pending;
 
             $instance = WorkflowInstance::query()->create([
                 'workflow_id' => $workflow->id,
-                'workflow_version_id' => $version->id,
+                'workflow_version_id' => $version?->id,
+                'parent_instance_id' => $parentInstanceId,
+                'parent_execution_id' => $parentExecutionId,
                 'tenant_id' => $workflow->tenant_id,
                 'status' => $instanceStatus,
                 'trigger_type' => $triggerType,
@@ -100,7 +114,27 @@ class WorkflowDispatcher
                     ->onQueue($this->queueFor($category));
             }
 
-            DB::afterCommit(fn () => Event::dispatch(new InstanceStarted($instance)));
+            DB::afterCommit(function () use ($instance) {
+                $startedEvent = new InstanceStarted($instance);
+                Event::dispatch($startedEvent);
+
+                // Forward to parent instance channel if this is a child
+                if ($instance->parent_instance_id) {
+                    $parentInstance = WorkflowInstance::find($instance->parent_instance_id);
+                    if ($parentInstance) {
+                        Log::info('workflow.child_event.forwarding_instance_started', [
+                            'child_instance_id' => $instance->id,
+                            'parent_instance_id' => $parentInstance->id,
+                        ]);
+                        Event::dispatch(new ChildInstanceEventForwarded(
+                            $instance,
+                            $parentInstance,
+                            $startedEvent->broadcastAs(),
+                            $startedEvent->broadcastWith(),
+                        ));
+                    }
+                }
+            });
 
             return $instance;
         });

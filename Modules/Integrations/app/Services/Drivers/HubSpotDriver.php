@@ -30,7 +30,7 @@ class HubSpotDriver extends AbstractOAuthDriver
             'grant_type' => 'authorization_code',
             'client_id' => $this->clientId($provider),
             'client_secret' => $this->clientSecret($provider),
-            'redirect_uri' => route('api.integrations.callback', ['provider' => $provider], ["secure"=> true]),
+            'redirect_uri' => route('api.integrations.callback', ['provider' => $provider], ['secure' => true]),
             'code' => $code,
         ])->throw()->json();
 

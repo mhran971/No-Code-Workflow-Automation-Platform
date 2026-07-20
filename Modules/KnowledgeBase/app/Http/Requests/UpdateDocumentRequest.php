@@ -4,6 +4,7 @@ namespace Modules\KnowledgeBase\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
+use Modules\KnowledgeBase\Models\Document;
 
 class UpdateDocumentRequest extends FormRequest
 {
@@ -17,7 +18,7 @@ class UpdateDocumentRequest extends FormRequest
         if (! $id) {
             return false;
         }
-        $document = \Modules\KnowledgeBase\Models\Document::where('id', $id)
+        $document = Document::where('id', $id)
             ->where('tenant_id', $tenantId)
             ->first();
 

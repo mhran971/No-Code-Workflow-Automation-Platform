@@ -14,12 +14,16 @@ interface UseWorkflowValidationArgs {
   nodeDefinitions: ApiNodeDefinition[];
   apiBaseUrl: string;
   accessToken: string;
+  /** Extra context variable keys (from a parent instance) to inject into the
+   *  trigger config so the verifier knows they will be available at runtime. */
+  extraTriggerVariables?: string[];
 }
 
 // Owns the "Verify" flow: builds a workflow definition from the canvas, calls the
 // backend validator, and maps the returned issues back onto the canvas nodes.
 export function useWorkflowValidation({
   canvasRef, canvasNodes, canvasEdges, nodeDefinitions, apiBaseUrl, accessToken,
+  extraTriggerVariables,
 }: UseWorkflowValidationArgs) {
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -67,6 +71,12 @@ export function useWorkflowValidation({
 
     const snapshot = canvasRef.current?.getSnapshot() ?? { nodes: canvasNodes, edges: canvasEdges };
     const definition = buildDefinitionFromCanvas(snapshot.nodes, snapshot.edges, nodeDefinitions);
+
+    // Inject parent context variables so the verifier knows they are available
+    if (extraTriggerVariables && extraTriggerVariables.length > 0) {
+      definition.trigger.config.variables = extraTriggerVariables.map((key) => ({ key }));
+    }
+
     setLastDefinition(definition);
 
     try {
@@ -87,7 +97,7 @@ export function useWorkflowValidation({
     } finally {
       setValidationLoading(false);
     }
-  }, [apiBaseUrl, accessToken, canvasNodes, canvasEdges, nodeDefinitions, applyValidationResult, canvasRef]);
+  }, [apiBaseUrl, accessToken, canvasNodes, canvasEdges, nodeDefinitions, extraTriggerVariables, applyValidationResult, canvasRef]);
 
   return {
     validationOpen,

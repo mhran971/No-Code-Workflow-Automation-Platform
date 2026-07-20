@@ -149,3 +149,81 @@ export interface InstanceSummary {
   started_at: string | null;
   finished_at: string | null;
 }
+
+export interface DynamicFlowSummary {
+  id: number;
+  status: string;
+  node_key: string;
+  instance_id: number;
+  child_instance_id: number | null;
+  definition: WorkflowDefinition | null;
+  created_at: string;
+}
+
+export interface DynamicFlowDesignResponse {
+  dynamic_flow: DynamicFlowSummary;
+  parent_definition: WorkflowDefinition | null;
+  parent_context: Record<string, unknown>;
+}
+
+export interface NodeExecutionSummary {
+  id: number;
+  node_key: string;
+  node_type: string;
+  status: string;
+  attempt: number;
+  input: Record<string, unknown> | null;
+  output: Record<string, unknown> | null;
+  error: { message?: string; exception?: string; file?: string } | null;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface DynamicFlowDetail {
+  id: number;
+  node_key: string;
+  status: string;
+  child_instance_id: number | null;
+  child_instance: {
+    id: number;
+    status: string;
+    error: { message?: string } | null;
+    node_executions: NodeExecutionSummary[];
+  } | null;
+}
+
+export interface InstanceDetail {
+  id: string;
+  status: string;
+  paused_reason: string | null;
+  error: { message?: string } | null;
+  context: Record<string, unknown> | null;
+  started_at: string | null;
+  finished_at: string | null;
+  node_executions: NodeExecutionSummary[];
+  dynamic_flows: DynamicFlowDetail[];
+}
+
+export interface LoginResponse {
+  message: string;
+  token: string;
+  expires_in_minutes: number;
+  user: CurrentUser;
+}
+
+export interface CurrentUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  position?: string;
+  role: string;
+  tenant?: {
+    id: number;
+    business_name: string;
+  } | null;
+  team?: {
+    id: number;
+    name: string;
+  } | null;
+}

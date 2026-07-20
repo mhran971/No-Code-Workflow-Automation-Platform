@@ -36,11 +36,11 @@ class IntegrationManager
 
         if ($provider === null) {
             throw IntegrationException::unknownProvider((string) $payload['provider']);
-            }
+        }
 
-            if (! $provider->is_active) {
-                throw IntegrationException::inactiveProvider($provider->id);
-                }
+        if (! $provider->is_active) {
+            throw IntegrationException::inactiveProvider($provider->id);
+        }
         Log::debug('fetched provider: ', ['id' => $provider->id, 'name' => $provider->name]);
 
         Log::debug('Fetching driver for provider ID: '.$payload['provider']);
@@ -58,6 +58,7 @@ class IntegrationManager
             $connectionData['config'] ?? []
         );
         Log::debug('Hydrated integration connection: ', ['id' => $connection->id]);
+
         return $connection;
     }
 
