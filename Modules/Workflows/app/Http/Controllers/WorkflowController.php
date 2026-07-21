@@ -16,6 +16,7 @@ use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\WorkflowVerificationService;
+use Modules\Workflows\Services\WorkflowVersioningService;
 use Modules\Workflows\Transformers\WorkflowResource;
 use Modules\Workflows\Transformers\WorkflowTemplateResource;
 use Modules\Workflows\Transformers\WorkflowVersionResource;
@@ -25,6 +26,7 @@ class WorkflowController extends Controller
     public function __construct(
         protected WorkflowManagementService $workflowManagementService,
         protected WorkflowVerificationService $verificationService,
+        protected WorkflowVersioningService $versioningService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -96,7 +98,7 @@ class WorkflowController extends Controller
 
     public function publish(PublishWorkflowRequest $request, Workflow $workflow): JsonResponse
     {
-        $version = $this->workflowManagementService->publish($this->actor(), $workflow, $request->validated());
+        $version = $this->versioningService->publish($this->actor(), $workflow, $request->validated());
         $workflow->refresh();
 
         return response()->json([
@@ -108,7 +110,7 @@ class WorkflowController extends Controller
 
     public function versions(Workflow $workflow): JsonResponse
     {
-        $versions = $this->workflowManagementService->listVersions($this->actor(), $workflow);
+        $versions = $this->versioningService->listVersions($this->actor(), $workflow);
 
         return response()->json([
             'data' => WorkflowVersionResource::collection($versions),
