@@ -13,9 +13,6 @@ use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
-use Modules\Workflows\Models\WorkflowTemplate;
-use Modules\Workflows\Models\WorkflowVersion;
-use Modules\Workflows\Services\Execution\WorkflowDispatcher;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class WorkflowManagementService
@@ -23,6 +20,7 @@ class WorkflowManagementService
     public function __construct(
         protected WorkflowVerificationService $verificationService,
         protected WorkflowAuthorizationService $authorizationService,
+        protected WorkflowTemplateService $templateService,
     ) {}
 
     public function listVisibleWorkflows(User $actor, array $filters = []): Collection
@@ -48,18 +46,6 @@ class WorkflowManagementService
                 'createdBy:id,first_name,last_name,name,email',
             ])
             ->latest('updated_at')
-            ->get();
-    }
-
-    public function listTemplates(User $actor): Collection
-    {
-        return WorkflowTemplate::query()
-            ->where('is_active', true)
-            ->where(function (Builder $query) use ($actor): void {
-                $query->whereNull('tenant_id')
-                    ->orWhere('tenant_id', (int) $actor->tenant_id);
-            })
-            ->orderBy('name')
             ->get();
     }
 
@@ -97,7 +83,7 @@ class WorkflowManagementService
             $definition = $this->blankDefinition();
 
             if ($method === 'template') {
-                $template = $this->resolveTemplate($actor, (int) $data['template_id']);
+                $template = $this->templateService->resolveTemplate($actor, (int) $data['template_id']);
                 $definition = $template->definition;
                 $template->increment('usage_count');
             }
@@ -296,26 +282,6 @@ class WorkflowManagementService
         }
 
         return $team;
-    }
-
-    protected function resolveTemplate(User $actor, int $templateId): WorkflowTemplate
-    {
-        $template = WorkflowTemplate::query()
-            ->where('id', $templateId)
-            ->where('is_active', true)
-            ->where(function (Builder $query) use ($actor): void {
-                $query->whereNull('tenant_id')
-                    ->orWhere('tenant_id', (int) $actor->tenant_id);
-            })
-            ->first();
-
-        if ($template === null) {
-            throw ValidationException::withMessages([
-                'template_id' => 'Selected workflow template was not found.',
-            ]);
-        }
-
-        return $template;
     }
 
     protected function blankDefinition(): array

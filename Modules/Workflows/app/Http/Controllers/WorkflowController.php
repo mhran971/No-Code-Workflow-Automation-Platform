@@ -15,6 +15,7 @@ use Modules\Workflows\Http\Requests\ValidateWorkflowDefinitionRequest;
 use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\WorkflowManagementService;
+use Modules\Workflows\Services\WorkflowTemplateService;
 use Modules\Workflows\Services\WorkflowVerificationService;
 use Modules\Workflows\Services\WorkflowVersioningService;
 use Modules\Workflows\Transformers\WorkflowResource;
@@ -27,6 +28,7 @@ class WorkflowController extends Controller
         protected WorkflowManagementService $workflowManagementService,
         protected WorkflowVerificationService $verificationService,
         protected WorkflowVersioningService $versioningService,
+        protected WorkflowTemplateService $templateService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -41,7 +43,7 @@ class WorkflowController extends Controller
 
     public function templates(): JsonResponse
     {
-        $templates = $this->workflowManagementService->listTemplates($this->actor());
+        $templates = $this->templateService->listTemplates($this->actor());
 
         return response()->json([
             'data' => WorkflowTemplateResource::collection($templates),

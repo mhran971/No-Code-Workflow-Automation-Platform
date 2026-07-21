@@ -16,6 +16,7 @@ class WorkflowVersioningService extends BaseService
         protected WorkflowVerificationService $verificationService,
         protected WorkflowAuthorizationService $authorizationService,
     ) {}
+
     public function publish(User $actor, Workflow $workflow, array $data): WorkflowVersion
     {
         $this->authorizationService->assertCanManage($actor, $workflow);
@@ -123,7 +124,6 @@ class WorkflowVersioningService extends BaseService
             ->orderByDesc('version_number')
             ->get();
     }
-
 
     protected function structuralDefinition(array $definition): array
     {
