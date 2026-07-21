@@ -66,11 +66,6 @@ class WorkflowManagementService
             ->get();
     }
 
-    public function validateDefinition(array $definition, ?Workflow $workflow = null, ?User $actor = null): array
-    {
-        return $this->verificationService->verify($definition, $workflow, $actor)->toArray();
-    }
-
     public function createWorkflow(User $actor, array $data): Workflow
     {
         if (! in_array($actor->role, [Role::Manager, Role::BusinessOwner], true)) {
@@ -328,39 +323,6 @@ class WorkflowManagementService
             $workflow->versions()->delete();
             $workflow->delete();
         });
-    }
-
-    public function triggerWebhook(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
-    {
-        $this->authorizationService->assertCanView($actor, $workflow);
-
-        if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
-            throw new HttpException(410, 'Workflow is not available for triggering.');
-        }
-
-        return $this->dispatcher->dispatch($workflow, TriggerType::Webhook, $payload);
-    }
-
-    public function triggerManual(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
-    {
-        $this->authorizationService->assertCanView($actor, $workflow);
-
-        if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
-            throw new HttpException(410, 'Workflow is not available for triggering.');
-        }
-
-        return $this->dispatcher->dispatch($workflow, TriggerType::Manual, $payload);
-    }
-
-    public function triggerForm(User $actor, Workflow $workflow, array $formData = []): WorkflowInstance
-    {
-        $this->authorizationService->assertCanView($actor, $workflow);
-
-        if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
-            throw new HttpException(410, 'Workflow is not available for triggering.');
-        }
-
-        return $this->dispatcher->dispatch($workflow, TriggerType::Form, $formData);
     }
 
     protected function visibleWorkflowsQuery(User $actor): Builder

@@ -64,7 +64,7 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::patch('/{workflow}/status', [WorkflowController::class, 'updateStatus'])->name('workflows.status.update');
     Route::delete('/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
     Route::delete('/{workflow}/purge', [WorkflowController::class, 'purge'])->name('workflows.purge');
-    Route::post('/{workflow}/trigger/webhook', [WorkflowController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
+    Route::post('/{workflow}/trigger/webhook', [WorkflowTriggerController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
     Route::post('/{workflow}/trigger/manual', [WorkflowTriggerController::class, 'manual'])->name('workflows.trigger.manual');
     Route::post('/{workflow}/trigger/form', [WorkflowTriggerController::class, 'form'])->name('workflows.trigger.form');
     Route::get('/{workflow}/instances', [WorkflowInstanceController::class, 'index'])->name('workflows.instances.index');

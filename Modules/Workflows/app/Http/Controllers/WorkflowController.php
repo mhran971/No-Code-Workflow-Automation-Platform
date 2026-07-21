@@ -17,6 +17,7 @@ use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowTemplate;
 use Modules\Workflows\Models\WorkflowVersion;
 use Modules\Workflows\Services\WorkflowManagementService;
+use Modules\Workflows\Services\WorkflowVerificationService;
 use Modules\Workflows\Transformers\WorkflowResource;
 use Modules\Workflows\Transformers\WorkflowTemplateResource;
 use Modules\Workflows\Transformers\WorkflowVersionResource;
@@ -24,7 +25,8 @@ use Modules\Workflows\Transformers\WorkflowVersionResource;
 class WorkflowController extends Controller
 {
     public function __construct(
-        protected WorkflowManagementService $workflowManagementService
+        protected WorkflowManagementService $workflowManagementService,
+        protected WorkflowVerificationService $verificationService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -65,7 +67,7 @@ class WorkflowController extends Controller
 
     public function validateDefinition(ValidateWorkflowDefinitionRequest $request): JsonResponse
     {
-        $validation = $this->workflowManagementService->validateDefinition($request->validated()['definition']);
+        $validation = $this->verificationService->verify($request->validated()['definition'])->toArray();
 
         return response()->json(
             (new WorkflowValidationResultResource($validation))->resolve($request)
@@ -147,18 +149,6 @@ class WorkflowController extends Controller
         return response()->json([
             'message' => 'Workflow permanently deleted.',
         ]);
-    }
-
-    public function triggerWebhook(Request $request, Workflow $workflow): JsonResponse
-    {
-        $instance = $this->workflowManagementService->triggerWebhook($this->actor(), $workflow, $request->all());
-
-        return response()->json([
-            'instance_id' => $instance->id,
-            'workflow_id' => $workflow->id,
-            'version_number' => $workflow->current_version_number,
-            'status' => $instance->status?->value,
-        ], 201);
     }
 
     protected function actor(): User
