@@ -5,6 +5,7 @@ namespace Modules\Auth\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Modules\Auth\Enums\Role;
+use Modules\Team\Models\Team;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
@@ -79,5 +80,14 @@ class User extends Authenticatable implements JWTSubject
                 'business_type' => $tenant->business_type?->value ?? $tenant->business_type,
             ] : null,
         ];
+    }
+
+    public function getManagedTeam()
+    {
+        if ($this->role !== Role::Manager) {
+            return null;
+        }
+
+        return $this->hasOne(Team::class, 'manager_id', 'id')->where('tenant_id', $this->tenant_id)->first();
     }
 }

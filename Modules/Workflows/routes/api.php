@@ -33,7 +33,6 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
     Route::post('/validate', [WorkflowController::class, 'validateDefinition'])->name('workflows.definition.validate');
     Route::get('/templates', [WorkflowController::class, 'templates'])->name('workflows.templates.index');
-    Route::post('/proposals/ai', [WorkflowController::class, 'proposal'])->name('workflows.proposals.ai');
 
     // Instance routes with /instances prefix must come before /{workflow}.
     Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');

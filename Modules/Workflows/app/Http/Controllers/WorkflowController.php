@@ -6,7 +6,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
-use Modules\Workflows\Http\Requests\AiProposalRequest;
 use Modules\Workflows\Http\Requests\PublishWorkflowRequest;
 use Modules\Workflows\Http\Requests\StoreWorkflowRequest;
 use Modules\Workflows\Http\Requests\UpdateDraftRequest;
@@ -58,13 +57,6 @@ class WorkflowController extends Controller
             'message' => 'Workflow created successfully.',
             'workflow' => WorkflowResource::make($workflow),
         ], 201);
-    }
-
-    public function proposal(AiProposalRequest $request): JsonResponse
-    {
-        return response()->json(
-            $this->workflowManagementService->generateAiProposal($this->actor(), $request->validated())
-        );
     }
 
     public function validateDefinition(ValidateWorkflowDefinitionRequest $request): JsonResponse
