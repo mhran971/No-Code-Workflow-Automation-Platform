@@ -11,7 +11,6 @@ use Illuminate\Validation\ValidationException;
 use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
-use Modules\Team\Models\TeamMembership;
 use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
@@ -26,6 +25,7 @@ class WorkflowManagementService
     public function __construct(
         protected WorkflowVerificationService $verificationService,
         protected WorkflowDispatcher $dispatcher,
+        protected WorkflowAuthorizationService $authorizationService,
     ) {}
 
     public function listVisibleWorkflows(User $actor, array $filters = []): Collection
@@ -177,7 +177,7 @@ class WorkflowManagementService
 
     public function getVisibleWorkflow(User $actor, Workflow $workflow): Workflow
     {
-        $this->assertCanView($actor, $workflow);
+        $this->authorizationService->assertCanView($actor, $workflow);
 
         return $workflow->load([
             'team:id,name',
@@ -189,7 +189,7 @@ class WorkflowManagementService
 
     public function updateDraft(User $actor, Workflow $workflow, array $data): array
     {
-        $this->assertCanManage($actor, $workflow);
+        $this->authorizationService->assertCanManage($actor, $workflow);
         $this->assertNotDeleted($workflow);
         $this->assertDraftRevisionMatches($workflow, (int) $data['expected_draft_revision']);
 
@@ -217,7 +217,7 @@ class WorkflowManagementService
 
     public function publish(User $actor, Workflow $workflow, array $data): WorkflowVersion
     {
-        $this->assertCanManage($actor, $workflow);
+        $this->authorizationService->assertCanManage($actor, $workflow);
         $this->assertNotDeleted($workflow);
 
         $validation = $this->verificationService->verify($workflow->draft_definition, $workflow, $actor)->toArray();
@@ -270,7 +270,7 @@ class WorkflowManagementService
 
     public function listVersions(User $actor, Workflow $workflow): Collection
     {
-        $this->assertCanView($actor, $workflow);
+        $this->authorizationService->assertCanView($actor, $workflow);
 
         return $workflow->versions()
             ->with('publishedBy:id,first_name,last_name,name,email')
@@ -280,7 +280,7 @@ class WorkflowManagementService
 
     public function updateStatus(User $actor, Workflow $workflow, string $status): Workflow
     {
-        $this->assertCanManage($actor, $workflow);
+        $this->authorizationService->assertCanManage($actor, $workflow);
         $this->assertNotDeleted($workflow);
 
         if ($status === WorkflowStatus::Active->value && $workflow->current_version_id === null) {
@@ -296,7 +296,7 @@ class WorkflowManagementService
 
     public function softDelete(User $actor, Workflow $workflow): Workflow
     {
-        $this->assertCanManage($actor, $workflow);
+        $this->authorizationService->assertCanManage($actor, $workflow);
 
         $workflow->forceFill([
             'status' => WorkflowStatus::Deleted,
@@ -308,8 +308,8 @@ class WorkflowManagementService
 
     public function purge(User $actor, Workflow $workflow): void
     {
-        $this->assertBusinessOwner($actor);
-        $this->assertSameTenant($actor, $workflow);
+        $this->authorizationService->assertBusinessOwner($actor);
+        $this->authorizationService->assertSameTenant($actor, $workflow);
 
         if ($workflow->status !== WorkflowStatus::Deleted) {
             throw ValidationException::withMessages([
@@ -332,7 +332,7 @@ class WorkflowManagementService
 
     public function triggerWebhook(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
     {
-        $this->assertCanView($actor, $workflow);
+        $this->authorizationService->assertCanView($actor, $workflow);
 
         if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
             throw new HttpException(410, 'Workflow is not available for triggering.');
@@ -343,7 +343,7 @@ class WorkflowManagementService
 
     public function triggerManual(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
     {
-        $this->assertCanView($actor, $workflow);
+        $this->authorizationService->assertCanView($actor, $workflow);
 
         if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
             throw new HttpException(410, 'Workflow is not available for triggering.');
@@ -354,89 +354,13 @@ class WorkflowManagementService
 
     public function triggerForm(User $actor, Workflow $workflow, array $formData = []): WorkflowInstance
     {
-        $this->assertCanView($actor, $workflow);
+        $this->authorizationService->assertCanView($actor, $workflow);
 
         if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
             throw new HttpException(410, 'Workflow is not available for triggering.');
         }
 
         return $this->dispatcher->dispatch($workflow, TriggerType::Form, $formData);
-    }
-
-    public function availableActions(User $actor, Workflow $workflow): array
-    {
-        if (! $this->canView($actor, $workflow)) {
-            return [];
-        }
-
-        if ($workflow->status === WorkflowStatus::Deleted) {
-            return $actor->role === Role::BusinessOwner ? ['view', 'purge'] : ['view'];
-        }
-
-        if ($this->canManage($actor, $workflow)) {
-            $statusAction = $workflow->status === WorkflowStatus::Active ? 'disable' : 'enable';
-
-            return ['view', 'edit_draft', 'publish', $statusAction, 'delete'];
-        }
-
-        return ['view'];
-    }
-
-    public function serializeWorkflow(Workflow $workflow, User $actor, bool $includeDetails = false): array
-    {
-        $payload = [
-            'id' => $workflow->id,
-            'public_token' => $workflow->public_token,
-            'name' => $workflow->name,
-            'description' => $workflow->description,
-            'status' => $workflow->status?->value,
-            'team' => $workflow->team ? [
-                'id' => $workflow->team->id,
-                'name' => $workflow->team->name,
-            ] : null,
-            'version_number' => $workflow->current_version_number,
-            'version_label' => $workflow->current_version_label,
-            'created_by' => $workflow->createdBy ? [
-                'id' => $workflow->createdBy->id,
-                'name' => $workflow->createdBy->name,
-                'email' => $workflow->createdBy->email,
-            ] : null,
-            'created_at' => $workflow->created_at,
-            'updated_at' => $workflow->updated_at,
-            'total_runs' => $workflow->total_runs,
-            'active_instances' => $workflow->active_instances,
-            'actions' => $this->availableActions($actor, $workflow),
-        ];
-
-        if ($includeDetails) {
-            $payload['draft_revision'] = $workflow->draft_revision;
-            $payload['draft_definition'] = $workflow->draft_definition;
-            $payload['template'] = $workflow->template ? [
-                'id' => $workflow->template->id,
-                'name' => $workflow->template->name,
-            ] : null;
-            $payload['current_version'] = $workflow->currentVersion
-                ? $this->serializeVersion($workflow->currentVersion)
-                : null;
-        }
-
-        return $payload;
-    }
-
-    public function serializeVersion(WorkflowVersion $version): array
-    {
-        return [
-            'id' => $version->id,
-            'version_number' => $version->version_number,
-            'version_label' => $version->version_label,
-            'release_note' => $version->release_note,
-            'published_at' => $version->published_at,
-            'published_by' => $version->publishedBy ? [
-                'id' => $version->publishedBy->id,
-                'name' => $version->publishedBy->name,
-                'email' => $version->publishedBy->email,
-            ] : null,
-        ];
     }
 
     protected function visibleWorkflowsQuery(User $actor): Builder
@@ -687,82 +611,6 @@ class WorkflowManagementService
     {
         if ((int) $workflow->draft_revision !== $expectedRevision) {
             throw new HttpException(409, 'Workflow draft has been modified. Refresh and retry.');
-        }
-    }
-
-    protected function assertCanView(User $actor, Workflow $workflow): void
-    {
-        if (! $this->canView($actor, $workflow)) {
-            throw new AuthorizationException('You are not allowed to view this workflow.');
-        }
-    }
-
-    protected function assertCanManage(User $actor, Workflow $workflow): void
-    {
-        if (! $this->canManage($actor, $workflow)) {
-            throw new AuthorizationException('You are not allowed to manage this workflow.');
-        }
-    }
-
-    protected function canView(User $actor, Workflow $workflow): bool
-    {
-        if ((int) $actor->tenant_id !== (int) $workflow->tenant_id) {
-            return false;
-        }
-
-        if ($actor->role === Role::BusinessOwner) {
-            return true;
-        }
-
-        if ($actor->role === Role::Manager) {
-            return $this->canManage($actor, $workflow);
-        }
-
-        if ($actor->role === Role::Employee) {
-            return TeamMembership::query()
-                ->where('tenant_id', (int) $actor->tenant_id)
-                ->where('team_id', (int) $workflow->team_id)
-                ->where('user_id', (int) $actor->id)
-                ->where('status', 'active')
-                ->exists();
-        }
-
-        return false;
-    }
-
-    protected function canManage(User $actor, Workflow $workflow): bool
-    {
-        if ((int) $actor->tenant_id !== (int) $workflow->tenant_id) {
-            return false;
-        }
-
-        if ($actor->role === Role::BusinessOwner) {
-            return true;
-        }
-
-        if ($actor->role !== Role::Manager) {
-            return false;
-        }
-
-        $team = Team::query()
-            ->where('tenant_id', (int) $actor->tenant_id)
-            ->where('manager_id', (int) $actor->id)
-            ->first();
-
-        return $team !== null && (int) $workflow->team_id === (int) $team->id;
-    }
-
-    protected function assertBusinessOwner(User $actor): void
-    {
-        if ($actor->role !== Role::BusinessOwner) {
-            throw new AuthorizationException('Only business owners can perform this action.');
-        }
-    }
-
-    protected function assertSameTenant(User $actor, Workflow $workflow): void
-    {
-        if ((int) $actor->tenant_id !== (int) $workflow->tenant_id) {
-            throw new AuthorizationException('You can only manage workflows within your tenant.');
         }
     }
 

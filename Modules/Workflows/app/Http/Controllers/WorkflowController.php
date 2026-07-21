@@ -17,6 +17,9 @@ use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowTemplate;
 use Modules\Workflows\Models\WorkflowVersion;
 use Modules\Workflows\Services\WorkflowManagementService;
+use Modules\Workflows\Transformers\WorkflowResource;
+use Modules\Workflows\Transformers\WorkflowTemplateResource;
+use Modules\Workflows\Transformers\WorkflowVersionResource;
 
 class WorkflowController extends Controller
 {
@@ -30,7 +33,7 @@ class WorkflowController extends Controller
         $workflows = $this->workflowManagementService->listVisibleWorkflows($actor, $request->query());
 
         return response()->json([
-            'data' => $workflows->map(fn (Workflow $workflow) => $this->workflowManagementService->serializeWorkflow($workflow, $actor))->values(),
+            'data' => WorkflowResource::collection($workflows),
         ]);
     }
 
@@ -39,7 +42,7 @@ class WorkflowController extends Controller
         $templates = $this->workflowManagementService->listTemplates($this->actor());
 
         return response()->json([
-            'data' => $templates->map(fn (WorkflowTemplate $template) => $this->serializeTemplate($template))->values(),
+            'data' => WorkflowTemplateResource::collection($templates),
         ]);
     }
 
@@ -49,7 +52,7 @@ class WorkflowController extends Controller
 
         return response()->json([
             'message' => 'Workflow created successfully.',
-            'workflow' => $this->workflowManagementService->serializeWorkflow($workflow, $this->actor()),
+            'workflow' => WorkflowResource::make($workflow),
         ], 201);
     }
 
@@ -74,7 +77,7 @@ class WorkflowController extends Controller
         $workflow = $this->workflowManagementService->getVisibleWorkflow($this->actor(), $workflow);
 
         return response()->json([
-            'data' => $this->workflowManagementService->serializeWorkflow($workflow, $this->actor(), true),
+            'data' => WorkflowResource::make($workflow, true),
         ]);
     }
 
@@ -98,7 +101,7 @@ class WorkflowController extends Controller
 
         return response()->json([
             'workflow_id' => $workflow->id,
-            'published_version' => $this->workflowManagementService->serializeVersion($version),
+            'published_version' => WorkflowVersionResource::make($version),
             'workflow_status' => $workflow->status?->value,
         ], 201);
     }
@@ -108,7 +111,7 @@ class WorkflowController extends Controller
         $versions = $this->workflowManagementService->listVersions($this->actor(), $workflow);
 
         return response()->json([
-            'data' => $versions->map(fn (WorkflowVersion $version) => $this->workflowManagementService->serializeVersion($version))->values(),
+            'data' => WorkflowVersionResource::collection($versions),
         ]);
     }
 
@@ -164,19 +167,5 @@ class WorkflowController extends Controller
         $actor = auth('api')->user();
 
         return $actor;
-    }
-
-    protected function serializeTemplate(WorkflowTemplate $template): array
-    {
-        return [
-            'id' => $template->id,
-            'name' => $template->name,
-            'description' => $template->description,
-            'category' => $template->category,
-            'is_global' => $template->tenant_id === null,
-            'usage_count' => $template->usage_count,
-            'created_at' => $template->created_at,
-            'updated_at' => $template->updated_at,
-        ];
     }
 }
