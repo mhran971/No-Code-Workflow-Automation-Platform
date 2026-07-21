@@ -10,7 +10,7 @@ use Modules\Workflows\Models\Node;
 use Modules\Workflows\Models\NodeConfigField;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
-use Modules\Workflows\Services\WorkflowDefinitionValidator;
+use Modules\Workflows\Services\WorkflowVerificationService;
 use Tests\TestCase;
 
 /**
@@ -32,7 +32,7 @@ class WorkflowVerificationTest extends TestCase
     // Shared helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    protected WorkflowDefinitionValidator $validator;
+    protected WorkflowVerificationService $validator;
 
     protected WorkflowDefinitionNormalizer $normalizer;
 
@@ -40,7 +40,7 @@ class WorkflowVerificationTest extends TestCase
     {
         parent::setUp();
 
-        $this->validator = app(WorkflowDefinitionValidator::class);
+        $this->validator = app(WorkflowVerificationService::class);
         $this->normalizer = app(WorkflowDefinitionNormalizer::class);
 
         // Seed the active node types used across tests
@@ -97,7 +97,7 @@ class WorkflowVerificationTest extends TestCase
     /** Run the full validator and return the result array. */
     protected function validate(array $definition, ?Workflow $workflow = null, ?User $actor = null): array
     {
-        return $this->validator->validate($definition, $workflow, $actor);
+        return $this->validator->verify($definition, $workflow, $actor)->toArray();
     }
 
     /** Assert the result has zero errors (publishable). */

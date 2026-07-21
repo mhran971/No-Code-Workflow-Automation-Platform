@@ -40,7 +40,6 @@ use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\SyntaxVerificationRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
-use Modules\Workflows\Services\WorkflowDefinitionValidator;
 use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\WorkflowVerificationService;
 
@@ -87,7 +86,6 @@ class WorkflowsServiceProvider extends ServiceProvider
         $this->app->singleton(ExpressionVerificationRule::class);
         $this->app->singleton(ContextualVerificationRule::class);
         $this->app->singleton(WorkflowVerificationService::class);
-        $this->app->singleton(WorkflowDefinitionValidator::class);
         $this->app->singleton(WorkflowManagementService::class);
 
         // Execution engine — M0: foundations.

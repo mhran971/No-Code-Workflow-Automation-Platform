@@ -24,7 +24,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 class WorkflowManagementService
 {
     public function __construct(
-        protected WorkflowDefinitionValidator $definitionValidator,
+        protected WorkflowVerificationService $verificationService,
         protected WorkflowDispatcher $dispatcher,
     ) {}
 
@@ -68,7 +68,7 @@ class WorkflowManagementService
 
     public function validateDefinition(array $definition, ?Workflow $workflow = null, ?User $actor = null): array
     {
-        return $this->definitionValidator->validate($definition, $workflow, $actor);
+        return $this->verificationService->verify($definition, $workflow, $actor)->toArray();
     }
 
     public function createWorkflow(User $actor, array $data): Workflow
@@ -193,7 +193,7 @@ class WorkflowManagementService
         $this->assertNotDeleted($workflow);
         $this->assertDraftRevisionMatches($workflow, (int) $data['expected_draft_revision']);
 
-        $validation = $this->definitionValidator->validate($data['definition'], $workflow, $actor);
+        $validation = $this->verificationService->verify($data['definition'], $workflow, $actor)->toArray();
 
         if ((bool) ($data['validate_only'] ?? false)) {
             return [
@@ -220,7 +220,7 @@ class WorkflowManagementService
         $this->assertCanManage($actor, $workflow);
         $this->assertNotDeleted($workflow);
 
-        $validation = $this->definitionValidator->validate($workflow->draft_definition, $workflow, $actor);
+        $validation = $this->verificationService->verify($workflow->draft_definition, $workflow, $actor)->toArray();
 
         if (! $validation['is_publishable']) {
             throw ValidationException::withMessages([
