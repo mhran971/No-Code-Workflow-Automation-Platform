@@ -14,8 +14,6 @@ use Modules\Workflows\Http\Requests\UpdateWorkflowStatusRequest;
 use Modules\Workflows\Http\Requests\ValidateWorkflowDefinitionRequest;
 use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
-use Modules\Workflows\Models\WorkflowTemplate;
-use Modules\Workflows\Models\WorkflowVersion;
 use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\WorkflowVerificationService;
 use Modules\Workflows\Transformers\WorkflowResource;

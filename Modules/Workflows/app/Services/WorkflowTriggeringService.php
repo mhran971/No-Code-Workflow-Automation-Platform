@@ -17,6 +17,7 @@ class WorkflowTriggeringService extends BaseService
         protected WorkflowAuthorizationService $authorizationService,
         protected WorkflowDispatcher $dispatcher,
     ) {}
+
     public function triggerWebhook(User $actor, Workflow $workflow, array $payload = []): WorkflowInstance
     {
         $this->authorizationService->assertCanView($actor, $workflow);

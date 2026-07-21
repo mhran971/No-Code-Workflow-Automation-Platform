@@ -5,7 +5,6 @@ namespace Modules\Workflows\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
 use Modules\Workflows\Models\Workflow;
@@ -35,7 +34,7 @@ class WorkflowInstanceController extends Controller
 
         $query = WorkflowInstance::query()
             ->where('workflow_id', $workflow->id)
-            ->where('tenant_id',auth('api')->user()->tenant_id);
+            ->where('tenant_id', auth('api')->user()->tenant_id);
 
         if (array_key_exists('status', $validated)) {
             $query->where('status', $validated['status']);
@@ -169,7 +168,7 @@ class WorkflowInstanceController extends Controller
 
     protected function authorizeInstance(WorkflowInstance $instance): void
     {
-        if ((int) $instance->tenant_id !== (int)auth('api')->user()->tenant_id) {
+        if ((int) $instance->tenant_id !== (int) auth('api')->user()->tenant_id) {
             abort(403);
         }
     }

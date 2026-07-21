@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
 use Modules\Workflows\Models\Workflow;
-use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\WorkflowTriggeringService;
 
 class WorkflowTriggerController extends Controller
