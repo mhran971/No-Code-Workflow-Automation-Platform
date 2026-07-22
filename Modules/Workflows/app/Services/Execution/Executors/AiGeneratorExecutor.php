@@ -6,7 +6,7 @@ use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\NodeExecutionResult;
+use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 
 class AiGeneratorExecutor implements NodeExecutor
 {

@@ -5,6 +5,7 @@ namespace Modules\Workflows\Services;
 use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\DataFlowVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
@@ -15,7 +16,6 @@ use Modules\Workflows\Services\Verification\Rules\StructuredControlFlowVerificat
 use Modules\Workflows\Services\Verification\Rules\SyntaxVerificationRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 class WorkflowVerificationService
 {

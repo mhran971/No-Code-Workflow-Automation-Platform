@@ -7,7 +7,7 @@ use Modules\Workflows\app\Enums\ResultKind;
 use Modules\Workflows\Services\Execution\ExecutionPlan;
 use Modules\Workflows\Services\Execution\Executors\IfNodeExecutor;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\PlanEdge;
+use Modules\Workflows\Services\Execution\Data\PlanEdge;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 

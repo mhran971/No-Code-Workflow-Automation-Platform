@@ -9,7 +9,7 @@ use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\NodeExecutionResult;
+use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
