@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Modules\Workflows\Http\Controllers\DynamicFlowController;
 use Modules\Workflows\Http\Controllers\NodeController;
-use Modules\Workflows\Http\Controllers\PublicFormController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
 use Modules\Workflows\Http\Controllers\WorkflowInstanceController;
 use Modules\Workflows\Http\Controllers\WorkflowTaskController;
@@ -65,6 +64,5 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::delete('/{workflow}/purge', [WorkflowController::class, 'purge'])->name('workflows.purge');
     Route::post('/{workflow}/trigger/webhook', [WorkflowTriggerController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
     Route::post('/{workflow}/trigger/manual', [WorkflowTriggerController::class, 'manual'])->name('workflows.trigger.manual');
-    Route::post('/{workflow}/trigger/form', [WorkflowTriggerController::class, 'form'])->name('workflows.trigger.form');
     Route::get('/{workflow}/instances', [WorkflowInstanceController::class, 'index'])->name('workflows.instances.index');
 });

@@ -39,15 +39,4 @@ class WorkflowTriggeringService extends BaseService
 
         return $this->dispatcher->dispatch($workflow, TriggerType::Manual, $payload);
     }
-
-    public function triggerForm(User $actor, Workflow $workflow, array $formData = []): WorkflowInstance
-    {
-        $this->authorizationService->assertCanView($actor, $workflow);
-
-        if (in_array($workflow->status, [WorkflowStatus::Disabled, WorkflowStatus::Deleted], true)) {
-            throw new HttpException(410, 'Workflow is not available for triggering.');
-        }
-
-        return $this->dispatcher->dispatch($workflow, TriggerType::Form, $formData);
-    }
 }
