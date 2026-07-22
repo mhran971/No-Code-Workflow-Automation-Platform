@@ -24,8 +24,8 @@ Route::middleware(['auth:api', 'active.user'])
 // (PublicFormService) to workflows that are published, active, and explicitly marked
 // trigger.config.accessLevel === 'public'. Throttled since it's open to the internet.
 Route::prefix('v1/public/forms')->middleware(['throttle:30,1'])->group(function (): void {
-    Route::get('/{publicToken}', [PublicFormController::class, 'show'])->name('public.forms.show');
-    Route::post('/{publicToken}/submit', [PublicFormController::class, 'submit'])->name('public.forms.submit');
+    Route::get('/{publicToken}', [WorkflowTriggerController::class, 'showForm'])->name('public.forms.show');
+    Route::post('/{publicToken}/submit', [WorkflowTriggerController::class, 'submitForm'])->name('public.forms.submit');
 });
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
