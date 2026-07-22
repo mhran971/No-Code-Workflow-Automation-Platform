@@ -29,8 +29,10 @@ use Modules\Workflows\Services\Execution\Executors\WebhookTriggerExecutor;
 use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
 use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
 use Modules\Workflows\Services\Execution\FailureClassifier;
+use Modules\Workflows\Services\Execution\InstanceStateManager;
 use Modules\Workflows\Services\Execution\MergeCoordinator;
 use Modules\Workflows\Services\Execution\NodeExecutorRegistry;
+use Modules\Workflows\Services\Execution\NodeStateManager;
 use Modules\Workflows\Services\Execution\NullAiContentGenerator;
 use Modules\Workflows\Services\Execution\RetryPolicy;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
@@ -118,6 +120,22 @@ class WorkflowsServiceProvider extends ServiceProvider
         $this->app->when(MergeCoordinator::class)
             ->needs('$controlQueue')
             ->giveConfig('workflows.execution.queues.control', 'workflow-control');
+
+        $this->app->when(InstanceStateManager::class)
+            ->needs('$controlQueue')
+            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
+
+        $this->app->when(InstanceStateManager::class)
+            ->needs('$actionQueue')
+            ->giveConfig('workflows.execution.queues.actions', 'workflow-actions');
+
+        $this->app->when(NodeStateManager::class)
+            ->needs('$controlQueue')
+            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
+
+        $this->app->when(NodeStateManager::class)
+            ->needs('$actionQueue')
+            ->giveConfig('workflows.execution.queues.actions', 'workflow-actions');
 
         // AI generator contract — swap NullAiContentGenerator for a real provider when available.
         $this->app->bind(AiContentGenerator::class, NullAiContentGenerator::class);
