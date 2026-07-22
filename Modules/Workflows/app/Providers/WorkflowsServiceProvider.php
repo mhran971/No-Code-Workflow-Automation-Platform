@@ -29,6 +29,7 @@ use Modules\Workflows\Services\Execution\Executors\WebhookTriggerExecutor;
 use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
 use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
 use Modules\Workflows\Services\Execution\FailureClassifier;
+use Modules\Workflows\Services\Execution\MergeCoordinator;
 use Modules\Workflows\Services\Execution\NodeExecutorRegistry;
 use Modules\Workflows\Services\Execution\NullAiContentGenerator;
 use Modules\Workflows\Services\Execution\RetryPolicy;
@@ -113,6 +114,10 @@ class WorkflowsServiceProvider extends ServiceProvider
 
         // Execution engine — M2: admission control.
         $this->app->singleton(InstanceAdmissionService::class);
+
+        $this->app->when(MergeCoordinator::class)
+            ->needs('$controlQueue')
+            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
 
         // AI generator contract — swap NullAiContentGenerator for a real provider when available.
         $this->app->bind(AiContentGenerator::class, NullAiContentGenerator::class);
