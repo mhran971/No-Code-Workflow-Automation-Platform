@@ -2,7 +2,7 @@
 
 namespace Modules\Workflows\Services\Execution\Expression;
 
-use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
+use Modules\Workflows\Services\Expression\ExpressionLexer;
 use RuntimeException;
 
 /**
@@ -19,10 +19,7 @@ use RuntimeException;
  */
 class ExpressionEvaluator
 {
-    /** @var array<int, array{type: string, value: string}> */
-    protected array $tokens = [];
-
-    protected int $position = 0;
+    protected ExpressionLexer $lexer;
 
     /** @var array<string, mixed> */
     protected array $data = [];
@@ -40,14 +37,14 @@ class ExpressionEvaluator
             throw new RuntimeException('Cannot evaluate an empty expression.');
         }
 
-        $this->tokens = $this->tokenize($expression);
-        $this->position = 0;
+        $this->lexer = new ExpressionLexer($expression);
+
         $this->data = $data;
 
         $value = $this->parseOr();
 
-        if (! $this->atEnd()) {
-            throw new RuntimeException('Unexpected token near "'.$this->currentValue().'".');
+        if (! $this->lexer->atEnd()) {
+            throw new RuntimeException('Unexpected token near "'.$this->lexer->currentValue().'".');
         }
 
         return $value;
@@ -63,65 +60,11 @@ class ExpressionEvaluator
         return $this->toBool($this->evaluate($expression, $data));
     }
 
-    /**
-     * @return array<int, array{type: string, value: string}>
-     */
-    protected function tokenize(string $expression): array
-    {
-        $tokens = [];
-        $length = strlen($expression);
-        $offset = 0;
-
-        while ($offset < $length) {
-            if (preg_match('/\G\s+/A', $expression, $match, 0, $offset)) {
-                $offset += strlen($match[0]);
-
-                continue;
-            }
-
-            if (preg_match('/\G(&&|\|\||==|!=|>=|<=|>|<|!|\(|\))/A', $expression, $match, 0, $offset)) {
-                $tokens[] = ['type' => 'operator', 'value' => $match[1]];
-                $offset += strlen($match[1]);
-
-                continue;
-            }
-
-            if (preg_match('/\G"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\'/A', $expression, $match, 0, $offset)) {
-                $tokens[] = ['type' => 'string', 'value' => $match[0]];
-                $offset += strlen($match[0]);
-
-                continue;
-            }
-
-            if (preg_match('/\G-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?/A', $expression, $match, 0, $offset)) {
-                $tokens[] = ['type' => 'number', 'value' => $match[0]];
-                $offset += strlen($match[0]);
-
-                continue;
-            }
-
-            if (preg_match('/\G[A-Za-z_][A-Za-z0-9_.]*/A', $expression, $match, 0, $offset)) {
-                $value = $match[0];
-                $tokens[] = [
-                    'type' => in_array(strtolower($value), ['true', 'false', 'null'], true) ? 'literal' : 'identifier',
-                    'value' => $value,
-                ];
-                $offset += strlen($value);
-
-                continue;
-            }
-
-            throw new RuntimeException('Invalid expression token near "'.substr($expression, $offset, 12).'".');
-        }
-
-        return $tokens;
-    }
-
     protected function parseOr(): mixed
     {
         $value = $this->parseAnd();
 
-        while ($this->consumeOperator('||')) {
+        while ($this->lexer->consumeOperator('||')) {
             if ($this->toBool($value)) {
                 $this->skipAnd();          // short-circuit: still consume the RHS tokens
                 $value = true;
@@ -139,7 +82,7 @@ class ExpressionEvaluator
     {
         $value = $this->parseComparison();
 
-        while ($this->consumeOperator('&&')) {
+        while ($this->lexer->consumeOperator('&&')) {
             if (! $this->toBool($value)) {
                 $this->skipComparison();   // short-circuit: still consume the RHS tokens
                 $value = false;
@@ -157,7 +100,7 @@ class ExpressionEvaluator
     {
         $left = $this->parseUnary();
 
-        $operator = $this->consumeAnyOperator(['==', '!=', '>=', '<=', '>', '<']);
+        $operator = $this->lexer->consumeAnyOperator(['==', '!=', '>=', '<=', '>', '<']);
 
         if ($operator !== null) {
             $right = $this->parseUnary();
@@ -170,7 +113,7 @@ class ExpressionEvaluator
 
     protected function parseUnary(): mixed
     {
-        if ($this->consumeOperator('!')) {
+        if ($this->lexer->consumeOperator('!')) {
             return ! $this->toBool($this->parseUnary());
         }
 
@@ -179,17 +122,17 @@ class ExpressionEvaluator
 
     protected function parsePrimary(): mixed
     {
-        if ($this->consumeOperator('(')) {
+        if ($this->lexer->consumeOperator('(')) {
             $value = $this->parseOr();
 
-            if (! $this->consumeOperator(')')) {
+            if (! $this->lexer->consumeOperator(')')) {
                 throw new RuntimeException('Missing closing parenthesis.');
             }
 
             return $value;
         }
 
-        $token = $this->next();
+        $token = $this->lexer->next();
 
         if ($token === null) {
             throw new RuntimeException('Unexpected end of expression.');
@@ -294,35 +237,6 @@ class ExpressionEvaluator
         return (bool) $value;
     }
 
-    protected function consumeOperator(string $operator): bool
-    {
-        $token = $this->tokens[$this->position] ?? null;
-
-        if ($token !== null && $token['type'] === 'operator' && $token['value'] === $operator) {
-            $this->position++;
-
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param  array<int, string>  $operators
-     */
-    protected function consumeAnyOperator(array $operators): ?string
-    {
-        $token = $this->tokens[$this->position] ?? null;
-
-        if ($token !== null && $token['type'] === 'operator' && in_array($token['value'], $operators, true)) {
-            $this->position++;
-
-            return $token['value'];
-        }
-
-        return null;
-    }
-
     /**
      * Consume and discard an `&&`-level subexpression (used for short-circuit evaluation).
      */
@@ -334,29 +248,5 @@ class ExpressionEvaluator
     protected function skipAnd(): void
     {
         $this->parseAnd();
-    }
-
-    /**
-     * @return array{type: string, value: string}|null
-     */
-    protected function next(): ?array
-    {
-        $token = $this->tokens[$this->position] ?? null;
-
-        if ($token !== null) {
-            $this->position++;
-        }
-
-        return $token;
-    }
-
-    protected function atEnd(): bool
-    {
-        return $this->position >= count($this->tokens);
-    }
-
-    protected function currentValue(): string
-    {
-        return (string) ($this->tokens[$this->position]['value'] ?? 'end of expression');
     }
 }

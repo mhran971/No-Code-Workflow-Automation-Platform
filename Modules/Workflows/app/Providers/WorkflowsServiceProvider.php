@@ -38,6 +38,17 @@ use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\AiGeneratorNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\MergeNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SendEmailNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SubWorkflowNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SwitchNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\TaskNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\TerminationNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeTypeVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\SyntaxVerificationRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
 use Modules\Workflows\Services\WorkflowManagementService;
@@ -105,6 +116,23 @@ class WorkflowsServiceProvider extends ServiceProvider
 
         // AI generator contract — swap NullAiContentGenerator for a real provider when available.
         $this->app->bind(AiContentGenerator::class, NullAiContentGenerator::class);
+
+        $this->app->tag([
+            IfNodeTypeRule::class,
+            ForkNodeTypeRule::class,
+            SwitchNodeTypeRule::class,
+            MergeNodeTypeRule::class,
+            TaskNodeTypeRule::class,
+            SendEmailNodeTypeRule::class,
+            AiGeneratorNodeTypeRule::class,
+            TerminationNodeTypeRule::class,
+            SubWorkflowNodeTypeRule::class,
+            DynamicEntryNodeTypeRule::class,
+        ], 'node-type-rules');
+
+        $this->app->when(NodeTypeVerificationRule::class)
+            ->needs('$rules')
+            ->giveTagged('node-type-rules');
 
         // Register node executors keyed by node type.
         $this->app->afterResolving(NodeExecutorRegistry::class, function (NodeExecutorRegistry $registry): void {
