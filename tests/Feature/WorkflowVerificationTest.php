@@ -10,7 +10,7 @@ use Modules\Workflows\Models\Node;
 use Modules\Workflows\Models\NodeConfigField;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
-use Modules\Workflows\Services\WorkflowVerificationService;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Tests\TestCase;
 
 /**

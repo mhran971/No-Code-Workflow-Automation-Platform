@@ -53,8 +53,8 @@ use Modules\Workflows\Services\Verification\Rules\NodeType\TerminationNodeTypeRu
 use Modules\Workflows\Services\Verification\Rules\NodeTypeVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\SyntaxVerificationRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Modules\Workflows\Services\WorkflowManagementService;
-use Modules\Workflows\Services\WorkflowVerificationService;
 
 class WorkflowsServiceProvider extends ServiceProvider
 {

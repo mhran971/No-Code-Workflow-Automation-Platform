@@ -13,7 +13,7 @@ use Modules\Team\Models\TeamMembership;
 use Modules\Workflows\Database\Seeders\NodeDefinitionSeeder;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
-use Modules\Workflows\Services\WorkflowVerificationService;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Tests\TestCase;
 
 class WorkflowVerificationServiceTest extends TestCase

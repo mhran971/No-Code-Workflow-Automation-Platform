@@ -16,7 +16,7 @@ use Modules\Workflows\Models\WorkflowDynamicFlow;
 use Modules\Workflows\Models\WorkflowEvent;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
-use Modules\Workflows\Services\WorkflowVerificationService;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 
 class DynamicFlowController extends Controller
 {

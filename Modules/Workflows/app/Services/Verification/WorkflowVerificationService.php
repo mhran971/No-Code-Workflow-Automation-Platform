@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Workflows\Services;
+namespace Modules\Workflows\Services\Verification;
 
 use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\VerificationMode;
