@@ -2,6 +2,8 @@
 
 namespace Modules\Workflows\Services\Execution;
 
+use Modules\Workflows\Services\Execution\Data\JoinSpec;
+use Modules\Workflows\Services\Execution\Data\PlanEdge;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 
 /**

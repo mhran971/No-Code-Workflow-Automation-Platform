@@ -11,6 +11,7 @@ use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
+use Modules\Workflows\Services\Execution\EventBroadcaster;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
 use Modules\Workflows\Services\Execution\Executors\AiGeneratorExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicEntryExecutor;
@@ -29,11 +30,9 @@ use Modules\Workflows\Services\Execution\Executors\WebhookTriggerExecutor;
 use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
 use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
 use Modules\Workflows\Services\Execution\FailureClassifier;
-use Modules\Workflows\Services\Execution\InstanceStateManager;
 use Modules\Workflows\Services\Execution\MergeCoordinator;
 use Modules\Workflows\Services\Execution\NodeExecutorRegistry;
-use Modules\Workflows\Services\Execution\NodeStateManager;
-use Modules\Workflows\Services\Execution\NullAiContentGenerator;
+use Modules\Workflows\Services\Execution\WorkflowExecutionEngine;
 use Modules\Workflows\Services\Execution\RetryPolicy;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
 use Modules\Workflows\Services\Execution\WorkflowRuntime;
@@ -117,28 +116,19 @@ class WorkflowsServiceProvider extends ServiceProvider
         // Execution engine — M2: admission control.
         $this->app->singleton(InstanceAdmissionService::class);
 
+        $this->app->singleton(EventBroadcaster::class);
+
         $this->app->when(MergeCoordinator::class)
             ->needs('$controlQueue')
             ->giveConfig('workflows.execution.queues.control', 'workflow-control');
 
-        $this->app->when(InstanceStateManager::class)
+        $this->app->when(WorkflowExecutionEngine::class)
             ->needs('$controlQueue')
             ->giveConfig('workflows.execution.queues.control', 'workflow-control');
 
-        $this->app->when(InstanceStateManager::class)
+        $this->app->when(WorkflowExecutionEngine::class)
             ->needs('$actionQueue')
             ->giveConfig('workflows.execution.queues.actions', 'workflow-actions');
-
-        $this->app->when(NodeStateManager::class)
-            ->needs('$controlQueue')
-            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
-
-        $this->app->when(NodeStateManager::class)
-            ->needs('$actionQueue')
-            ->giveConfig('workflows.execution.queues.actions', 'workflow-actions');
-
-        // AI generator contract — swap NullAiContentGenerator for a real provider when available.
-        $this->app->bind(AiContentGenerator::class, NullAiContentGenerator::class);
 
         $this->app->tag([
             IfNodeTypeRule::class,
