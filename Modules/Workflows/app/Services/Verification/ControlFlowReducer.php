@@ -2,6 +2,8 @@
 
 namespace Modules\Workflows\Services\Verification;
 
+use Modules\Workflows\Services\Verification\Data\ControlFlowReductionResult;
+
 /**
  * Verifies that a workflow's splits and merges form a well-structured (sound) graph by
  * applying classic workflow-graph **reduction rules** to a fixpoint:

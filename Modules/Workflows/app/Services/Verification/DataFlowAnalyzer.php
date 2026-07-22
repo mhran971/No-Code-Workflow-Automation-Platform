@@ -2,6 +2,8 @@
 
 namespace Modules\Workflows\Services\Verification;
 
+use Modules\Workflows\Services\Verification\Data\DataFlowResult;
+
 /**
  * Forward data-flow analysis over a workflow graph. For every node it computes the set of
  * `context.*` variables that are **guaranteed** (available on every incoming path) and **possible**

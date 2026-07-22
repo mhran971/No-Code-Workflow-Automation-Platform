@@ -5,10 +5,10 @@ namespace Modules\Workflows\Services\Verification\Rules;
 use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\DataFlowResult;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\DataFlowAnalyzer;
-use Modules\Workflows\Services\Verification\DataFlowResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 /**
  * Catches data hazards at validation time using {@see DataFlowAnalyzer}:

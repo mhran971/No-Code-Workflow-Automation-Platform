@@ -3,6 +3,7 @@
 namespace Modules\Workflows\Services\Verification;
 
 use Modules\Workflows\Services\Expression\ExpressionLexer;
+use Modules\Workflows\Services\Verification\Data\ExpressionValidationResult;
 
 class ExpressionLanguageValidator
 {

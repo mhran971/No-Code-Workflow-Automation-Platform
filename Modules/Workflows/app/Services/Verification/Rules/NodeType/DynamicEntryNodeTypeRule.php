@@ -3,8 +3,8 @@
 namespace Modules\Workflows\Services\Verification\Rules\NodeType;
 
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 class DynamicEntryNodeTypeRule implements NodeTypeRule
 {

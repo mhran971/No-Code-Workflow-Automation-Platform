@@ -7,8 +7,8 @@ use Modules\KnowledgeBase\Models\Document;
 use Modules\Team\Models\TeamMembership;
 use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 class ContextualVerificationRule implements VerificationRule
 {
