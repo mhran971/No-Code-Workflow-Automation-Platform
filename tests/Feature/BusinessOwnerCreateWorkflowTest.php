@@ -18,8 +18,8 @@ class BusinessOwnerCreateWorkflowTest extends TestCase
     public function test_business_owner_can_create_workflow(): void
     {
         $tenant = Tenant::query()->create([
-            'company_name' => 'Test Company',
-            'business_type' => BusinessType::B2b->value,
+'business_name' => 'Test Company',
+'business_type' => BusinessType::SaaS->value,
             'industry' => 'IT',
             'subscription_plan' => 'pro',
             'trial_ends_at' => now()->addDays(14),
@@ -28,8 +28,10 @@ class BusinessOwnerCreateWorkflowTest extends TestCase
 
         $owner = User::query()->create([
             'tenant_id' => $tenant->id,
-            'first_name' => 'Owner',
-            'last_name' => 'User',
+'first_name' => 'Owner',
+'last_name' => 'User',
+            'name' => 'Owner User',
+            'position' => 'Owner',
             'email' => 'owner@example.com',
             'password' => Hash::make('password'),
             'role' => Role::BusinessOwner->value,
@@ -37,10 +39,12 @@ class BusinessOwnerCreateWorkflowTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        $manager = User::query()->create([
+$manager = User::query()->create([
             'tenant_id' => $tenant->id,
             'first_name' => 'Manager',
             'last_name' => 'User',
+            'name' => 'Manager User',
+            'position' => 'Manager',
             'email' => 'manager@example.com',
             'password' => Hash::make('password'),
             'role' => Role::Manager->value,
