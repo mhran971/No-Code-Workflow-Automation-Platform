@@ -8,6 +8,9 @@ use Illuminate\Support\ServiceProvider;
 use Modules\Workflows\Console\Commands\AdmitPendingInstancesCommand;
 use Modules\Workflows\Console\Commands\ExpireOverdueInstancesCommand;
 use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
+use Modules\Workflows\Models\WorkflowInstance;
+use Modules\Workflows\Models\WorkflowTask;
+use Modules\Workflows\Observers\WorkflowTaskObserver;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
@@ -47,11 +50,16 @@ class WorkflowsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->loadTranslationsFrom(module_path($this->name, 'lang'), 'workflows');
+
         $this->commands([
             ScanWorkflowTimersCommand::class,
             AdmitPendingInstancesCommand::class,
             ExpireOverdueInstancesCommand::class,
         ]);
+
+        // Register model observers.
+        WorkflowTask::observe(WorkflowTaskObserver::class);
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule->command('workflows:scan-timers')->everyMinute()->withoutOverlapping();
@@ -65,7 +73,7 @@ class WorkflowsServiceProvider extends ServiceProvider
     private function bootBroadcasting(): void
     {
         Broadcast::channel('workflow-instance.{instanceId}', function ($user, string $instanceId): bool {
-            $instance = \Modules\Workflows\Models\WorkflowInstance::find((int) $instanceId);
+            $instance = WorkflowInstance::find((int) $instanceId);
 
             return $instance !== null
                 && (int) $instance->tenant_id === (int) $user->tenant_id;
