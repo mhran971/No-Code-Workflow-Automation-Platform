@@ -10,10 +10,8 @@ use Modules\Workflows\Console\Commands\ExpireOverdueInstancesCommand;
 use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
-use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
 use Modules\Workflows\Services\Execution\EventBroadcaster;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
-use Modules\Workflows\Services\Execution\Executors\AiGeneratorExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicEntryExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicFlowExecutor;
 use Modules\Workflows\Services\Execution\Executors\ForkNodeExecutor;
@@ -137,7 +135,6 @@ class WorkflowsServiceProvider extends ServiceProvider
             MergeNodeTypeRule::class,
             TaskNodeTypeRule::class,
             SendEmailNodeTypeRule::class,
-            AiGeneratorNodeTypeRule::class,
             TerminationNodeTypeRule::class,
             SubWorkflowNodeTypeRule::class,
             DynamicEntryNodeTypeRule::class,
@@ -157,7 +154,6 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(SwitchNodeExecutor::class));
             $registry->register($this->app->make(TerminationNodeExecutor::class));
             $registry->register($this->app->make(SendEmailExecutor::class));
-            $registry->register($this->app->make(AiGeneratorExecutor::class));
 
             // M2 executors
             $registry->register($this->app->make(ForkNodeExecutor::class));
