@@ -8,8 +8,8 @@ use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Node;
 use Modules\Workflows\Models\NodeConfigField;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 class SyntaxVerificationRule implements VerificationRule
 {

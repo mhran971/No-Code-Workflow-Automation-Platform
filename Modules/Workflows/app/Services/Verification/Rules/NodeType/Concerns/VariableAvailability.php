@@ -2,8 +2,8 @@
 
 namespace Modules\Workflows\Services\Verification\Rules\NodeType\Concerns;
 
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 trait VariableAvailability
 {

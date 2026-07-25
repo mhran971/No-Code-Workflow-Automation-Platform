@@ -16,12 +16,12 @@ use Modules\Workflows\Models\WorkflowDynamicFlow;
 use Modules\Workflows\Models\WorkflowEvent;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
-use Modules\Workflows\Services\WorkflowDefinitionValidator;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 
 class DynamicFlowController extends Controller
 {
     public function __construct(
-        protected WorkflowDefinitionValidator $validator,
+        protected WorkflowVerificationService $validationService,
         protected WorkflowDispatcher $dispatcher,
         protected AuditTrailRepository $auditTrail,
     ) {}
@@ -82,7 +82,7 @@ class DynamicFlowController extends Controller
             );
         }
 
-        $errors = $this->validator->validate($definition, $workflow, $actor, VerificationMode::Segment);
+        $errors = $this->validationService->verify($definition, $workflow, $actor, VerificationMode::Segment)->toArray();
 
         if (! empty($errors['errors'])) {
             return response()->json(['errors' => $errors['errors']], 422);

@@ -13,9 +13,9 @@ use Modules\Workflows\Database\Seeders\NodeDefinitionSeeder;
 use Modules\Workflows\Enums\WorkflowStatus;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowVersion;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SubWorkflowNodeTypeRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 use Tests\TestCase;
 
 class SubWorkflowNodeTypeRuleTest extends TestCase

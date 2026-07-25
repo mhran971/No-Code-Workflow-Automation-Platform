@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Workflows\Services\Verification;
+namespace Modules\Workflows\Services\Verification\Data;
 
 class WorkflowVerificationResult
 {

@@ -5,18 +5,20 @@ namespace Modules\Workflows\Services\Verification\Rules;
 use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\Rules\NodeType\NodeTypeRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 class NodeTypeVerificationRule implements VerificationRule
 {
     /** @var array<string, NodeTypeRule> */
     protected array $rules = [];
 
-    public function register(NodeTypeRule $rule): void
+    public function __construct(iterable $rules)
     {
-        $this->rules[$rule->nodeType()] = $rule;
+        foreach ($rules as $rule) {
+            $this->rules[$rule->nodeType()] = $rule;
+        }
     }
 
     public function verify(

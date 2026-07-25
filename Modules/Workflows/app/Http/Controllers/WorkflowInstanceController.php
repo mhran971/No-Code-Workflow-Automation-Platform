@@ -5,7 +5,6 @@ namespace Modules\Workflows\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
 use Modules\Workflows\Models\Workflow;
@@ -13,6 +12,7 @@ use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
 use Modules\Workflows\Services\Execution\WorkflowRuntime;
 use Modules\Workflows\Services\WorkflowManagementService;
+use Modules\Workflows\Transformers\WorkflowResource;
 
 /**
  * Operator view of running instances: list, inspect, cancel, and retry-from-node.
@@ -30,11 +30,11 @@ class WorkflowInstanceController extends Controller
     public function index(ListWorkflowInstancesRequest $request, Workflow $workflow): JsonResponse
     {
         $validated = $request->validated();
-        $workflow = $this->workflowManagementService->getVisibleWorkflow($this->actor(), $workflow);
+        $workflow = $this->workflowManagementService->getVisibleWorkflow(auth('api')->user(), $workflow);
 
         $query = WorkflowInstance::query()
             ->where('workflow_id', $workflow->id)
-            ->where('tenant_id', $this->actor()->tenant_id);
+            ->where('tenant_id', auth('api')->user()->tenant_id);
 
         if (array_key_exists('status', $validated)) {
             $query->where('status', $validated['status']);
@@ -76,7 +76,7 @@ class WorkflowInstanceController extends Controller
         ]);
 
         $payload = $instance->toArray();
-        $payload['workflow'] = $this->workflowManagementService->serializeWorkflow($instance->workflow, $this->actor());
+        $payload['workflow'] = WorkflowResource::make($instance->workflow)->toArray(request());
 
         if ($instance->dynamicFlows->isNotEmpty()) {
             $payload['dynamic_flows'] = $instance->dynamicFlows->map(function ($df) {
@@ -168,13 +168,8 @@ class WorkflowInstanceController extends Controller
 
     protected function authorizeInstance(WorkflowInstance $instance): void
     {
-        if ((int) $instance->tenant_id !== (int) $this->actor()->tenant_id) {
+        if ((int) $instance->tenant_id !== (int) auth('api')->user()->tenant_id) {
             abort(403);
         }
-    }
-
-    protected function actor(): User
-    {
-        return auth('api')->user();
     }
 }

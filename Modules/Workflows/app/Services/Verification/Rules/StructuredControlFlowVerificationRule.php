@@ -6,8 +6,8 @@ use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\ControlFlowReducer;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 /**
  * Ensures splits and merges are correctly paired using graph reduction, preventing deadlock and

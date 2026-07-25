@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use Modules\Workflows\Services\Verification\ControlFlowReducer;
-use Modules\Workflows\Services\Verification\ControlFlowReductionResult;
+use Modules\Workflows\Services\Verification\Data\ControlFlowReductionResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use PHPUnit\Framework\TestCase;
 

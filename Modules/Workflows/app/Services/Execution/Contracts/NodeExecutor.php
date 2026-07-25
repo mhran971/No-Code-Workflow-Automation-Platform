@@ -4,7 +4,7 @@ namespace Modules\Workflows\Services\Execution\Contracts;
 
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\NodeExecutionResult;
+use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 
 /**
  * One implementation per node type. Mirrors the verification side's NodeTypeRule registry so authoring and

@@ -3,7 +3,7 @@
 namespace Tests\Unit\Execution;
 
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
-use Modules\Workflows\Services\Execution\JoinSpec;
+use Modules\Workflows\Services\Execution\Data\JoinSpec;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
 use Tests\TestCase;
 

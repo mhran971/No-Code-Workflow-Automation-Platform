@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
+use Modules\Workflows\Services\Verification\Data\DataFlowResult;
 use Modules\Workflows\Services\Verification\DataFlowAnalyzer;
-use Modules\Workflows\Services\Verification\DataFlowResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 use PHPUnit\Framework\TestCase;
 

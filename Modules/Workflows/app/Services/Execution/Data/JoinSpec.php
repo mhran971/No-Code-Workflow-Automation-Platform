@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Workflows\Services\Execution;
+namespace Modules\Workflows\Services\Execution\Data;
 
 /**
  * The synchronization contract for a `merge` node, precomputed from the plan so runtime never counts

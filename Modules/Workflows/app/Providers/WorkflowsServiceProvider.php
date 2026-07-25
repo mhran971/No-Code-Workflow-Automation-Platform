@@ -11,6 +11,7 @@ use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
+use Modules\Workflows\Services\Execution\EventBroadcaster;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
 use Modules\Workflows\Services\Execution\Executors\AiGeneratorExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicEntryExecutor;
@@ -29,8 +30,9 @@ use Modules\Workflows\Services\Execution\Executors\WebhookTriggerExecutor;
 use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
 use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
 use Modules\Workflows\Services\Execution\FailureClassifier;
+use Modules\Workflows\Services\Execution\MergeCoordinator;
 use Modules\Workflows\Services\Execution\NodeExecutorRegistry;
-use Modules\Workflows\Services\Execution\NullAiContentGenerator;
+use Modules\Workflows\Services\Execution\WorkflowExecutionEngine;
 use Modules\Workflows\Services\Execution\RetryPolicy;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
 use Modules\Workflows\Services\Execution\WorkflowRuntime;
@@ -38,11 +40,21 @@ use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\AiGeneratorNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\MergeNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SendEmailNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SubWorkflowNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\SwitchNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\TaskNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\TerminationNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeTypeVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\SyntaxVerificationRule;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
-use Modules\Workflows\Services\WorkflowDefinitionValidator;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Modules\Workflows\Services\WorkflowManagementService;
-use Modules\Workflows\Services\WorkflowVerificationService;
 
 class WorkflowsServiceProvider extends ServiceProvider
 {
@@ -87,7 +99,6 @@ class WorkflowsServiceProvider extends ServiceProvider
         $this->app->singleton(ExpressionVerificationRule::class);
         $this->app->singleton(ContextualVerificationRule::class);
         $this->app->singleton(WorkflowVerificationService::class);
-        $this->app->singleton(WorkflowDefinitionValidator::class);
         $this->app->singleton(WorkflowManagementService::class);
 
         // Execution engine — M0: foundations.
@@ -105,8 +116,36 @@ class WorkflowsServiceProvider extends ServiceProvider
         // Execution engine — M2: admission control.
         $this->app->singleton(InstanceAdmissionService::class);
 
-        // AI generator contract — swap NullAiContentGenerator for a real provider when available.
-        $this->app->bind(AiContentGenerator::class, NullAiContentGenerator::class);
+        $this->app->singleton(EventBroadcaster::class);
+
+        $this->app->when(MergeCoordinator::class)
+            ->needs('$controlQueue')
+            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
+
+        $this->app->when(WorkflowExecutionEngine::class)
+            ->needs('$controlQueue')
+            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
+
+        $this->app->when(WorkflowExecutionEngine::class)
+            ->needs('$actionQueue')
+            ->giveConfig('workflows.execution.queues.actions', 'workflow-actions');
+
+        $this->app->tag([
+            IfNodeTypeRule::class,
+            ForkNodeTypeRule::class,
+            SwitchNodeTypeRule::class,
+            MergeNodeTypeRule::class,
+            TaskNodeTypeRule::class,
+            SendEmailNodeTypeRule::class,
+            AiGeneratorNodeTypeRule::class,
+            TerminationNodeTypeRule::class,
+            SubWorkflowNodeTypeRule::class,
+            DynamicEntryNodeTypeRule::class,
+        ], 'node-type-rules');
+
+        $this->app->when(NodeTypeVerificationRule::class)
+            ->needs('$rules')
+            ->giveTagged('node-type-rules');
 
         // Register node executors keyed by node type.
         $this->app->afterResolving(NodeExecutorRegistry::class, function (NodeExecutorRegistry $registry): void {

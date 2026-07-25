@@ -7,7 +7,6 @@ use Modules\Workflows\Http\Controllers\DynamicFlowController;
 use Modules\Workflows\Http\Controllers\NodeController;
 use Modules\Workflows\Http\Controllers\MobileTaskCommentsController;
 use Modules\Workflows\Http\Controllers\MobileTaskFilesController;
-use Modules\Workflows\Http\Controllers\PublicFormController;
 use Modules\Workflows\Http\Controllers\WorkflowController;
 use Modules\Workflows\Http\Controllers\WorkflowInstanceController;
 use Modules\Workflows\Http\Controllers\WorkflowTaskController;
@@ -26,8 +25,8 @@ Route::middleware(['auth:api', 'active.user'])
 // (PublicFormService) to workflows that are published, active, and explicitly marked
 // trigger.config.accessLevel === 'public'. Throttled since it's open to the internet.
 Route::prefix('v1/public/forms')->middleware(['throttle:30,1'])->group(function (): void {
-    Route::get('/{publicToken}', [PublicFormController::class, 'show'])->name('public.forms.show');
-    Route::post('/{publicToken}/submit', [PublicFormController::class, 'submit'])->name('public.forms.submit');
+    Route::get('/{publicToken}', [WorkflowTriggerController::class, 'showForm'])->name('public.forms.show');
+    Route::post('/{publicToken}/submit', [WorkflowTriggerController::class, 'submitForm'])->name('public.forms.submit');
 });
 
 Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(function (): void {
@@ -35,7 +34,6 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
     Route::post('/validate', [WorkflowController::class, 'validateDefinition'])->name('workflows.definition.validate');
     Route::get('/templates', [WorkflowController::class, 'templates'])->name('workflows.templates.index');
-    Route::post('/proposals/ai', [WorkflowController::class, 'proposal'])->name('workflows.proposals.ai');
 
     // Instance routes with /instances prefix must come before /{workflow}.
     Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
@@ -72,8 +70,7 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::patch('/{workflow}/status', [WorkflowController::class, 'updateStatus'])->name('workflows.status.update');
     Route::delete('/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
     Route::delete('/{workflow}/purge', [WorkflowController::class, 'purge'])->name('workflows.purge');
-    Route::post('/{workflow}/trigger/webhook', [WorkflowController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
+    Route::post('/{workflow}/trigger/webhook', [WorkflowTriggerController::class, 'triggerWebhook'])->name('workflows.trigger.webhook');
     Route::post('/{workflow}/trigger/manual', [WorkflowTriggerController::class, 'manual'])->name('workflows.trigger.manual');
-    Route::post('/{workflow}/trigger/form', [WorkflowTriggerController::class, 'form'])->name('workflows.trigger.form');
     Route::get('/{workflow}/instances', [WorkflowInstanceController::class, 'index'])->name('workflows.instances.index');
 });

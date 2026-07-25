@@ -1,10 +1,11 @@
 <?php
 
-namespace Modules\Workflows\Services\Execution;
+namespace Modules\Workflows\Services\Execution\Data;
 
 use DateTimeInterface;
 use Modules\Workflows\app\Enums\ResultKind;
 use Modules\Workflows\Enums\WaitType;
+use Modules\Workflows\Services\Execution\Data\PlanEdge;
 use Throwable;
 
 /**

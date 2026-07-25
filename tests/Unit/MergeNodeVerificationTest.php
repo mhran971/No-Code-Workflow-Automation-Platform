@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Workflows\Database\Seeders\NodeDefinitionSeeder;
-use Modules\Workflows\Services\WorkflowVerificationService;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Tests\TestCase;
 
 /**

@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Workflows\Services\Execution;
+namespace Modules\Workflows\Services\Execution\Data;
 
 /**
  * An execution-shaped view of a single workflow edge, derived from the normalized definition.
