@@ -28,17 +28,16 @@ use Modules\Workflows\Services\Execution\Executors\WebhookTriggerExecutor;
 use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
 use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
 use Modules\Workflows\Services\Execution\FailureClassifier;
+use Modules\Workflows\Services\Execution\InstanceLifecycleManager;
 use Modules\Workflows\Services\Execution\MergeCoordinator;
 use Modules\Workflows\Services\Execution\NodeExecutorRegistry;
-use Modules\Workflows\Services\Execution\WorkflowExecutionEngine;
+use Modules\Workflows\Services\Execution\NodeRunner;
 use Modules\Workflows\Services\Execution\RetryPolicy;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
-use Modules\Workflows\Services\Execution\WorkflowRuntime;
 use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
-use Modules\Workflows\Services\Verification\Rules\NodeType\AiGeneratorNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
@@ -108,7 +107,7 @@ class WorkflowsServiceProvider extends ServiceProvider
         // Execution engine — M1: reliability layer + runtime.
         $this->app->singleton(FailureClassifier::class);
         $this->app->singleton(RetryPolicy::class);
-        $this->app->singleton(WorkflowRuntime::class);
+        $this->app->singleton(NodeRunner::class);
         $this->app->singleton(WorkflowDispatcher::class);
 
         // Execution engine — M2: admission control.
@@ -116,17 +115,9 @@ class WorkflowsServiceProvider extends ServiceProvider
 
         $this->app->singleton(EventBroadcaster::class);
 
-        $this->app->when(MergeCoordinator::class)
-            ->needs('$controlQueue')
-            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
+        $this->app->singleton(InstanceLifecycleManager::class);
 
-        $this->app->when(WorkflowExecutionEngine::class)
-            ->needs('$controlQueue')
-            ->giveConfig('workflows.execution.queues.control', 'workflow-control');
-
-        $this->app->when(WorkflowExecutionEngine::class)
-            ->needs('$actionQueue')
-            ->giveConfig('workflows.execution.queues.actions', 'workflow-actions');
+        $this->app->singleton(MergeCoordinator::class);
 
         $this->app->tag([
             IfNodeTypeRule::class,

@@ -9,12 +9,15 @@ use Modules\Workflows\Enums\WaitType;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
-use Modules\Workflows\Services\Execution\ExecutionPlan;
+use Modules\Workflows\Services\Execution\Concerns\DispatchesNodes;
+use Modules\Workflows\Services\Execution\Concerns\NodeSeeder;
 
 class MergeCoordinator
 {
+    use DispatchesNodes, NodeSeeder;
+
     public function __construct(
-        protected string $controlQueue,
+        protected NodeExecutorRegistry $registry,
     ) {}
 
     /**
@@ -33,8 +36,7 @@ class MergeCoordinator
         string $mergeKey,
         string $mergeType,
         ExecutionPlan $plan,
-    ) : void
-    {
+    ): void {
         $joinSpec = $plan->joinFor($mergeKey);
         if ($joinSpec === null) {
             return;
@@ -43,18 +45,18 @@ class MergeCoordinator
         $mergeIdempotencyKey = hash('sha256', $instance->id.':'.$mergeKey.':merge:1');
 
         // Ensure the single shared merge coordination row exists.
-        $merge = WorkflowNodeExecution::firstOrCreate(
-            ['idempotency_key' => $mergeIdempotencyKey],
+        $merge = $this->createExecutionRow(
+            $instance,
+            $mergeIdempotencyKey,
+            $mergeKey,
+            $mergeType,
+            1,
+            null,
+            $parentExecution->output ?? [],
             [
-                'instance_id' => $instance->id,
-                'tenant_id' => $instance->tenant_id,
-                'node_key' => $mergeKey,
-                'node_type' => $mergeType,
                 'status' => NodeExecutionStatus::Waiting,
-                'attempt' => 1,
                 'expected_count' => $joinSpec->expectedCount,
                 'arrived_count' => 0,
-                'input' => $parentExecution->output ?? [],
                 'wait_type' => $joinSpec->timeoutSeconds ? WaitType::MergeTimeout : null,
                 'wait_until' => $joinSpec->timeoutSeconds ? now()->addSeconds($joinSpec->timeoutSeconds) : null,
             ],
@@ -81,7 +83,7 @@ class MergeCoordinator
         if ($shouldProceed) {
             $merge->update(['status' => NodeExecutionStatus::Pending]);
             ExecuteNodeJob::dispatch($merge->id, NodeCategory::Logic->value)
-                ->onQueue($this->controlQueue);
+                ->onQueue($this->queueFor(NodeCategory::Logic));
         }
     }
 }

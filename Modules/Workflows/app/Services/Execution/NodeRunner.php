@@ -16,7 +16,12 @@ use Modules\Workflows\Services\Execution\Expression\ExpressionEvaluator;
 use Modules\Workflows\Services\Execution\Expression\TemplateInterpolator;
 use Throwable;
 
-class WorkflowRuntime
+/**
+ * Orchestrates a single node execution cycle: claim → resolve plan → run executor → commit result.
+ *
+ * This is the entry point called by ExecuteNodeJob for each queued node execution.
+ */
+class NodeRunner
 {
     public function __construct(
         protected ExecutionPlanCompiler $compiler,

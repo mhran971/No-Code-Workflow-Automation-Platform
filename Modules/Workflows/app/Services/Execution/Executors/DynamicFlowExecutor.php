@@ -11,8 +11,8 @@ use Modules\Workflows\Models\WorkflowDynamicFlow;
 use Modules\Workflows\Models\WorkflowEvent;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
-use Modules\Workflows\Services\Execution\NodeExecutionContext;
 use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
+use Modules\Workflows\Services\Execution\NodeExecutionContext;
 
 /**
  * Pauses the parent instance when a dynamic-flow node is reached,

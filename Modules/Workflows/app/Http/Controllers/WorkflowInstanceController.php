@@ -10,7 +10,7 @@ use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
-use Modules\Workflows\Services\Execution\WorkflowRuntime;
+use Modules\Workflows\Services\Execution\NodeRunner;
 use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Transformers\WorkflowResource;
 
@@ -20,7 +20,7 @@ use Modules\Workflows\Transformers\WorkflowResource;
 class WorkflowInstanceController extends Controller
 {
     public function __construct(
-        protected WorkflowRuntime $runtime,
+        protected NodeRunner $runner,
         protected WorkflowManagementService $workflowManagementService,
     ) {}
 
@@ -143,7 +143,7 @@ class WorkflowInstanceController extends Controller
             return response()->json(['error' => 'Instance is already in a terminal state.'], 422);
         }
 
-        $this->runtime->cancel($instance);
+        $this->runner->cancel($instance);
 
         return response()->json(['message' => 'Instance cancelled.'], 200);
     }
@@ -161,7 +161,7 @@ class WorkflowInstanceController extends Controller
         }
 
         $instance->load('workflowVersion');
-        $this->runtime->retryFromNode($instance, $nodeKey);
+        $this->runner->retryFromNode($instance, $nodeKey);
 
         return response()->json(['message' => 'Retry dispatched.'], 202);
     }
