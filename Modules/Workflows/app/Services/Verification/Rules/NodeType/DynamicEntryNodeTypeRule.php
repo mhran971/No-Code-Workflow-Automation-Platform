@@ -28,16 +28,6 @@ class DynamicEntryNodeTypeRule implements NodeTypeRule
             return;
         }
 
-        // Must have no incoming edges — it is the entry point.
-        if ($graph->incoming($nodeId) !== []) {
-            $result->addError(
-                'dynamic_entry.has_incoming_edges',
-                'An Entry Point node must not have incoming edges.',
-                "nodes[{$index}]",
-                $nodeId,
-            );
-        }
-
         // Must have at least one outgoing edge.
         if ($graph->outgoing($nodeId) === []) {
             $result->addError(

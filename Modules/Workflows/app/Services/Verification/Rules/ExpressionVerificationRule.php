@@ -30,17 +30,10 @@ class ExpressionVerificationRule implements VerificationRule
     protected function verifyEdgeExpressions(WorkflowDefinitionGraph $graph, WorkflowVerificationResult $result): void
     {
         foreach ($graph->edges() as $index => $edge) {
-            if (($edge['branch_type'] ?? 'default') !== 'conditional' || (bool) ($edge['is_default_branch'] ?? false)) {
-                continue;
-            }
-
             $expression = trim((string) ($edge['condition_expression'] ?? ''));
             $edgeId = $edge['id'] ?? null;
-            $path = "edges[{$index}].condition_expression";
 
-            if ($expression === '') {
-                $result->addError('expression.condition_missing', 'Conditional edge must declare condition_expression.', $path, null, $edgeId);
-
+            if ($expression === '' || (bool) ($edge['is_default_branch'] ?? false)) {
                 continue;
             }
 

@@ -202,8 +202,6 @@ class SyntaxVerificationRule implements VerificationRule
 
                 $seenPairs[$pair] = true;
             }
-
-            // 'branch_type' is ignored; conditional/parallel semantics are derived from edge properties
         }
     }
 

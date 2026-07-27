@@ -71,8 +71,12 @@ class GraphControlFlowVerificationRule implements VerificationRule
         $terminalLookup = array_fill_keys($terminalNodeIds, true);
 
         foreach ($graph->nodeIds() as $nodeId) {
-            // Trigger node has no incoming edges and is not required to be a terminal.
-            if ($nodeId === $triggerNodeId) {
+            // Trigger and dynamic-entry nodes are entry points — they must not have incoming edges.
+            if ($nodeId === $triggerNodeId || $graph->nodeType($nodeId) === 'dynamic-entry') {
+                if ($graph->incoming($nodeId) !== []) {
+                    $result->addError('graph.entry_has_incoming', 'An entry node must not have incoming edges.', null, $nodeId);
+                }
+
                 continue;
             }
 
