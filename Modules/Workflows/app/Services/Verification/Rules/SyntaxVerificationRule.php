@@ -22,11 +22,7 @@ class SyntaxVerificationRule implements VerificationRule
         VerificationMode $mode = VerificationMode::Full,
     ): void {
         $raw = $definition['_raw'] ?? [];
-        $nodeDefinitions = Node::query()
-            ->where('is_active', true)
-            ->with('configFields')
-            ->get()
-            ->keyBy('type');
+        $nodeDefinitions = Node::activeWithConfigFields();
 
         $this->verifyTopLevelShape($raw, $result, $mode);
         $this->verifyTrigger($definition['trigger'] ?? null, $nodeDefinitions, $result, $mode);

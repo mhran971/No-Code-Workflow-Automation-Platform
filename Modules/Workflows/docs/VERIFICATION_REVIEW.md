@@ -244,7 +244,7 @@ Publish-time validation (`WorkflowController::validate`) calls `->verify($defini
 |---|------|-------|------|
 | 1.1 | Register `AiGeneratorNodeTypeRule` in service provider tag | `WorkflowsServiceProvider.php` | 5 min |
 | 1.2 | ~~Fix `dynamic-entry` contradiction — exclude from graph degree check~~ ✅ | `GraphControlFlowVerificationRule.php`, `DynamicEntryNodeTypeRule.php` | Done |
-| 1.3 | Cache `Node::query()` in `SyntaxVerificationRule` | `SyntaxVerificationRule.php` | 15 min |
+| 1.3 | ~~Cache `Node::query()` in `SyntaxVerificationRule`~~ ✅ | `Node.php`, `SyntaxVerificationRule.php` | Done |
 | 1.4 | Extract duplicated field validation into shared concern | New `Concerns/FormFieldValidation.php`, `FormTriggerVerificationRule.php`, `TaskNodeTypeRule.php` | 30 min |
 | 1.5 | Fix `branch_type` comment or fix `ExpressionVerificationRule` | `WorkflowDefinitionNormalizer.php` or `ExpressionVerificationRule.php` | 10 min |
 | 1.6 | Handle `merge-and`/`merge-or` in `MergeNodeTypeRule` and `ControlFlowReducer` | `MergeNodeTypeRule.php`, `ControlFlowReducer.php` | 20 min |
