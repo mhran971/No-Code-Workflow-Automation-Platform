@@ -13,6 +13,8 @@ use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 
 class SyntaxVerificationRule implements VerificationRule
 {
+    use Concerns\SegmentSkipDisabled;
+
     public function verify(
         array $definition,
         WorkflowDefinitionGraph $graph,

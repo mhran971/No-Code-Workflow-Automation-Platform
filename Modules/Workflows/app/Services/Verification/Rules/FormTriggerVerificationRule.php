@@ -15,6 +15,11 @@ class FormTriggerVerificationRule implements VerificationRule
 
     private const VALID_ACCESS_LEVELS = ['public', 'tenant'];
 
+    public function skipForSegment(): bool
+    {
+        return true;
+    }
+
     public function verify(
         array $definition,
         WorkflowDefinitionGraph $graph,

@@ -10,6 +10,8 @@ use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 
 class GraphControlFlowVerificationRule implements VerificationRule
 {
+    use Concerns\SegmentSkipDisabled;
+
     public function verify(
         array $definition,
         WorkflowDefinitionGraph $graph,

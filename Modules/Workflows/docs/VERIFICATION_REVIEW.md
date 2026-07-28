@@ -247,7 +247,7 @@ Publish-time validation (`WorkflowController::validate`) calls `->verify($defini
 
 | # | Task | Files | Est. |
 |---|------|-------|------|
-| 2.1 | Add `skipForSegment()` to `VerificationRule` interface | `VerificationRule.php`, all implementations | 45 min |
+| 2.1 | ~~Add `skipForSegment()` to `VerificationRule` interface~~ | `VerificationRule.php`, all implementations | ✅ Done |
 | 2.2 | Add graph traversal memoization to `WorkflowDefinitionGraph` | `WorkflowDefinitionGraph.php` | 30 min |
 | 2.3 | Replace singleton `ExpressionLanguageValidator` with non-singleton or pure function | `ExpressionLanguageValidator.php`, `WorkflowsServiceProvider.php` | 20 min |
 | 2.4 | Batch DB queries in `ContextualVerificationRule` | `ContextualVerificationRule.php` | 30 min |

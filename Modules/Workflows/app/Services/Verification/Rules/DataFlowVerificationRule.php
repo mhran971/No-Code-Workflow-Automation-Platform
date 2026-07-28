@@ -21,6 +21,8 @@ use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
  */
 class DataFlowVerificationRule implements VerificationRule
 {
+    use Concerns\SegmentSkipDisabled;
+
     private const WRITE_FIELDS = ['outputVariables', 'outputVariable'];
 
     public function verify(

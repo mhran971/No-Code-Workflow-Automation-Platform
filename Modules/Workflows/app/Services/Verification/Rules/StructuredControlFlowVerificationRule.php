@@ -15,6 +15,8 @@ use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
  */
 class StructuredControlFlowVerificationRule implements VerificationRule
 {
+    use Concerns\SegmentSkipDisabled;
+
     public function verify(
         array $definition,
         WorkflowDefinitionGraph $graph,

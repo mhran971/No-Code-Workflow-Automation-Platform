@@ -36,6 +36,10 @@ class WorkflowVerificationService
         $result = new WorkflowVerificationResult;
 
         foreach ($this->rules() as $rule) {
+            if ($mode === VerificationMode::Segment && $rule->skipForSegment()) {
+                continue;
+            }
+
             $rule->verify($normalizedDefinition, $graph, $result, $workflow, $actor, $mode);
         }
 

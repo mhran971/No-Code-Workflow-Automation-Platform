@@ -12,6 +12,11 @@ use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 
 class ContextualVerificationRule implements VerificationRule
 {
+    public function skipForSegment(): bool
+    {
+        return true;
+    }
+
     public function verify(
         array $definition,
         WorkflowDefinitionGraph $graph,

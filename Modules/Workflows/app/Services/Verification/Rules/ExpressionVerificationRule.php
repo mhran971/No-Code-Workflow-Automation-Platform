@@ -11,6 +11,8 @@ use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 
 class ExpressionVerificationRule implements VerificationRule
 {
+    use Concerns\SegmentSkipDisabled;
+
     public function __construct(
         protected ExpressionLanguageValidator $expressionValidator
     ) {}

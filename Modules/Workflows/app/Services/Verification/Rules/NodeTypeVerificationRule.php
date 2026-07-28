@@ -11,6 +11,8 @@ use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
 
 class NodeTypeVerificationRule implements VerificationRule
 {
+    use Concerns\SegmentSkipDisabled;
+
     /** @var array<string, NodeTypeRule> */
     protected array $rules = [];
 
