@@ -85,6 +85,8 @@ There is no `loop` node type in the seed data, CLAUDE.md, or anywhere in the cod
 
 The execution engine registers `merge-and` and `merge-or` as separate types. But `MergeNodeTypeRule::nodeType()` returns `'merge'` only. If a canvas definition uses `merge-and` or `merge-or` as a node type, `MergeNodeTypeRule` never validates it — no mode check, no branch count check.
 
+**Decision:** Left as-is. Only `merge` is a user-facing canvas node (seeded in `NodeDefinitionSeeder`). Nobody can create `merge-and`/`merge-or` through the UI. This is a defensive gap, not a real bug.
+
 ---
 
 ### 1E. `ControlFlowReducer::classify` has the same gap
@@ -92,6 +94,8 @@ The execution engine registers `merge-and` and `merge-or` as separate types. But
 **File:** `ControlFlowReducer.php:107-115`
 
 Only classifies nodes with type `'merge'`. A node typed `merge-and` or `merge-or` falls through to `'plain'`, skipping soundness checking entirely.
+
+✅ **Fixed:** Added `merge-and` → `p-merge` and `merge-or` → `c-merge` classification, mirroring `ExecutionPlan::joinFor()` logic.
 
 ---
 
@@ -237,7 +241,7 @@ Publish-time validation (`WorkflowController::validate`) calls `->verify($defini
 | 1.3 | ~~Cache `Node::query()` in `SyntaxVerificationRule`~~ | `Node.php`, `SyntaxVerificationRule.php` | ✅ Done |
 | 1.4 | ~~Extract duplicated field validation into shared concern~~ | `Concerns/FormFieldValidation.php`, `FormTriggerVerificationRule.php`, `TaskNodeTypeRule.php` | ✅ Done |
 | 1.5 | ~~Fix `branch_type` — gate on `condition_expression` instead of legacy field~~ | `ExpressionVerificationRule.php`, `WorkflowDefinitionNormalizer.php`, `SyntaxVerificationRule.php` | ✅ Done |
-| 1.6 | Handle `merge-and`/`merge-or` in `MergeNodeTypeRule` and `ControlFlowReducer` | `MergeNodeTypeRule.php`, `ControlFlowReducer.php` | Pending |
+| 1.6 | ~~Handle `merge-and`/`merge-or` in `ControlFlowReducer`~~ | `ControlFlowReducer.php` | ✅ Done |
 
 ### Phase 2: Structural Improvements (medium impact)
 

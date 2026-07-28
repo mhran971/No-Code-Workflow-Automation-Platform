@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\User;
@@ -17,12 +18,12 @@ class RoleMiddlewareTest extends TestCase
         Route::middleware(['auth:api', 'role:manager'])
             ->get('/api/test-role-middleware', fn () => response()->json(['allowed' => true]));
 
-$manager = User::query()->create([
+        $manager = User::query()->create([
             'first_name' => 'Manager',
             'last_name' => 'User',
             'name' => 'Manager User',
             'email' => 'manager_'.uniqid().'@example.test',
-            'password' => \Illuminate\Support\Facades\Hash::make('Pass1234!'),
+            'password' => Hash::make('Pass1234!'),
             'role' => Role::Manager,
         ]);
 
@@ -31,12 +32,12 @@ $manager = User::query()->create([
             ->assertOk()
             ->assertJson(['allowed' => true]);
 
-$employee = User::query()->create([
+        $employee = User::query()->create([
             'first_name' => 'Employee',
             'last_name' => 'User',
             'name' => 'Employee User',
             'email' => 'employee_'.uniqid().'@example.test',
-            'password' => \Illuminate\Support\Facades\Hash::make('Pass1234!'),
+            'password' => Hash::make('Pass1234!'),
             'role' => Role::Employee,
         ]);
 

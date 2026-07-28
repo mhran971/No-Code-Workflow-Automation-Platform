@@ -30,7 +30,6 @@ class MobileTaskFilesController extends Controller
         return WorkflowInstanceAttachmentResource::collection($attachments);
     }
 
-
     public function store(UploadTaskFileRequest $request, WorkflowTask $task): JsonResponse
     {
         $attachment = $this->service->uploadForTask($task, $this->actor(), $request->file('file'));

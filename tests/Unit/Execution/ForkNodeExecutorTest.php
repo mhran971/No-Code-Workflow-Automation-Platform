@@ -5,10 +5,10 @@ namespace Tests\Unit\Execution;
 use Mockery;
 use Modules\Workflows\app\Enums\ResultKind;
 use Modules\Workflows\Enums\NodeCategory;
+use Modules\Workflows\Services\Execution\Data\PlanEdge;
 use Modules\Workflows\Services\Execution\ExecutionPlan;
 use Modules\Workflows\Services\Execution\Executors\ForkNodeExecutor;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\Data\PlanEdge;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 

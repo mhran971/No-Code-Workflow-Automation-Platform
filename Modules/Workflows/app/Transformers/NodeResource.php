@@ -13,15 +13,15 @@ class NodeResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-                'id' => $this->id,
-                'type' => $this->type,
-                'label' => $this->label,
-                'category' => $this->category?->value,
-                'icon' => $this->icon,
-                'description' => $this->description,
-                'color' => $this->color,
-                'is_active' => (bool) $this->is_active,
-                'config_fields' => NodeConfigResource::collection($this->whenLoaded('configFields')),
+            'id' => $this->id,
+            'type' => $this->type,
+            'label' => $this->label,
+            'category' => $this->category?->value,
+            'icon' => $this->icon,
+            'description' => $this->description,
+            'color' => $this->color,
+            'is_active' => (bool) $this->is_active,
+            'config_fields' => NodeConfigResource::collection($this->whenLoaded('configFields')),
         ];
     }
 }

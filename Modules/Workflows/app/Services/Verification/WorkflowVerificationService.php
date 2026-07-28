@@ -14,8 +14,6 @@ use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRu
 use Modules\Workflows\Services\Verification\Rules\NodeTypeVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\StructuredControlFlowVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\SyntaxVerificationRule;
-use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowDefinitionNormalizer;
 
 class WorkflowVerificationService
 {

@@ -104,6 +104,14 @@ class ControlFlowReducer
             return 'c-split';
         }
 
+        if ($type === 'merge-and') {
+            return 'p-merge';
+        }
+
+        if ($type === 'merge-or') {
+            return 'c-merge';
+        }
+
         if ($type === 'merge') {
             $node = $graph->node($nodeId) ?? [];
             $mode = is_array($node['config'] ?? null) ? trim((string) ($node['config']['mergeMode'] ?? '')) : '';

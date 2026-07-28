@@ -3,10 +3,10 @@
 namespace Modules\Workflows\Models;
 
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\Tenant;
