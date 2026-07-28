@@ -2,6 +2,7 @@
 
 > Generated review of `Modules/Workflows/app/Services/Verification/`
 > Scope: 32 PHP files, ~3000 lines across the verification subsystem.
+> Last updated: 2026-07-28
 
 ---
 
@@ -30,14 +31,15 @@ WorkflowVerificationService (orchestrator)
         ├── TerminationNodeTypeRule
         ├── SubWorkflowNodeTypeRule
         ├── DynamicEntryNodeTypeRule
-        ├── AiGeneratorNodeTypeRule        ⚠️ NOT REGISTERED (dead code)
+        ├── AiGeneratorNodeTypeRule        ✅ REGISTERED
         └── (no rule for dynamic-flow, manual-trigger, form-trigger, webhook-trigger)
 
 Supporting services:
   ├── ExpressionLanguageValidator          — recursive-descent parser for boolean expressions
   ├── ControlFlowReducer                  — academic graph reduction for soundness checking
   ├── DataFlowAnalyzer                    — forward data-flow analysis (guaranteed/possible sets)
-  └── VariableAvailability trait           — shared context-variable checking for node-type rules
+  ├── VariableAvailability trait           — shared context-variable checking for node-type rules
+  └── FormFieldValidation trait            — shared field validation for form triggers and task nodes
 ```
 
 ---
@@ -69,23 +71,11 @@ There is no `loop` node type in the seed data, CLAUDE.md, or anywhere in the cod
 
 ---
 
-### 1C. `branch_type` is called "legacy" but is still the gating signal
+### 1C. ~~`branch_type` is called "legacy" but is still the gating signal~~ ✅ FIXED
 
-**Files:** `WorkflowDefinitionNormalizer.php:99`, `ExpressionVerificationRule.php:33`
+**Files:** `ExpressionVerificationRule.php`, `WorkflowDefinitionNormalizer.php`, `SyntaxVerificationRule.php`
 
-Normalizer comment at line 99:
-```php
-// 'branch_type' is legacy and ignored; derive semantics from edge properties instead
-```
-
-But `ExpressionVerificationRule::verifyEdgeExpressions` (line 33) reads it directly:
-```php
-if (($edge['branch_type'] ?? 'default') !== 'conditional' || (bool) ($edge['is_default_branch'] ?? false)) {
-    continue;
-}
-```
-
-The comment contradicts the code. Either `branch_type` is still the source of truth (fix the comment) or the expression rule should use a derived signal (fix the logic).
+`ExpressionVerificationRule` now gates on `condition_expression` presence instead of `branch_type === 'conditional'`. Misleading "legacy" comments removed from normalizer and syntax rule.
 
 ---
 
@@ -111,12 +101,12 @@ Only classifies nodes with type `'merge'`. A node typed `merge-and` or `merge-or
 
 | Rule | Query | Frequency |
 |------|-------|-----------|
-| `SyntaxVerificationRule` | `Node::query()->where('is_active', true)->with('configFields')->get()` | Every validation call |
+| ~~`SyntaxVerificationRule`~~ | ~~`Node::query()->where('is_active', true)->with('configFields')->get()`~~ | ~~Every validation call~~ ✅ Cached via `Node::activeWithConfigFields()` |
 | `ContextualVerificationRule` | `User::query()->where(...)` + `TeamMembership::query()->where(...)` | Per task-node |
 | `ContextualVerificationRule` | `Document::query()->where(...)` | Per KB doc per AI node |
 | `SubWorkflowNodeTypeRule` | `Workflow::find()` | Per sub-workflow node |
 
-None of these are cached or batched.
+Remaining queries are not cached or batched.
 
 ---
 
@@ -154,9 +144,11 @@ No documented convention.
 
 ---
 
-### 2F. Duplicated form-field validation logic
+### 2F. ~~Duplicated form-field validation logic~~ ✅ FIXED
 
-`FormTriggerVerificationRule` and `TaskNodeTypeRule` have identical constants (`VALID_FIELD_TYPES`, `OPTIONS_REQUIRED_TYPES`) and nearly identical field validation loops (~30 lines each). Should be extracted into a shared concern or service.
+**Files:** `Rules/Concerns/FormFieldValidation.php`, `FormTriggerVerificationRule.php`, `TaskNodeTypeRule.php`
+
+Extracted shared `FormFieldValidation` trait with `validateFields()` method. Both rules now use the trait with one-line calls. All error codes preserved.
 
 ---
 
@@ -185,13 +177,11 @@ Or/and/comparison/unary/primary precedence levels, type tracking. The only calle
 
 ## 4. Under-Engineering Gaps
 
-### 4A. `AiGeneratorNodeTypeRule` is never executed
+### 4A. ~~`AiGeneratorNodeTypeRule` is never executed~~ ✅ FIXED
 
-**File:** `WorkflowsServiceProvider.php:122-132`
+**File:** `WorkflowsServiceProvider.php`
 
-The `node-type-rules` tag includes 9 rules but `AiGeneratorNodeTypeRule` is missing. The class exists (53 lines, validates prompt + outputVariable), but is dead code. AI generator nodes get zero type-specific validation.
-
-**Fix:** Add `AiGeneratorNodeTypeRule::class` to the tagged array.
+`AiGeneratorNodeTypeRule` is now registered in the `node-type-rules` tag. AI generator nodes receive type-specific validation (prompt required, outputVariable format).
 
 ---
 
@@ -240,14 +230,14 @@ Publish-time validation (`WorkflowController::validate`) calls `->verify($defini
 
 ### Phase 1: Quick Wins (high impact, low risk)
 
-| # | Task | Files | Est. |
-|---|------|-------|------|
-| 1.1 | Register `AiGeneratorNodeTypeRule` in service provider tag | `WorkflowsServiceProvider.php` | 5 min |
-| 1.2 | ~~Fix `dynamic-entry` contradiction — exclude from graph degree check~~ ✅ | `GraphControlFlowVerificationRule.php`, `DynamicEntryNodeTypeRule.php` | Done |
-| 1.3 | ~~Cache `Node::query()` in `SyntaxVerificationRule`~~ ✅ | `Node.php`, `SyntaxVerificationRule.php` | Done |
-| 1.4 | ~~Extract duplicated field validation into shared concern~~ ✅ | `Concerns/FormFieldValidation.php`, `FormTriggerVerificationRule.php`, `TaskNodeTypeRule.php` | Done |
-| 1.5 | Fix `branch_type` comment or fix `ExpressionVerificationRule` | `WorkflowDefinitionNormalizer.php` or `ExpressionVerificationRule.php` | 10 min |
-| 1.6 | Handle `merge-and`/`merge-or` in `MergeNodeTypeRule` and `ControlFlowReducer` | `MergeNodeTypeRule.php`, `ControlFlowReducer.php` | 20 min |
+| # | Task | Files | Status |
+|---|------|-------|--------|
+| 1.1 | ~~Register `AiGeneratorNodeTypeRule` in service provider tag~~ | `WorkflowsServiceProvider.php` | ✅ Done |
+| 1.2 | ~~Fix `dynamic-entry` contradiction — unify entry-point checks at graph level~~ | `GraphControlFlowVerificationRule.php`, `DynamicEntryNodeTypeRule.php` | ✅ Done |
+| 1.3 | ~~Cache `Node::query()` in `SyntaxVerificationRule`~~ | `Node.php`, `SyntaxVerificationRule.php` | ✅ Done |
+| 1.4 | ~~Extract duplicated field validation into shared concern~~ | `Concerns/FormFieldValidation.php`, `FormTriggerVerificationRule.php`, `TaskNodeTypeRule.php` | ✅ Done |
+| 1.5 | ~~Fix `branch_type` — gate on `condition_expression` instead of legacy field~~ | `ExpressionVerificationRule.php`, `WorkflowDefinitionNormalizer.php`, `SyntaxVerificationRule.php` | ✅ Done |
+| 1.6 | Handle `merge-and`/`merge-or` in `MergeNodeTypeRule` and `ControlFlowReducer` | `MergeNodeTypeRule.php`, `ControlFlowReducer.php` | Pending |
 
 ### Phase 2: Structural Improvements (medium impact)
 
@@ -282,14 +272,15 @@ Publish-time validation (`WorkflowController::validate`) calls `->verify($defini
 | `ExpressionLanguageValidator.php` | 143 | Expression parser |
 | `ControlFlowReducer.php` | 286 | Split/merge soundness |
 | `DataFlowAnalyzer.php` | 315 | Variable availability analysis |
-| `Rules/SyntaxVerificationRule.php` | 271 | Shape + type validation |
-| `Rules/GraphControlFlowVerificationRule.php` | 173 | Reachability + degrees |
+| `Rules/SyntaxVerificationRule.php` | ~265 | Shape + type validation |
+| `Rules/GraphControlFlowVerificationRule.php` | ~175 | Reachability + degrees |
 | `Rules/StructuredControlFlowVerificationRule.php` | 97 | Split/merge pairing |
-| `Rules/ExpressionVerificationRule.php` | 85 | Expression syntax |
+| `Rules/ExpressionVerificationRule.php` | ~75 | Expression syntax |
 | `Rules/ContextualVerificationRule.php` | 117 | Assignee + KB validation |
 | `Rules/NodeTypeVerificationRule.php` | 40 | Node-type dispatcher |
 | `Rules/DataFlowVerificationRule.php` | 204 | Variable conflict detection |
-| `Rules/FormTriggerVerificationRule.php` | 103 | Form trigger structure |
+| `Rules/FormTriggerVerificationRule.php` | ~65 | Form trigger structure |
+| `Rules/Concerns/FormFieldValidation.php` | 60 | Shared field validation |
 | `Rules/NodeType/*.php` | 11 files | Per-node-type validation |
 | `Rules/NodeType/Concerns/VariableAvailability.php` | 177 | Shared variable checking |
 | `Data/WorkflowVerificationResult.php` | 104 | Result accumulator |
