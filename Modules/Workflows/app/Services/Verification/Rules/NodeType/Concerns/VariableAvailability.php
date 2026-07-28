@@ -146,32 +146,6 @@ trait VariableAvailability
 
     protected function hasParallelPaths(string $nodeId, WorkflowDefinitionGraph $graph): bool
     {
-        foreach ($graph->ancestorNodeIds($nodeId) as $ancestorId) {
-            $outgoing = $graph->outgoing($ancestorId);
-
-            if (count($outgoing) <= 1) {
-                continue;
-            }
-
-            $pathsLeadingToNode = 0;
-
-            foreach ($outgoing as $edge) {
-                $target = $edge['target_node_key'] ?? null;
-
-                if (! is_string($target)) {
-                    continue;
-                }
-
-                if ($target === $nodeId || in_array($nodeId, $graph->reachableFrom($target), true)) {
-                    $pathsLeadingToNode++;
-                }
-            }
-
-            if ($pathsLeadingToNode > 1) {
-                return true;
-            }
-        }
-
-        return false;
+        return $graph->hasParallelPaths($nodeId);
     }
 }

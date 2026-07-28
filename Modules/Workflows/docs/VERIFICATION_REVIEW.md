@@ -122,17 +122,17 @@ Registered as singleton (`WorkflowsServiceProvider.php:93`) but stores `$this->l
 
 ---
 
-### 2C. `hasParallelPaths` is O(N * (V+E)) per node
+### 2C. ~~`hasParallelPaths` is O(N * (V+E)) per node~~ ✅ FIXED
 
-**File:** `Concerns/VariableAvailability.php:147-176`
+**File:** `Concerns/VariableAvailability.php:147-176`, `WorkflowDefinitionGraph.php`
 
-For every node using the trait (if, switch, ai-generator, sub-workflow, send-email), it calls `reachableFrom()` for each outgoing edge of each ancestor. No memoization of reachability results.
+Replaced per-node BFS traversal with a single O(V²) forward topological pass in `WorkflowDefinitionGraph::computeParallelPathsSet()`. Tracks ancestor sets per node; detects reconvergent branches via ancestor overlap. `VariableAvailability::hasParallelPaths()` now delegates to the graph's O(1) cached lookup.
 
 ---
 
 ### 2D. `WorkflowDefinitionGraph` doesn't memoize graph traversals
 
-`reachableFrom()`, `nodesThatCanReachAny()`, `ancestorNodeIds()`, `topologicalOrder()` are all called multiple times across different rules and the trait. Each call rebuilds the traversal from scratch.
+`reachableFrom()`, `nodesThatCanReachAny()`, `ancestorNodeIds()`, `topologicalOrder()` are called across different rules. Each call rebuilds the traversal from scratch. The `VariableAvailability` trait's calls were eliminated by the 2C fix, but `GraphControlFlowVerificationRule` still calls `reachableFrom()` and `nodesThatCanReachAny()` directly.
 
 ---
 
