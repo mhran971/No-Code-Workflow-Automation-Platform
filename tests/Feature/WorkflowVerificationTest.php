@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Workflows\Tests\Feature;
+namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Models\User;

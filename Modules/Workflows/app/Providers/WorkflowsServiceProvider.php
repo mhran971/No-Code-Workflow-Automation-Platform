@@ -9,6 +9,8 @@ use Modules\Workflows\Console\Commands\AdmitPendingInstancesCommand;
 use Modules\Workflows\Console\Commands\ExpireOverdueInstancesCommand;
 use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
 use Modules\Workflows\Models\WorkflowInstance;
+use Modules\Workflows\Models\WorkflowTask;
+use Modules\Workflows\Observers\WorkflowTaskObserver;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\EventBroadcaster;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
