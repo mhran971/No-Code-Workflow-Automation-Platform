@@ -3,5 +3,6 @@
     "KnowledgeBase": true,
     "Team": true,
     "Integrations": true,
-    "Workflows": true
+    "Workflows": true,
+    "Notifications": true
 }

@@ -40,4 +40,9 @@ return [
         'site_key' => env('RECAPTCHA_SITE_KEY'),
     ],
 
+    'firebase' => [
+        'credentials' => env('FIREBASE_CREDENTIALS', base_path('Modules/Notifications/storage/app/workflow-auto-notif-firebase-adminsdk-fbsvc-862073bad6.json')),
+        'project_id' => env('FIREBASE_PROJECT_ID', 'workflow-auto-notif'),
+    ],
+
 ];

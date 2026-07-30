@@ -61,11 +61,16 @@ class WorkflowsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->loadTranslationsFrom(module_path($this->name, 'lang'), 'workflows');
+
         $this->commands([
             ScanWorkflowTimersCommand::class,
             AdmitPendingInstancesCommand::class,
             ExpireOverdueInstancesCommand::class,
         ]);
+
+        // Register model observers.
+        WorkflowTask::observe(WorkflowTaskObserver::class);
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule->command('workflows:scan-timers')->everyMinute()->withoutOverlapping();

@@ -1,0 +1,11 @@
+{
+    "name": "Notifications",
+    "alias": "notifications",
+    "description": "Notifications module for managing user in-app and push notifications",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Notifications\\Providers\\NotificationsServiceProvider"
+    ],
+    "files": []
+}
