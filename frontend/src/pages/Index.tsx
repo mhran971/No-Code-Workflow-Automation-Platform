@@ -5,22 +5,24 @@ import { NodeLibrary } from '@/components/workflow/NodeLibrary';
 import { WorkflowCanvas, type WorkflowCanvasHandle } from '@/components/workflow/WorkflowCanvas';
 import { ExecutionPanel } from '@/components/workflow/ExecutionPanel';
 import { WorkflowHeader } from '@/components/workflow/WorkflowHeader';
-import { ApiConnectionDialog } from '@/components/workflow/ApiConnectionDialog';
+import { DynamicFlowDesignModal } from '@/components/workflow/DynamicFlowDesignModal';
 import { ValidationResultsDialog } from '@/components/workflow/ValidationResultsDialog';
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import { useBackendExecution } from '@/hooks/useBackendExecution';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { useWorkflowValidation } from '@/hooks/useWorkflowValidation';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   ApiError,
   fetchKnowledgeBaseDocuments,
   fetchTenantUsers,
+  listWorkflows,
   loadWorkflow,
   publishWorkflow,
   saveDraft,
 } from '@/lib/api/client';
-import type { KnowledgeBaseDocument, TenantUser } from '@/lib/api/types';
-import { buildDefinitionFromCanvas, normalizeToken } from '@/lib/api/utils';
+import type { KnowledgeBaseDocument, TenantUser, WorkflowSummary } from '@/lib/api/types';
+import { buildDefinitionFromCanvas } from '@/lib/api/utils';
 import type { Node, Edge } from '@xyflow/react';
 
 export interface SelectedNodeInfo {
@@ -36,6 +38,7 @@ export interface SelectedNodeInfo {
 
 const Index = () => {
   const { id: workflowId } = useParams<{ id: string }>();
+  const { apiBaseUrl, token, logout } = useAuth();
 
   const canvasRef = useRef<WorkflowCanvasHandle>(null);
   const [selectedNode, setSelectedNode] = useState<SelectedNodeInfo | null>(null);
@@ -43,8 +46,8 @@ const Index = () => {
   const [canvasEdges, setCanvasEdges] = useState<Edge[]>([]);
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [kbDocuments, setKbDocuments] = useState<KnowledgeBaseDocument[]>([]);
+  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
 
-  // Workflow metadata
   const [workflowName, setWorkflowName] = useState('');
   const [draftRevision, setDraftRevision] = useState<number | null>(null);
   const [publicToken, setPublicToken] = useState<string | null>(null);
@@ -53,35 +56,37 @@ const Index = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Guard: prevent the initial canvas load from triggering "unsaved changes"
+  const [designModalOpen, setDesignModalOpen] = useState(false);
+  const [designInstanceId, setDesignInstanceId] = useState<string | null>(null);
+
   const isLoadingDefinitionRef = useRef(false);
-  // Guard: only load the workflow definition once
   const definitionLoadedRef = useRef(false);
 
-  const apiConfig = useApiConfig();
-  const {
-    nodeDefinitions,
-    isConnected,
-    isValidating,
-    dialogOpen,
-    setDialogOpen,
-    accessToken,
-    apiBaseUrl,
-  } = apiConfig;
+  const { nodeDefinitions, isConnected, isValidating } = useApiConfig();
 
   const mockExec = useWorkflowExecution(canvasNodes, canvasEdges);
   const backendExec = useBackendExecution(workflowId, canvasNodes, {
     baseUrl: apiBaseUrl,
-    accessToken,
+    accessToken: token,
   });
 
-  // Use the real backend when the API is connected and a workflow is loaded.
   const useBackend = isConnected && Boolean(workflowId);
   const activeExec = useBackend ? backendExec : mockExec;
 
-  const { execution, mode, currentStepIndex, runAll, stepForward, pause, resume, reset, nodeStatuses } = activeExec;
+  const {
+    execution,
+    mode,
+    currentStepIndex,
+    runAll,
+    stepForward,
+    pause,
+    resume,
+    reset,
+    nodeStatuses,
+  } = activeExec;
   const onCancel       = useBackend ? backendExec.cancel        : undefined;
   const runtimeContext = useBackend ? backendExec.runtimeContext : undefined;
+  const instanceId     = useBackend ? backendExec.instanceId     : null;
 
   const {
     validationOpen,
@@ -92,31 +97,26 @@ const Index = () => {
     lastDefinition,
     nodeValidationIssues,
     handleVerify,
-  } = useWorkflowValidation({ canvasRef, canvasNodes, canvasEdges, nodeDefinitions, apiBaseUrl, accessToken });
+  } = useWorkflowValidation({ canvasRef, canvasNodes, canvasEdges, nodeDefinitions, apiBaseUrl, accessToken: token });
 
-  useEffect(() => {
-    if (!isConnected && !normalizeToken(accessToken)) {
-      setDialogOpen(true);
-    }
-  }, [isConnected, accessToken, setDialogOpen]);
-
-  // Fetch tenant users and KB documents once connected
   useEffect(() => {
     if (!isConnected) return;
-    fetchTenantUsers(apiBaseUrl, accessToken)
+    fetchTenantUsers(apiBaseUrl, token)
       .then((res) => setTenantUsers(res.data))
       .catch(() => { /* non-critical */ });
-    fetchKnowledgeBaseDocuments(apiBaseUrl, accessToken)
+    fetchKnowledgeBaseDocuments(apiBaseUrl, token)
       .then((res) => setKbDocuments(res.data))
       .catch(() => { /* non-critical */ });
-  }, [isConnected, apiBaseUrl, accessToken]);
+    listWorkflows(apiBaseUrl, token)
+      .then((res) => setWorkflows(res.data))
+      .catch(() => { /* non-critical */ });
+  }, [isConnected, apiBaseUrl, token]);
 
-  // Load workflow definition once connected and node definitions are ready
   useEffect(() => {
     if (!isConnected || !workflowId || nodeDefinitions.length === 0 || definitionLoadedRef.current) return;
     definitionLoadedRef.current = true;
 
-    loadWorkflow(apiBaseUrl, accessToken, workflowId)
+    loadWorkflow(apiBaseUrl, token, workflowId)
       .then(({ data }) => {
         setWorkflowName(data.name);
         setDraftRevision(data.draft_revision);
@@ -126,18 +126,26 @@ const Index = () => {
         if (data.draft_definition && canvasRef.current) {
           isLoadingDefinitionRef.current = true;
           canvasRef.current.loadDefinition(data.draft_definition, nodeDefinitions);
-          // Allow the canvas state to settle before re-enabling change tracking
           setTimeout(() => { isLoadingDefinitionRef.current = false; }, 100);
         }
       })
       .catch(() => {
         toast.error('Failed to load workflow');
       });
-  }, [isConnected, workflowId, nodeDefinitions, apiBaseUrl, accessToken]);
+  }, [isConnected, workflowId, nodeDefinitions, apiBaseUrl, token]);
 
   const handleNodeSelect = useCallback((node: SelectedNodeInfo | null) => {
     setSelectedNode(node);
   }, []);
+
+  const handleWaitingDynamicFlowClick = useCallback((_nodeId: string) => {
+    if (!backendExec.instanceId) {
+      toast.error('No running instance. Run the workflow first.');
+      return;
+    }
+    setDesignInstanceId(backendExec.instanceId);
+    setDesignModalOpen(true);
+  }, [backendExec.instanceId]);
 
   const handleNodesEdgesChange = useCallback((nodes: Node[], edges: Edge[]) => {
     setCanvasNodes(nodes);
@@ -175,7 +183,7 @@ const Index = () => {
 
     setIsSaving(true);
     try {
-      const res = await saveDraft(apiBaseUrl, accessToken, workflowId, definition, draftRevision);
+      const res = await saveDraft(apiBaseUrl, token, workflowId, definition, draftRevision);
       setDraftRevision(res.draft_revision);
       setHasUnsavedChanges(false);
       toast.success('Workflow saved');
@@ -188,7 +196,7 @@ const Index = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [workflowId, draftRevision, canvasNodes, canvasEdges, nodeDefinitions, apiBaseUrl, accessToken]);
+  }, [workflowId, draftRevision, canvasNodes, canvasEdges, nodeDefinitions, apiBaseUrl, token]);
 
   const saveDisabled = !workflowId || draftRevision === null || isSaving;
   const publishDisabled = !workflowId || draftRevision === null || isPublishing;
@@ -206,7 +214,7 @@ const Index = () => {
 
     setIsPublishing(true);
     try {
-      await publishWorkflow(apiBaseUrl, accessToken, workflowId);
+      await publishWorkflow(apiBaseUrl, token, workflowId);
       toast.success('Workflow published successfully');
     } catch (e) {
       if (e instanceof ApiError) {
@@ -217,7 +225,7 @@ const Index = () => {
     } finally {
       setIsPublishing(false);
     }
-  }, [workflowId, draftRevision, apiBaseUrl, accessToken]);
+  }, [workflowId, draftRevision, apiBaseUrl, token]);
 
   const formTriggerNode = canvasNodes.find((node) => (node.data as { nodeType?: string })?.nodeType === 'form-trigger');
   const formTriggerConfig = formTriggerNode?.data?.config as Record<string, unknown> | undefined;
@@ -235,9 +243,8 @@ const Index = () => {
         executionMode={mode}
         onVerify={handleVerify}
         isVerifying={validationLoading}
-        canVerify={isConnected && Boolean(normalizeToken(accessToken))}
-        isApiConnected={isConnected}
-        onApiSettingsClick={() => setDialogOpen(true)}
+        canVerify={isConnected && Boolean(token)}
+        onSignOut={logout}
         onSave={handleSave}
         isSaving={isSaving}
         saveDisabled={saveDisabled}
@@ -251,7 +258,6 @@ const Index = () => {
           nodeDefinitions={nodeDefinitions}
           isConnected={isConnected}
           isLoading={isValidating}
-          onConnectClick={() => setDialogOpen(true)}
         />
         <WorkflowCanvas
           ref={canvasRef}
@@ -259,6 +265,7 @@ const Index = () => {
           nodeStatuses={nodeStatuses}
           onNodesEdgesChange={handleNodesEdgesChange}
           nodeDefinitions={nodeDefinitions}
+          onWaitingDynamicFlowClick={handleWaitingDynamicFlowClick}
         />
         <ExecutionPanel
           selectedNode={selectedNode}
@@ -273,6 +280,9 @@ const Index = () => {
           nodeValidationIssues={nodeValidationIssues}
           tenantUsers={tenantUsers}
           kbDocuments={kbDocuments}
+          workflows={workflows}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={token}
           execution={execution}
           executionMode={mode}
           currentStepIndex={currentStepIndex}
@@ -282,16 +292,17 @@ const Index = () => {
           onResume={resume}
           onReset={reset}
           onCancel={onCancel}
+          onDesignSubFlow={instanceId ? () => {
+            setDesignInstanceId(instanceId);
+            setDesignModalOpen(true);
+          } : undefined}
           isBackendMode={useBackend}
           runtimeContext={runtimeContext}
+          instanceId={instanceId}
+          instanceStatus={execution?.status === 'running' ? 'running' : execution?.status === 'failed' ? 'failed' : execution?.status === 'success' ? 'succeeded' : 'paused'}
+          pausedReason={execution?.status === 'waiting' ? 'dynamic_flow:awaiting_design' : null}
         />
       </div>
-
-      <ApiConnectionDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        apiConfig={apiConfig}
-      />
 
       <ValidationResultsDialog
         open={validationOpen}
@@ -300,6 +311,19 @@ const Index = () => {
         error={validationError}
         loading={validationLoading}
         definition={lastDefinition}
+      />
+
+      <DynamicFlowDesignModal
+        open={designModalOpen}
+        onOpenChange={setDesignModalOpen}
+        instanceId={designInstanceId ?? ''}
+        apiBaseUrl={apiBaseUrl}
+        accessToken={token}
+        nodeDefinitions={nodeDefinitions}
+        workflows={workflows}
+        tenantUsers={tenantUsers}
+        kbDocuments={kbDocuments}
+        onSuccess={() => { /* workflow resumes via Echo */ }}
       />
     </div>
   );

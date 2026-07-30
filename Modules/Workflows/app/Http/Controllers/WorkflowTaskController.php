@@ -2,6 +2,7 @@
 
 namespace Modules\Workflows\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
@@ -12,6 +13,7 @@ use Modules\Team\Models\Team;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Http\Requests\ListTasksRequest;
+use Modules\Workflows\Http\Requests\SaveTaskDraftRequest;
 use Modules\Workflows\Http\Requests\SubmitTaskRequest;
 use Modules\Workflows\Http\Resources\WorkflowTaskDetailResource;
 use Modules\Workflows\Http\Resources\WorkflowTaskResource;
@@ -48,10 +50,17 @@ class WorkflowTaskController extends Controller
             $query->where('assignee_id', $request->integer('assignee_id'));
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->string('status'));
+        $status = $request->filled('status') ? $request->string('status')->toString() : 'open';
+
+        if ($status === 'expired') {
+            $query->where('status', 'open')
+                ->whereNotNull('due_at')
+                ->where('due_at', '<', now());
+        } elseif ($status === 'open') {
+            $query->where('status', 'open')
+                ->where(fn ($q) => $q->whereNull('due_at')->orWhere('due_at', '>=', now()));
         } else {
-            $query->where('status', 'open');
+            $query->where('status', $status);
         }
 
         if ($request->filled('search')) {
@@ -63,9 +72,9 @@ class WorkflowTaskController extends Controller
         }
 
         match ($request->string('sort', 'due_asc')->toString()) {
-            'due_desc'    => $query->orderBy('due_at', 'desc'),
+            'due_desc' => $query->orderBy('due_at', 'desc'),
             'created_asc' => $query->orderBy('created_at', 'asc'),
-            default       => $query->orderBy('due_at', 'asc'),
+            default => $query->orderBy('due_at', 'asc'),
         };
 
         return WorkflowTaskResource::collection($query->with('assignee')->paginate(20));
@@ -130,14 +139,14 @@ class WorkflowTaskController extends Controller
      * Manager: constrained to their team members.
      * Employee: constrained to themselves.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<WorkflowTask>  $query
+     * @param  Builder<WorkflowTask>  $query
      */
-    private function scopeToRole(\Illuminate\Database\Eloquent\Builder $query, User $user): void
+    private function scopeToRole(Builder $query, User $user): void
     {
         match ($user->role) {
             Role::BusinessOwner => null,
-            Role::Manager       => $query->whereIn('assignee_id', $this->teamMemberIds($user)),
-            default             => $query->where('assignee_id', $user->id),
+            Role::Manager => $query->whereIn('assignee_id', $this->teamMemberIds($user)),
+            default => $query->where('assignee_id', $user->id),
         };
     }
 
@@ -157,7 +166,7 @@ class WorkflowTaskController extends Controller
      * Persist a partial response without closing the task.
      * Only allowed while the task is still open.
      */
-    public function saveDraft(SubmitTaskRequest $request, WorkflowTask $task): JsonResponse
+    public function saveDraft(SaveTaskDraftRequest $request, WorkflowTask $task): JsonResponse
     {
         $user = $this->actor();
 

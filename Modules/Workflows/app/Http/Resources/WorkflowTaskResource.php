@@ -17,7 +17,7 @@ class WorkflowTaskResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
-            'status' => $this->status,
+            'status' => $this->displayStatus(),
             'due_at' => $this->due_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),

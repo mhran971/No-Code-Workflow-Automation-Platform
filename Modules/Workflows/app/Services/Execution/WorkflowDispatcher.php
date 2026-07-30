@@ -3,19 +3,17 @@
 namespace Modules\Workflows\Services\Execution;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
-use Modules\Workflows\Enums\NodeCategory;
-use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
 use Modules\Workflows\Events\InstanceStarted;
 use Modules\Workflows\Jobs\ExecuteNodeJob;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
-use Modules\Workflows\Models\WorkflowNodeExecution;
 use Modules\Workflows\Models\WorkflowVersion;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
+use Modules\Workflows\Services\Execution\Concerns\DispatchesNodes;
+use Modules\Workflows\Services\Execution\Concerns\NodeSeeder;
 
 /**
  * Creates a new workflow instance, seeds the trigger-node execution, and dispatches the first job.
@@ -28,14 +26,18 @@ use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
  */
 class WorkflowDispatcher
 {
+    use DispatchesNodes, NodeSeeder;
+
     public function __construct(
         protected ExecutionPlanCompiler $compiler,
         protected NodeExecutorRegistry $registry,
         protected InstanceAdmissionService $admission,
+        protected EventBroadcaster $broadcaster,
     ) {}
 
     /**
      * @param  array<string, mixed>  $payload  trigger payload (webhook body, form fields, etc.)
+     * @param  array<string, mixed>|null  $definition  optional raw definition (bypasses version lookup for dynamic-flow segments)
      *
      * @throws ValidationException if the workflow is not published or not triggerable
      */
@@ -44,9 +46,18 @@ class WorkflowDispatcher
         TriggerType $triggerType,
         array $payload = [],
         ?string $correlationId = null,
+        ?int $parentInstanceId = null,
+        ?int $parentExecutionId = null,
+        ?array $definition = null,
     ): WorkflowInstance {
-        $version = $this->resolveVersion($workflow);
-        $plan = $this->compiler->compileVersion($version);
+        $version = null;
+
+        if ($definition !== null) {
+            $plan = $this->compiler->compile($definition);
+        } else {
+            $version = $this->resolveVersion($workflow);
+            $plan = $this->compiler->compileVersion($version);
+        }
 
         $triggerNodeKey = $plan->triggerNodeKey();
         if ($triggerNodeKey === null) {
@@ -58,13 +69,15 @@ class WorkflowDispatcher
         $admitted = $this->admission->canAdmit((int) $workflow->tenant_id);
 
         return DB::transaction(function () use (
-            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey, $admitted
+            $workflow, $version, $plan, $triggerType, $payload, $correlationId, $triggerNodeKey, $admitted, $parentInstanceId, $parentExecutionId
         ): WorkflowInstance {
             $instanceStatus = $admitted ? WorkflowInstanceStatus::Running : WorkflowInstanceStatus::Pending;
 
             $instance = WorkflowInstance::query()->create([
                 'workflow_id' => $workflow->id,
-                'workflow_version_id' => $version->id,
+                'workflow_version_id' => $version?->id,
+                'parent_instance_id' => $parentInstanceId,
+                'parent_execution_id' => $parentExecutionId,
                 'tenant_id' => $workflow->tenant_id,
                 'status' => $instanceStatus,
                 'trigger_type' => $triggerType,
@@ -83,16 +96,15 @@ class WorkflowDispatcher
             $idempotencyKey = hash('sha256', $instance->id.':'.$triggerNodeKey.':1');
             $category = $this->resolveCategory($triggerNodeType);
 
-            $execution = WorkflowNodeExecution::query()->create([
-                'instance_id' => $instance->id,
-                'tenant_id' => $workflow->tenant_id,
-                'node_key' => $triggerNodeKey,
-                'node_type' => $triggerNodeType,
-                'status' => NodeExecutionStatus::Pending,
-                'attempt' => 1,
-                'idempotency_key' => $idempotencyKey,
-                'input' => $payload,
-            ]);
+            $execution = $this->createExecutionRow(
+                $instance,
+                $idempotencyKey,
+                $triggerNodeKey,
+                $triggerNodeType,
+                1,
+                null,
+                $payload,
+            );
 
             // Only dispatch the first job when admitted; AdmitPendingInstancesCommand handles the rest.
             if ($admitted) {
@@ -100,7 +112,9 @@ class WorkflowDispatcher
                     ->onQueue($this->queueFor($category));
             }
 
-            DB::afterCommit(fn () => Event::dispatch(new InstanceStarted($instance)));
+            DB::afterCommit(function () use ($instance) {
+                $this->broadcaster->broadcast(new InstanceStarted($instance));
+            });
 
             return $instance;
         });
@@ -115,21 +129,5 @@ class WorkflowDispatcher
         }
 
         return WorkflowVersion::query()->findOrFail($workflow->current_version_id);
-    }
-
-    protected function resolveCategory(string $nodeType): NodeCategory
-    {
-        if ($this->registry->has($nodeType)) {
-            return $this->registry->for($nodeType)->category();
-        }
-
-        return NodeCategory::Logic;
-    }
-
-    protected function queueFor(NodeCategory $category): string
-    {
-        return $category === NodeCategory::Action || $category === NodeCategory::Ai
-            ? (string) config('workflows.execution.queues.actions', 'workflow-actions')
-            : (string) config('workflows.execution.queues.control', 'workflow-control');
     }
 }

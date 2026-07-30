@@ -2,10 +2,13 @@
 
 namespace Modules\Workflows\Models;
 
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\Tenant;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
@@ -81,13 +84,41 @@ class Workflow extends Model
         return $this->hasMany(WorkflowVersion::class);
     }
 
-    public function accessGrants(): HasMany
-    {
-        return $this->hasMany(WorkflowAccessGrant::class);
-    }
-
     public function instances(): HasMany
     {
         return $this->hasMany(WorkflowInstance::class);
+    }
+
+    public function scopeVisibleTo(
+        Builder $query,
+        User $actor
+    ): Builder {
+        $query->where(
+            'tenant_id',
+            (int) $actor->tenant_id
+        );
+
+        return match ($actor->role) {
+            Role::BusinessOwner => $query,
+
+            Role::Manager => $query->where(
+                'team_id',
+                $actor->managedTeam->id
+            ),
+
+            Role::Employee => $query->whereHas(
+                'team.memberships',
+                function (Builder $query) use ($actor): void {
+                    $query
+                        ->where('tenant_id', (int) $actor->tenant_id)
+                        ->where('user_id', (int) $actor->id)
+                        ->where('status', 'active');
+                }
+            ),
+
+            default => throw new AuthorizationException(
+                'You are not allowed to view workflows.'
+            ),
+        };
     }
 }

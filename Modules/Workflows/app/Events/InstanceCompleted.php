@@ -24,8 +24,8 @@ class InstanceCompleted implements ShouldBroadcastNow
     {
         return [
             'instance_id' => $this->instance->id,
-            'status'      => 'completed',
-            'context'     => $this->instance->context ?? [],
+            'status' => 'completed',
+            'context' => $this->instance->context ?? [],
             'finished_at' => $this->instance->finished_at?->toISOString(),
         ];
     }

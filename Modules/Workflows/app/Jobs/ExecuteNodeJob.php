@@ -8,10 +8,10 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Workflows\Enums\NodeCategory;
-use Modules\Workflows\Services\Execution\WorkflowRuntime;
+use Modules\Workflows\Services\Execution\NodeRunner;
 
 /**
- * Picks up a single node execution from the queue and delegates to WorkflowRuntime::advance().
+ * Picks up a single node execution from the queue and delegates to NodeRunner::advance().
  *
  * tries = 1 because our retry logic lives inside the runtime (it creates a new execution row
  * and re-dispatches with a delay). Queue-level retries would bypass idempotency keys and
@@ -28,9 +28,14 @@ class ExecuteNodeJob implements ShouldQueue
         public readonly string $nodeCategory,
     ) {}
 
-    public function handle(WorkflowRuntime $runtime): void
+    public function handle(NodeRunner $runner): void
     {
-        $runtime->advance($this->executionId);
+        try {
+            $runner->advance($this->executionId);
+        } catch (\Throwable $e) {
+            $runner->handleAdvanceFailure($this->executionId, $e);
+            throw $e;
+        }
     }
 
     public function timeout(): int

@@ -64,7 +64,7 @@ class TagService extends BaseService
 
         foreach ($tagNamesOrIds as $item) {
             if (is_int($item) || (is_string($item) && ctype_digit($item))) {
-                $tag = \Modules\KnowledgeBase\Models\Tag::where('id', (int) $item)
+                $tag = Tag::where('id', (int) $item)
                     ->where('tenant_id', $tenantId)
                     ->first();
                 if ($tag && ! in_array($tag->id, $ids, true)) {

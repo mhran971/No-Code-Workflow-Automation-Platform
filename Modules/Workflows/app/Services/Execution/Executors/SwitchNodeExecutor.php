@@ -4,8 +4,8 @@ namespace Modules\Workflows\Services\Execution\Executors;
 
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
+use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\NodeExecutionResult;
 
 class SwitchNodeExecutor implements NodeExecutor
 {
@@ -21,16 +21,16 @@ class SwitchNodeExecutor implements NodeExecutor
 
     public function execute(NodeExecutionContext $context): NodeExecutionResult
     {
-        $outgoing    = $context->plan()->outgoing($context->nodeKey());
-        $config      = $context->config();
+        $outgoing = $context->plan()->outgoing($context->nodeKey());
+        $config = $context->config();
         $defaultEdge = null;
 
         // Resolve the switch variable to its current value. Note: evaluate(), not render() —
         // render() only interpolates {{ }} placeholders and returns bare paths like "context.color"
         // unchanged, which would never match a branch and always fall through to default.
-        $varPath  = trim((string) ($config['variable'] ?? ''));
+        $varPath = trim((string) ($config['variable'] ?? ''));
         $rawValue = $varPath !== '' ? $context->evaluate($varPath) : null;
-        $value    = match (true) {
+        $value = match (true) {
             $rawValue === null => null,
             is_bool($rawValue) => $rawValue ? 'true' : 'false',
             is_scalar($rawValue) => (string) $rawValue,

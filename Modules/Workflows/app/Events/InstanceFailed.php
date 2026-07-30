@@ -24,9 +24,9 @@ class InstanceFailed implements ShouldBroadcastNow
     {
         return [
             'instance_id' => $this->instance->id,
-            'status'      => 'failed',
-            'error'       => $this->instance->error,
-            'context'     => $this->instance->context ?? [],
+            'status' => 'failed',
+            'error' => $this->instance->error,
+            'context' => $this->instance->context ?? [],
             'finished_at' => $this->instance->finished_at?->toISOString(),
         ];
     }

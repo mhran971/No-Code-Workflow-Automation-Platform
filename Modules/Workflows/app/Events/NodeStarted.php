@@ -28,14 +28,14 @@ class NodeStarted implements ShouldBroadcastNow
     {
         return [
             'instance_id' => $this->instance->id,
-            'node_key'    => $this->execution->node_key,
-            'node_type'   => $this->execution->node_type,
-            'status'      => $this->execution->status->value,
-            'attempt'     => $this->execution->attempt,
-            'input'       => $this->execution->input ?? [],
-            'output'      => null,
-            'error'       => null,
-            'started_at'  => $this->execution->started_at?->toISOString(),
+            'node_key' => $this->execution->node_key,
+            'node_type' => $this->execution->node_type,
+            'status' => $this->execution->status->value,
+            'attempt' => $this->execution->attempt,
+            'input' => $this->execution->input ?? [],
+            'output' => null,
+            'error' => null,
+            'started_at' => $this->execution->started_at?->toISOString(),
             'finished_at' => null,
         ];
     }

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('workflow_instance_attachments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workflow_instance_id')->constrained('workflow_instances')->cascadeOnDelete();
-            $table->foreignId('uploaded_by')->constrained('users')->nullOnDelete();
+            $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('file_name');
             $table->string('file_path');
             $table->string('mime_type', 191);

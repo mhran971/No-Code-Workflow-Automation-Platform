@@ -17,11 +17,12 @@ class WorkflowTaskDetailResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
-            'status' => $this->status,
+            'status' => $this->displayStatus(),
             'due_at' => $this->due_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
             'input_schema' => $this->input_schema,
+            'response' => $this->response,
             'draft_response' => $this->draft_response,
             'assignee' => $this->whenLoaded('assignee', fn () => [
                 'id' => $this->assignee->id,

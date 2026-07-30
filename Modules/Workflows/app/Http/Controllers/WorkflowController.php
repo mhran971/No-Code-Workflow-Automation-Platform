@@ -6,7 +6,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
-use Modules\Workflows\Http\Requests\AiProposalRequest;
 use Modules\Workflows\Http\Requests\PublishWorkflowRequest;
 use Modules\Workflows\Http\Requests\StoreWorkflowRequest;
 use Modules\Workflows\Http\Requests\UpdateDraftRequest;
@@ -14,14 +13,21 @@ use Modules\Workflows\Http\Requests\UpdateWorkflowStatusRequest;
 use Modules\Workflows\Http\Requests\ValidateWorkflowDefinitionRequest;
 use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
-use Modules\Workflows\Models\WorkflowTemplate;
-use Modules\Workflows\Models\WorkflowVersion;
+use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Modules\Workflows\Services\WorkflowManagementService;
+use Modules\Workflows\Services\WorkflowTemplateService;
+use Modules\Workflows\Services\WorkflowVersioningService;
+use Modules\Workflows\Transformers\WorkflowResource;
+use Modules\Workflows\Transformers\WorkflowTemplateResource;
+use Modules\Workflows\Transformers\WorkflowVersionResource;
 
 class WorkflowController extends Controller
 {
     public function __construct(
-        protected WorkflowManagementService $workflowManagementService
+        protected WorkflowManagementService $workflowManagementService,
+        protected WorkflowVerificationService $verificationService,
+        protected WorkflowVersioningService $versioningService,
+        protected WorkflowTemplateService $templateService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -30,16 +36,16 @@ class WorkflowController extends Controller
         $workflows = $this->workflowManagementService->listVisibleWorkflows($actor, $request->query());
 
         return response()->json([
-            'data' => $workflows->map(fn (Workflow $workflow) => $this->serializeWorkflow($workflow, $actor))->values(),
+            'data' => WorkflowResource::collection($workflows),
         ]);
     }
 
     public function templates(): JsonResponse
     {
-        $templates = $this->workflowManagementService->listTemplates($this->actor());
+        $templates = $this->templateService->listTemplates($this->actor());
 
         return response()->json([
-            'data' => $templates->map(fn (WorkflowTemplate $template) => $this->serializeTemplate($template))->values(),
+            'data' => WorkflowTemplateResource::collection($templates),
         ]);
     }
 
@@ -49,20 +55,13 @@ class WorkflowController extends Controller
 
         return response()->json([
             'message' => 'Workflow created successfully.',
-            'workflow' => $this->serializeWorkflow($workflow, $this->actor()),
+            'workflow' => WorkflowResource::make($workflow),
         ], 201);
-    }
-
-    public function proposal(AiProposalRequest $request): JsonResponse
-    {
-        return response()->json(
-            $this->workflowManagementService->generateAiProposal($this->actor(), $request->validated())
-        );
     }
 
     public function validateDefinition(ValidateWorkflowDefinitionRequest $request): JsonResponse
     {
-        $validation = $this->workflowManagementService->validateDefinition($request->validated()['definition']);
+        $validation = $this->verificationService->verify($request->validated()['definition'])->toArray();
 
         return response()->json(
             (new WorkflowValidationResultResource($validation))->resolve($request)
@@ -74,7 +73,7 @@ class WorkflowController extends Controller
         $workflow = $this->workflowManagementService->getVisibleWorkflow($this->actor(), $workflow);
 
         return response()->json([
-            'data' => $this->serializeWorkflow($workflow, $this->actor(), true),
+            'data' => WorkflowResource::make($workflow, true),
         ]);
     }
 
@@ -93,22 +92,22 @@ class WorkflowController extends Controller
 
     public function publish(PublishWorkflowRequest $request, Workflow $workflow): JsonResponse
     {
-        $version = $this->workflowManagementService->publish($this->actor(), $workflow, $request->validated());
+        $version = $this->versioningService->publish($this->actor(), $workflow, $request->validated());
         $workflow->refresh();
 
         return response()->json([
             'workflow_id' => $workflow->id,
-            'published_version' => $this->serializeVersion($version),
+            'published_version' => WorkflowVersionResource::make($version),
             'workflow_status' => $workflow->status?->value,
         ], 201);
     }
 
     public function versions(Workflow $workflow): JsonResponse
     {
-        $versions = $this->workflowManagementService->listVersions($this->actor(), $workflow);
+        $versions = $this->versioningService->listVersions($this->actor(), $workflow);
 
         return response()->json([
-            'data' => $versions->map(fn (WorkflowVersion $version) => $this->serializeVersion($version))->values(),
+            'data' => WorkflowVersionResource::collection($versions),
         ]);
     }
 
@@ -146,94 +145,11 @@ class WorkflowController extends Controller
         ]);
     }
 
-    public function triggerWebhook(Request $request, Workflow $workflow): JsonResponse
-    {
-        $instance = $this->workflowManagementService->triggerWebhook($this->actor(), $workflow, $request->all());
-
-        return response()->json([
-            'instance_id' => $instance->id,
-            'workflow_id' => $workflow->id,
-            'version_number' => $workflow->current_version_number,
-            'status' => $instance->status?->value,
-        ], 201);
-    }
-
     protected function actor(): User
     {
         /** @var User $actor */
         $actor = auth('api')->user();
 
         return $actor;
-    }
-
-    protected function serializeWorkflow(Workflow $workflow, User $actor, bool $includeDetails = false): array
-    {
-        $payload = [
-            'id' => $workflow->id,
-            'public_token' => $workflow->public_token,
-            'name' => $workflow->name,
-            'description' => $workflow->description,
-            'status' => $workflow->status?->value,
-            'team' => $workflow->team ? [
-                'id' => $workflow->team->id,
-                'name' => $workflow->team->name,
-            ] : null,
-            'version_number' => $workflow->current_version_number,
-            'version_label' => $workflow->current_version_label,
-            'created_by' => $workflow->createdBy ? [
-                'id' => $workflow->createdBy->id,
-                'name' => $workflow->createdBy->name,
-                'email' => $workflow->createdBy->email,
-            ] : null,
-            'created_at' => $workflow->created_at,
-            'updated_at' => $workflow->updated_at,
-            'total_runs' => $workflow->total_runs,
-            'active_instances' => $workflow->active_instances,
-            'actions' => $this->workflowManagementService->availableActions($actor, $workflow),
-        ];
-
-        if ($includeDetails) {
-            $payload['draft_revision'] = $workflow->draft_revision;
-            $payload['draft_definition'] = $workflow->draft_definition;
-            $payload['template'] = $workflow->template ? [
-                'id' => $workflow->template->id,
-                'name' => $workflow->template->name,
-            ] : null;
-            $payload['current_version'] = $workflow->currentVersion
-                ? $this->serializeVersion($workflow->currentVersion)
-                : null;
-        }
-
-        return $payload;
-    }
-
-    protected function serializeTemplate(WorkflowTemplate $template): array
-    {
-        return [
-            'id' => $template->id,
-            'name' => $template->name,
-            'description' => $template->description,
-            'category' => $template->category,
-            'is_global' => $template->tenant_id === null,
-            'usage_count' => $template->usage_count,
-            'created_at' => $template->created_at,
-            'updated_at' => $template->updated_at,
-        ];
-    }
-
-    protected function serializeVersion(WorkflowVersion $version): array
-    {
-        return [
-            'id' => $version->id,
-            'version_number' => $version->version_number,
-            'version_label' => $version->version_label,
-            'release_note' => $version->release_note,
-            'published_at' => $version->published_at,
-            'published_by' => $version->publishedBy ? [
-                'id' => $version->publishedBy->id,
-                'name' => $version->publishedBy->name,
-                'email' => $version->publishedBy->email,
-            ] : null,
-        ];
     }
 }

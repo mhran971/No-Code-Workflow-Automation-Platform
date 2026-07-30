@@ -6,7 +6,7 @@ use Modules\Integrations\Http\Controllers\IntegrationsController;
 Route::prefix('v1/integrations')->name('integrations.')->group(function () {
     Route::middleware(['auth:api', 'role:business_owner'])->group(function () {
         Route::post('/{provider}/connect', [IntegrationsController::class, 'connect'])
-        ->name('connect');
+            ->name('connect');
         Route::delete('/{provider}/disconnect', [IntegrationsController::class, 'disconnect'])
             ->name('disconnect');
         Route::get('/', [IntegrationsController::class, 'index'])

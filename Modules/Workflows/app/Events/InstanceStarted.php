@@ -24,8 +24,8 @@ class InstanceStarted implements ShouldBroadcastNow
     {
         return [
             'instance_id' => $this->instance->id,
-            'status'      => 'running',
-            'started_at'  => $this->instance->created_at?->toISOString(),
+            'status' => 'running',
+            'started_at' => $this->instance->created_at?->toISOString(),
         ];
     }
 }

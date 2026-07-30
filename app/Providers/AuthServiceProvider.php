@@ -21,7 +21,7 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        Gate::before(function ($user, string $ability): bool|null {
+        Gate::before(function ($user, string $ability): ?bool {
             if (($user->role ?? null) === Role::BusinessOwner) {
                 return true;
             }

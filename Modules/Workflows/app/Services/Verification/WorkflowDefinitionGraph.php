@@ -19,6 +19,11 @@ class WorkflowDefinitionGraph
      */
     protected array $incoming = [];
 
+    /** @var array<string, bool> */
+    protected array $parallelPathsCache = [];
+
+    protected bool $parallelPathsComputed = false;
+
     public function __construct(protected array $definition)
     {
         foreach ($this->nodes() as $node) {
@@ -250,6 +255,108 @@ class WorkflowDefinitionGraph
         }
 
         return array_reverse($postorder);
+    }
+
+    /**
+     * Whether the given node can be reached via multiple independent execution paths.
+     *
+     * Uses a single forward topological pass to precompute results for all nodes.
+     * A node has parallel paths when two or more of its predecessors share a common
+     * ancestor — meaning distinct branches reconverge at or before this node.
+     */
+    public function hasParallelPaths(string $nodeId): bool
+    {
+        if (! $this->parallelPathsComputed) {
+            $this->computeParallelPathsSet();
+        }
+
+        return $this->parallelPathsCache[$nodeId] ?? false;
+    }
+
+    /**
+     * Single forward pass through topological order to determine which nodes
+     * have parallel (reconvergent) paths. O(V²) total.
+     *
+     * For each node, tracks the set of ancestors that can reach it. When a node
+     * has multiple predecessors, checks whether any pair shares a common ancestor.
+     * If so, distinct branches reconverge — the node has parallel paths.
+     *
+     * @return array<string, bool>
+     */
+    protected function computeParallelPathsSet(): array
+    {
+        $ancestors = [];
+        $parallel = [];
+        $order = $this->topologicalOrder();
+
+        foreach ($order as $nodeId) {
+            $predecessors = [];
+
+            foreach ($this->incoming($nodeId) as $edge) {
+                $source = $edge['source_node_key'] ?? null;
+
+                if (is_string($source) && isset($this->nodesById[$source])) {
+                    $predecessors[] = $source;
+                }
+            }
+
+            if ($predecessors === []) {
+                $ancestors[$nodeId] = [];
+                $parallel[$nodeId] = false;
+
+                continue;
+            }
+
+            if (count($predecessors) === 1) {
+                $pred = $predecessors[0];
+                $ancestors[$nodeId] = array_merge($ancestors[$pred] ?? [], [$pred]);
+                $parallel[$nodeId] = $parallel[$pred] ?? false;
+
+                continue;
+            }
+
+            // Multiple predecessors: merge ancestor sets and check for overlap.
+            $merged = [];
+            $hasOverlap = false;
+
+            for ($i = 0; $i < count($predecessors); $i++) {
+                $predA = $predecessors[$i];
+                $setA = $ancestors[$predA] ?? [];
+
+                foreach ($setA as $a) {
+                    $merged[$a] = true;
+                }
+                $merged[$predA] = true;
+
+                for ($j = $i + 1; $j < count($predecessors); $j++) {
+                    $predB = $predecessors[$j];
+                    $setB = $ancestors[$predB] ?? [];
+
+                    if (array_intersect($setA, $setB) !== []) {
+                        $hasOverlap = true;
+                    }
+                }
+            }
+
+            if (! $hasOverlap) {
+                // Check if any predecessor already has parallel paths.
+                foreach ($predecessors as $pred) {
+                    if ($parallel[$pred] ?? false) {
+                        $hasOverlap = true;
+
+                        break;
+                    }
+                }
+            }
+
+            $ancestors[$nodeId] = array_keys($merged);
+            $parallel[$nodeId] = $hasOverlap;
+        }
+
+        $this->parallelPathsCache = $parallel;
+        $this->parallelPathsComputed = true;
+
+        return $parallel;
     }
 
     /**

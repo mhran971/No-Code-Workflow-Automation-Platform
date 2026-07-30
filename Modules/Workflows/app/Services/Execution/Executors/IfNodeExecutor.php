@@ -4,9 +4,9 @@ namespace Modules\Workflows\Services\Execution\Executors;
 
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
+use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
+use Modules\Workflows\Services\Execution\Data\PlanEdge;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\NodeExecutionResult;
-use Modules\Workflows\Services\Execution\PlanEdge;
 
 class IfNodeExecutor implements NodeExecutor
 {
@@ -23,7 +23,7 @@ class IfNodeExecutor implements NodeExecutor
     public function execute(NodeExecutionContext $context): NodeExecutionResult
     {
         $outgoing = $context->plan()->outgoing($context->nodeKey());
-        $config   = $context->config();
+        $config = $context->config();
 
         $nodeCondition = trim((string) ($config['conditionExpression'] ?? ''));
 
@@ -35,7 +35,7 @@ class IfNodeExecutor implements NodeExecutor
 
         // Partition outgoing edges into yes-branch and no-branch pools.
         $yesBranch = null;
-        $noBranch  = null;
+        $noBranch = null;
 
         foreach ($outgoing as $edge) {
             if ($this->isTrueBranch($edge)) {

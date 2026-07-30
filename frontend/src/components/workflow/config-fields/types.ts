@@ -1,5 +1,5 @@
 import type { ConfigField } from '@/config/types';
-import type { KnowledgeBaseDocument, TenantUser } from '@/lib/api/types';
+import type { KnowledgeBaseDocument, TenantUser, WorkflowSummary } from '@/lib/api/types';
 import type { NestedFieldErrors } from '@/hooks/useFieldValidationErrors';
 
 // Shared shapes for the config field renderers.
@@ -25,6 +25,10 @@ export interface FieldRendererProps {
   onChange: (v: unknown) => void;
   users?: TenantUser[];
   kbDocuments?: KnowledgeBaseDocument[];
+  workflows?: WorkflowSummary[];
+  allValues?: Record<string, unknown>;
+  apiBaseUrl?: string;
+  accessToken?: string;
   // Per-row errors for repeating list renderers (inputfieldlist), so each
   // nested error can render under its related input.
   nestedErrors?: NestedFieldErrors;

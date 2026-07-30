@@ -65,4 +65,22 @@ class WorkflowTask extends Model
     {
         return $this->belongsTo(User::class, 'completed_by_id');
     }
+
+    /**
+     * An open task whose due date has passed. Cancelled and completed tasks are never expired —
+     * their status is final and takes precedence.
+     */
+    public function isExpired(): bool
+    {
+        return $this->status === 'open' && $this->due_at !== null && $this->due_at->isPast();
+    }
+
+    /**
+     * The status as it should be shown to callers: overdue open tasks display as `expired`
+     * without the underlying `open` status (and the parked execution) actually changing.
+     */
+    public function displayStatus(): string
+    {
+        return $this->isExpired() ? 'expired' : $this->status;
+    }
 }

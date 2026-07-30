@@ -6,8 +6,8 @@ use Modules\Integrations\Models\IntegrationConnection;
 use Modules\Integrations\Services\Gmail\GmailClient;
 use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
+use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\NodeExecutionResult;
 
 class SendEmailExecutor implements NodeExecutor
 {
@@ -27,11 +27,11 @@ class SendEmailExecutor implements NodeExecutor
     {
         $config = $context->config();
 
-        $to      = $context->render((string) ($config['to'] ?? ''));
+        $to = $context->render((string) ($config['to'] ?? ''));
         $subject = $context->render((string) ($config['subject'] ?? ''));
-        $body    = $context->render((string) ($config['body'] ?? ''));
-        $cc      = isset($config['cc'])  && $config['cc']  !== '' ? $context->render((string) $config['cc'])  : null;
-        $bcc     = isset($config['bcc']) && $config['bcc'] !== '' ? $context->render((string) $config['bcc']) : null;
+        $body = $context->render((string) ($config['body'] ?? ''));
+        $cc = isset($config['cc']) && $config['cc'] !== '' ? $context->render((string) $config['cc']) : null;
+        $bcc = isset($config['bcc']) && $config['bcc'] !== '' ? $context->render((string) $config['bcc']) : null;
 
         // Deterministic Message-ID derived from the execution's idempotency key so that
         // re-delivery of the same job (at-least-once queue) does not produce a duplicate send
@@ -55,10 +55,10 @@ class SendEmailExecutor implements NodeExecutor
         return NodeExecutionResult::proceed(
             $context->plan()->outgoing($context->nodeKey()),
             [
-                'sent_to'   => $to,
+                'sent_to' => $to,
                 'message_id' => $messageId,
-                'gmail_id'   => $result['id'] ?? null,
-                'thread_id'  => $result['threadId'] ?? null,
+                'gmail_id' => $result['id'] ?? null,
+                'thread_id' => $result['threadId'] ?? null,
             ],
         );
     }

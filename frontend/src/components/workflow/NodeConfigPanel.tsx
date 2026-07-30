@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { X, AlertCircle } from 'lucide-react';
-import type { ApiConfigField, KnowledgeBaseDocument, TenantUser, ValidationIssue } from '@/lib/api/types';
+import type { ApiConfigField, KnowledgeBaseDocument, TenantUser, ValidationIssue, WorkflowSummary } from '@/lib/api/types';
 import { useNodeConfigSchema, buildInitialValues } from '@/hooks/useNodeConfigSchema';
 import { useFieldValidationErrors } from '@/hooks/useFieldValidationErrors';
 import { iconMap, colorBg, DefaultIcon } from './config-icons';
@@ -26,6 +26,9 @@ interface NodeConfigPanelProps {
   validationIssues?: ValidationIssue[];
   tenantUsers?: TenantUser[];
   kbDocuments?: KnowledgeBaseDocument[];
+  workflows?: WorkflowSummary[];
+  apiBaseUrl?: string;
+  accessToken?: string;
 }
 
 export function NodeConfigPanel({
@@ -37,6 +40,9 @@ export function NodeConfigPanel({
   validationIssues,
   tenantUsers = [],
   kbDocuments = [],
+  workflows = [],
+  apiBaseUrl,
+  accessToken,
 }: NodeConfigPanelProps) {
   const schema = useNodeConfigSchema(node.nodeType, apiConfigFields);
 
@@ -141,6 +147,9 @@ export function NodeConfigPanel({
                 onValueChange={updateValue}
                 users={tenantUsers}
                 kbDocuments={kbDocuments}
+                workflows={workflows}
+                apiBaseUrl={apiBaseUrl}
+                accessToken={accessToken}
               />
             ))}
           </div>

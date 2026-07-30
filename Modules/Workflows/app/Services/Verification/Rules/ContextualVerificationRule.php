@@ -5,18 +5,25 @@ namespace Modules\Workflows\Services\Verification\Rules;
 use Modules\Auth\Models\User;
 use Modules\KnowledgeBase\Models\Document;
 use Modules\Team\Models\TeamMembership;
+use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 class ContextualVerificationRule implements VerificationRule
 {
+    public function skipForSegment(): bool
+    {
+        return true;
+    }
+
     public function verify(
         array $definition,
         WorkflowDefinitionGraph $graph,
         WorkflowVerificationResult $result,
         ?Workflow $workflow = null,
         ?User $actor = null,
+        VerificationMode $mode = VerificationMode::Full,
     ): void {
         if ($workflow === null) {
             return;

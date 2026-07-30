@@ -3,11 +3,12 @@
 namespace Modules\Workflows\Services\Verification\Rules;
 
 use Modules\Auth\Models\User;
+use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Services\Verification\Data\DataFlowResult;
+use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\DataFlowAnalyzer;
-use Modules\Workflows\Services\Verification\DataFlowResult;
 use Modules\Workflows\Services\Verification\WorkflowDefinitionGraph;
-use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
 
 /**
  * Catches data hazards at validation time using {@see DataFlowAnalyzer}:
@@ -20,6 +21,8 @@ use Modules\Workflows\Services\Verification\WorkflowVerificationResult;
  */
 class DataFlowVerificationRule implements VerificationRule
 {
+    use Concerns\SegmentSkipDisabled;
+
     private const WRITE_FIELDS = ['outputVariables', 'outputVariable'];
 
     public function verify(
@@ -28,6 +31,7 @@ class DataFlowVerificationRule implements VerificationRule
         WorkflowVerificationResult $result,
         ?Workflow $workflow = null,
         ?User $actor = null,
+        VerificationMode $mode = VerificationMode::Full,
     ): void {
         if ($graph->nodes() === []) {
             return;

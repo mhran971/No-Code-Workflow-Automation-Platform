@@ -3,10 +3,11 @@
 namespace Tests\Unit\Execution;
 
 use Mockery;
+use Modules\Workflows\app\Enums\ResultKind;
+use Modules\Workflows\Services\Execution\Data\PlanEdge;
+use Modules\Workflows\Services\Execution\ExecutionPlan;
 use Modules\Workflows\Services\Execution\Executors\IfNodeExecutor;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\PlanEdge;
-use Modules\Workflows\Services\Execution\ResultKind;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ class IfNodeExecutorTest extends TestCase
     public function it_routes_to_yes_branch_when_condition_is_true(): void
     {
         $yesBranch = $this->edge(branchType: 'true');
-        $noBranch  = $this->edge(branchType: 'else');
+        $noBranch = $this->edge(branchType: 'else');
         $ctx = $this->mockContext(
             'if-1',
             [$yesBranch, $noBranch],
@@ -42,7 +43,7 @@ class IfNodeExecutorTest extends TestCase
     public function it_routes_to_no_branch_when_condition_is_false(): void
     {
         $yesBranch = $this->edge(branchType: 'true');
-        $noBranch  = $this->edge(branchType: 'else');
+        $noBranch = $this->edge(branchType: 'else');
         $ctx = $this->mockContext(
             'if-1',
             [$yesBranch, $noBranch],
@@ -72,7 +73,7 @@ class IfNodeExecutorTest extends TestCase
     public function it_uses_node_config_condition_to_take_true_branch(): void
     {
         // Mirrors the real-world if-node setup: condition on node config, branch_type "default" for else
-        $trueBranch    = $this->edge(branchType: 'branch_1');
+        $trueBranch = $this->edge(branchType: 'branch_1');
         $defaultBranch = $this->edge(branchType: 'default');
 
         $ctx = $this->mockContext(
@@ -91,7 +92,7 @@ class IfNodeExecutorTest extends TestCase
     #[Test]
     public function it_falls_to_default_branch_when_node_config_condition_is_false(): void
     {
-        $trueBranch    = $this->edge(branchType: 'branch_1');
+        $trueBranch = $this->edge(branchType: 'branch_1');
         $defaultBranch = $this->edge(branchType: 'default');
 
         $ctx = $this->mockContext(
@@ -133,7 +134,7 @@ class IfNodeExecutorTest extends TestCase
         bool $evaluateBoolean,
         array $nodeConfig = [],
     ): NodeExecutionContext {
-        $plan = Mockery::mock(\Modules\Workflows\Services\Execution\ExecutionPlan::class);
+        $plan = Mockery::mock(ExecutionPlan::class);
         $plan->allows('outgoing')->with($nodeKey)->andReturn($outgoing);
 
         $ctx = Mockery::mock(NodeExecutionContext::class);

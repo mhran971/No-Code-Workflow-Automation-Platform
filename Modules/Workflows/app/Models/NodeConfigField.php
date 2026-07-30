@@ -4,6 +4,7 @@ namespace Modules\Workflows\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Workflows\Enums\NodeConfigFieldType;
 
 class NodeConfigField extends Model
 {
@@ -26,7 +27,7 @@ class NodeConfigField extends Model
             'is_required' => 'boolean',
             'default_value' => 'json',
             'sort_order' => 'integer',
-            'type' => \Modules\Workflows\Enums\NodeConfigFieldType::class,
+            'type' => NodeConfigFieldType::class,
         ];
     }
 

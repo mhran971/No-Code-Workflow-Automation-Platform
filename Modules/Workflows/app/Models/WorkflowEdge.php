@@ -4,7 +4,6 @@ namespace Modules\Workflows\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Modules\Workflows\Enums\EdgeBranchType;
 
 // use Modules\Workflows\Database\Factories\WorkflowEdgeFactory;
 

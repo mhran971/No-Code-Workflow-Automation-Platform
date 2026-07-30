@@ -47,6 +47,9 @@ interface WorkflowCanvasProps {
   nodeStatuses?: Map<string, ExecutionStatus>;
   onNodesEdgesChange?: (nodes: Node[], edges: Edge[]) => void;
   nodeDefinitions?: ApiNodeDefinition[];
+  readOnly?: boolean;
+  highlightNodeId?: string;
+  onWaitingDynamicFlowClick?: (nodeId: string) => void;
 }
 
 function restoreSourceHandle(branchType: string | undefined, sourceNodeType?: string): string | undefined {
@@ -87,7 +90,7 @@ export interface WorkflowCanvasHandle {
 }
 
 export const WorkflowCanvas = forwardRef<WorkflowCanvasHandle, WorkflowCanvasProps>(function WorkflowCanvas(
-  { onNodeSelect, nodeStatuses, onNodesEdgesChange, nodeDefinitions = [] },
+  { onNodeSelect, nodeStatuses, onNodesEdgesChange, nodeDefinitions = [], readOnly = false, highlightNodeId, onWaitingDynamicFlowClick },
   ref,
 ) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -183,18 +186,28 @@ export const WorkflowCanvas = forwardRef<WorkflowCanvasHandle, WorkflowCanvasPro
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      if (readOnly) return;
       setEdges(eds => addEdge({
         ...connection,
         animated: true,
         style: { stroke: 'hsl(217 91% 60%)' },
       }, eds));
     },
-    [setEdges]
+    [setEdges, readOnly]
   );
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       const d = node.data as Record<string, unknown>;
+      const nodeType = d.nodeType as string;
+      const execStatus = d.executionStatus as string | undefined;
+
+      // If it's a dynamic-flow node in waiting state, fire the dedicated callback
+      if (nodeType === 'dynamic-flow' && execStatus === 'waiting' && onWaitingDynamicFlowClick) {
+        onWaitingDynamicFlowClick(node.id);
+        return;
+      }
+
       onNodeSelect?.({
         id: node.id,
         label: d.label as string,
@@ -206,7 +219,7 @@ export const WorkflowCanvas = forwardRef<WorkflowCanvasHandle, WorkflowCanvasPro
         name: d.name as string | undefined,
       });
     },
-    [onNodeSelect]
+    [onNodeSelect, onWaitingDynamicFlowClick]
   );
 
   const onPaneClick = useCallback(() => {
@@ -215,22 +228,33 @@ export const WorkflowCanvas = forwardRef<WorkflowCanvasHandle, WorkflowCanvasPro
 
   const { onDragOver, onDrop } = useCanvasDragDrop({ reactFlowInstance, nodeDefinitions, setNodes });
 
+  // Apply highlight styling to nodes
+  const styledNodes = nodes.map(n => ({
+    ...n,
+    className: n.id === highlightNodeId
+      ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      : undefined,
+  }));
+
   return (
     <div ref={reactFlowWrapper} className="flex-1 h-full workflow-canvas">
       <ReactFlow
-        nodes={nodes}
+        nodes={styledNodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onInit={setReactFlowInstance}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
+        onDrop={readOnly ? undefined : onDrop}
+        onDragOver={readOnly ? undefined : onDragOver}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         onNodesDelete={onNodesDelete}
         nodeTypes={nodeTypes}
-        deleteKeyCode={['Backspace', 'Delete']}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
+        elementsSelectable={!readOnly}
+        deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
         fitViewOptions={{ padding: 0.3 }}

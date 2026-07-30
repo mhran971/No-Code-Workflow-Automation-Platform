@@ -6,8 +6,8 @@ use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Enums\WaitType;
 use Modules\Workflows\Models\WorkflowTask;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
+use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
-use Modules\Workflows\Services\Execution\NodeExecutionResult;
 
 /**
  * Creates a human-task row and parks the execution until the assignee submits a response
@@ -49,6 +49,7 @@ class TaskNodeExecutor implements NodeExecutor
         // SLA-breach path: timer fired but task still open — expire and proceed.
         if ($task !== null && $context->execution()->wait_until !== null && now()->gte($context->execution()->wait_until)) {
             $task->update(['status' => 'expired']);
+            // TODO: send a notification here
 
             return NodeExecutionResult::proceed(
                 $context->plan()->outgoing($context->nodeKey()),

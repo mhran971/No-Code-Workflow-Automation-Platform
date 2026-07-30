@@ -5,30 +5,58 @@ namespace Modules\Workflows\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Modules\Auth\Models\User;
 use Modules\Workflows\Enums\NodeExecutionStatus;
+use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowNodeExecution;
-use Modules\Workflows\Services\Execution\WorkflowRuntime;
+use Modules\Workflows\Services\Execution\NodeRunner;
+use Modules\Workflows\Services\WorkflowManagementService;
+use Modules\Workflows\Transformers\WorkflowResource;
 
 /**
  * Operator view of running instances: list, inspect, cancel, and retry-from-node.
  */
 class WorkflowInstanceController extends Controller
 {
-    public function __construct(protected WorkflowRuntime $runtime) {}
+    public function __construct(
+        protected NodeRunner $runner,
+        protected WorkflowManagementService $workflowManagementService,
+    ) {}
 
     /**
      * List instances for a given workflow (most recent first).
      */
-    public function index(Request $request, Workflow $workflow): JsonResponse
+    public function index(ListWorkflowInstancesRequest $request, Workflow $workflow): JsonResponse
     {
-        $instances = WorkflowInstance::query()
+        $validated = $request->validated();
+        $workflow = $this->workflowManagementService->getVisibleWorkflow(auth('api')->user(), $workflow);
+
+        $query = WorkflowInstance::query()
             ->where('workflow_id', $workflow->id)
-            ->where('tenant_id', $this->actor()->tenant_id)
-            ->latest()
-            ->paginate(20);
+            ->where('tenant_id', auth('api')->user()->tenant_id);
+
+        if (array_key_exists('status', $validated)) {
+            $query->where('status', $validated['status']);
+        }
+
+        if (array_key_exists('started_from', $validated)) {
+            $query->whereDate('started_at', '>=', $validated['started_from']);
+        }
+
+        if (array_key_exists('started_to', $validated)) {
+            $query->whereDate('started_at', '<=', $validated['started_to']);
+        }
+
+        if (array_key_exists('finished_from', $validated)) {
+            $query->whereDate('finished_at', '>=', $validated['finished_from']);
+        }
+
+        if (array_key_exists('finished_to', $validated)) {
+            $query->whereDate('finished_at', '<=', $validated['finished_to']);
+        }
+
+        $instances = $query->latest()->paginate(20);
 
         return response()->json($instances);
     }
@@ -40,9 +68,47 @@ class WorkflowInstanceController extends Controller
     {
         $this->authorizeInstance($instance);
 
-        $instance->load('nodeExecutions');
+        $instance->load([
+            'nodeExecutions',
+            'workflow.team:id,name',
+            'workflow.createdBy:id,first_name,last_name,name,email',
+            'dynamicFlows.childInstance.nodeExecutions',
+        ]);
 
-        return response()->json($instance);
+        $payload = $instance->toArray();
+        $payload['workflow'] = WorkflowResource::make($instance->workflow)->toArray(request());
+
+        if ($instance->dynamicFlows->isNotEmpty()) {
+            $payload['dynamic_flows'] = $instance->dynamicFlows->map(function ($df) {
+                $child = $df->childInstance;
+
+                return [
+                    'id' => $df->id,
+                    'node_key' => $df->node_key,
+                    'status' => $df->status->value,
+                    'child_instance_id' => $df->child_instance_id,
+                    'child_instance' => $child ? [
+                        'id' => $child->id,
+                        'status' => $child->status->value,
+                        'error' => $child->error,
+                        'node_executions' => $child->nodeExecutions->map(fn ($ne) => [
+                            'id' => $ne->id,
+                            'node_key' => $ne->node_key,
+                            'node_type' => $ne->node_type,
+                            'status' => $ne->status->value,
+                            'attempt' => $ne->attempt,
+                            'input' => $ne->input,
+                            'output' => $ne->output,
+                            'error' => $ne->error,
+                            'started_at' => $ne->started_at?->toISOString(),
+                            'finished_at' => $ne->finished_at?->toISOString(),
+                        ])->values(),
+                    ] : null,
+                ];
+            })->values();
+        }
+
+        return response()->json($payload);
     }
 
     /**
@@ -77,7 +143,7 @@ class WorkflowInstanceController extends Controller
             return response()->json(['error' => 'Instance is already in a terminal state.'], 422);
         }
 
-        $this->runtime->cancel($instance);
+        $this->runner->cancel($instance);
 
         return response()->json(['message' => 'Instance cancelled.'], 200);
     }
@@ -95,20 +161,15 @@ class WorkflowInstanceController extends Controller
         }
 
         $instance->load('workflowVersion');
-        $this->runtime->retryFromNode($instance, $nodeKey);
+        $this->runner->retryFromNode($instance, $nodeKey);
 
         return response()->json(['message' => 'Retry dispatched.'], 202);
     }
 
     protected function authorizeInstance(WorkflowInstance $instance): void
     {
-        if ((int) $instance->tenant_id !== (int) $this->actor()->tenant_id) {
+        if ((int) $instance->tenant_id !== (int) auth('api')->user()->tenant_id) {
             abort(403);
         }
-    }
-
-    protected function actor(): User
-    {
-        return auth('api')->user();
     }
 }
