@@ -3,5 +3,20 @@
     "allow": [
       "Bash(./vendor/bin/pint Modules/Workflows/app/Services/Execution Modules/Workflows/app/Models/WorkflowNodeExecution.php Modules/Workflows/app/Models/WorkflowTask.php Modules/Workflows/app/Models/WorkflowEvent.php Modules/Workflows/app/Models/WorkflowInstance.php Modules/Workflows/app/Enums Modules/Workflows/config/config.php tests/Unit/Execution)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json,re,sys\nd=json.load(sys.stdin)\nf=(d.get('tool_input') or {}).get('file_path') or (d.get('tool_response') or {}).get('filePath') or ''\nm=re.search(r'Modules/([^/]+)/(app|routes|database|config)/', f)\nif m:\n    mod=m.group(1)\n    msg='This edit touched Modules/'+mod+'/. If it changed a model, service, API route, enum, or a documented business rule, update Modules/'+mod+'/docs/README.md in this same turn (see the Module Documentation section in CLAUDE.md).'\n    print(json.dumps({'hookSpecificOutput':{'hookEventName':'PostToolUse','additionalContext':msg}}))\n\" 2>/dev/null || true",
+            "timeout": 10,
+            "statusMessage": "Checking module docs..."
+          }
+        ]
+      }
+    ]
   }
 }

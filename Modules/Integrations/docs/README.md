@@ -1,0 +1,78 @@
+# Integrations Module
+
+Stores tenant-scoped OAuth connections to third-party providers (ClickUp, HubSpot, Google) and exposes the Gmail-sending capability that backs the Workflows `send-email` node. Provider support beyond the OAuth handshake itself is largely unimplemented today — see Gotchas.
+
+## Data Model
+
+Both models in `app/Models/`.
+
+| Model | Key fields/relationships | Migration file |
+|---|---|---|
+| `IntegrationProvider` | Non-incrementing **string** PK `id` (e.g. `clickup`, `hubspot`, `google`). Fillable: `id, name, description, auth_type, config_schema, auth_schema, is_active`. `config_schema`/`auth_schema` cast to array — descriptive JSON-schema-like metadata, not actually enforced anywhere in code. `connections()` hasMany `IntegrationConnection`. `connectionStatus(?Tenant $tenant)` → `'connected'` \| `'not_connected'` (queries `connections()->where('tenant_id', ...)->exists()`). | `2026_04_28_145841_create_integration_providers_table.php`; `description` column added later by `2026_05_09_175726_add_description_to_integration_providers_table.php` |
+| `IntegrationConnection` | Auto-increment PK. Fillable: `integration_provider_id, tenant_id, auth_config, config` (both JSON-cast arrays). `provider()` belongsTo `IntegrationProvider`; `tenant()` belongsTo `Modules\Auth\Models\Tenant`. Unique constraint on `(integration_provider_id, tenant_id)` — one connection per provider per tenant. `auth_config` holds `Crypt::encryptString()`-encrypted tokens (`access_token`, `refresh_token`, `expires_at`); `config` holds non-secret provider data (ClickUp `teams`, HubSpot `portal_id`). | `2026_04_28_150155_create_integration_connections_table.php` |
+
+Neither model has a factory (`newFactory()` is commented out in both) — `database/factories/` is empty (`.gitkeep` only).
+
+`IntegrationProvider` rows are **not** seeded automatically: the root `database/seeders/DatabaseSeeder.php` is empty boilerplate and never calls `IntegrationsDatabaseSeeder`. Run `php artisan module:seed Integrations` (or seed explicitly) or the `integration_providers` table stays empty and every endpoint 404s / returns `[]`.
+
+## Services & Repositories
+
+`app/Repositories/` is empty (`.gitkeep` only) and **no class extends `App\Services\BaseService`** — this module does not follow the Service→Repository `__call()` delegation convention used elsewhere in the app. Everything is a plain class with logic written directly in the service/driver.
+
+Two contracts define the extension points: `IntegrationDriver` (`app/Contracts/IntegrationDriver.php`: `key()`, `connect()`, `callback()`, `hydrateConnection()`) and `IntegrationAction` (`app/Contracts/IntegrationAction.php`: `key()`, `handle(array $payload, ?IntegrationConnection $connection)`).
+
+| Class | File | Purpose |
+|---|---|---|
+| `IntegrationManager` | `app/Services/IntegrationManager.php` | Orchestrator with an empty constructor (no DI, no `BaseService`). `connect()` resolves the configured driver and returns its authorization URL. `callback()` decrypts/decodes the `state` param, exchanges the code via the driver, and persists the connection. `runAction()` resolves an `IntegrationAction` by `integrations.actions.{key}.driver` config — **zero call sites elsewhere in the codebase today** (dead path; see Gotchas). |
+| `AbstractOAuthDriver` (abstract) | `app/Services/Drivers/AbstractOAuthDriver.php` | Shared OAuth scaffolding for all three drivers: builds the encrypted `state` payload (`provider`, `tenant_id`, `nonce`), assembles the authorization URL, and a `postForm()` helper (`Http::asForm()->post()->throw()`) that maps any HTTP failure to `IntegrationException::tokenExchangeFailed()`. |
+| `ClickUpDriver` | `app/Services/Drivers/ClickUpDriver.php` | `callback()` exchanges the code, then immediately calls ClickUp's `team_url` and stores the returned teams in `config.teams`. No extra `authorizationParameters()`. |
+| `GoogleDriver` | `app/Services/Drivers/GoogleDriver.php` | Requests `access_type=offline&prompt=consent` (forces a `refresh_token` on every consent). Stores encrypted access/refresh tokens + ISO-8601 `expires_at`. |
+| `HubSpotDriver` | `app/Services/Drivers/HubSpotDriver.php` | Same token/refresh/expiry shape as Google; also stores the token response's `hub_id` as `config.portal_id`. |
+| `GmailClient` | `app/Services/Gmail/GmailClient.php` | **Not** an `IntegrationDriver`/`IntegrationAction`. Standalone helper injected directly by `Modules\Workflows`' `SendEmailExecutor`. `send()` builds a raw RFC 2822 MIME message and POSTs its base64url-encoded form to the Gmail API `messages/send` endpoint. `freshAccessToken()` proactively refreshes 5 minutes before `expires_at` and writes the new token straight back onto the `IntegrationConnection` row. |
+| `SendEmailAction` | `app/Services/Actions/SendEmailAction.php` | Implements `IntegrationAction`. Sends via Laravel's own mailer (`Mail::raw(...)`) — **not** Gmail. Wired as `integrations.actions.send-email.driver` and reachable only through `IntegrationManager::runAction()`, which nothing currently calls. Do not confuse this with the Workflows `send-email` **node**, which is a completely separate code path (see Cross-Module Dependencies). |
+
+## API Routes
+
+All under `Route::prefix('v1/integrations')->name('integrations.')` in `routes/api.php`, mounted with the `api` middleware group + `name('api.')` prefix by `RouteServiceProvider::mapApiRoutes()` (so the callback route's full name is `api.integrations.callback`, used internally by the drivers for `redirect_uri`). Full request/response walkthrough (with caveats, see below) is in [`docs/api.md`](api.md) — do not duplicate it here.
+
+| Method | Path | Middleware | Description |
+|---|---|---|---|
+| GET | `/api/v1/integrations` | `auth:api`, `role:business_owner` | `IntegrationsController::index` — active providers (`is_active=true`) + this tenant's `connected`/`not_connected` status, via `IntegrationProviderResource` |
+| POST | `/api/v1/integrations/{provider}/connect` | `auth:api`, `role:business_owner` | Returns JSON `{"auth_url": "..."}` (200) |
+| DELETE | `/api/v1/integrations/{provider}/disconnect` | `auth:api`, `role:business_owner` | Deletes the tenant's connection row inside a `DB::transaction()` closure (`IntegrationsController.php:62-64`) — this module does use the closure form, not manual `beginTransaction()/commit()` |
+| GET | `/api/v1/integrations/{provider}/callback` | none (public) | OAuth redirect target. Derives provider + tenant from the encrypted `state` query param, not from the `{provider}` route segment (which the controller method doesn't even accept as an argument) |
+
+**Note:** unlike the app-wide convention (CLAUDE.md: `auth:api` + `active.user`), none of these routes apply `active.user`. A deactivated user with a still-valid JWT can list/connect/disconnect integrations. `role:business_owner` (`App\Http\Middleware\EnsureUserHasRole`, aliased in `bootstrap/app.php:20`) is an **exact-match** role gate — it does not also admit `manager`, unlike the "Manager or BusinessOwner" pattern documented for Workflows' `POST /proposals/ai`.
+
+**`docs/api.md` accuracy — verified by reading `IntegrationsController.php` and running `tests/Feature/IntegrationsApiTest.php`:**
+- ✅ Route shapes, provider keys (`clickup`/`hubspot`/`google`), disconnect response body, and the `GET /` response example all match current code exactly.
+- ❌ **Stale:** the "Start OAuth connection" section claims `/connect` "responds with an HTTP redirect... do not expect a JSON response body." The controller (`app/Http/Controllers/IntegrationsController.php:29`) actually returns `response()->json(['auth_url' => $authUrl], 200)`. The doc's own suggested frontend snippet (`window.location.href = '/api/v1/integrations/google/connect'`) would additionally 405 regardless, since `/connect` is POST-only.
+- ⚠️ Silent on the `role:business_owner` gate — "Auth rules" only says these endpoints "require `auth:api`," omitting the role restriction entirely.
+
+## Enums
+
+None. `app/Enums/` does not exist in this module. `auth_type` (`oauth2`), connection status (`connected`/`not_connected`), and provider ids (`clickup`/`hubspot`/`google`) are all plain strings, not backed enums.
+
+## Key Business Rules & Gotchas
+
+- **Hardcoded OAuth fallback secrets in versioned config.** `config/config.php:15-16` (ClickUp), `:24-25` (HubSpot), `:33-34` (Google) pass real-looking literal values as the default second argument to `env(...)` for every `client_id`/`client_secret`. These match the local `.env` exactly and were committed deliberately (git history: `d13eeaf "Update integration configuration with default client IDs and secrets"`). Any deployment that forgets to set the corresponding env vars silently falls back to these committed sandbox credentials rather than failing loudly.
+- **The existing test suite is currently red.** Running `php artisan test tests/Feature/IntegrationsApiTest.php` (reproduced after `route:clear`+`config:clear`, so not a stale-cache artifact) gives **3 failing / 1 passing**: the connect-redirect assertion fails because the controller returns JSON not a redirect (see API Routes); both callback tests 404 because they call a provider-less `/api/v1/integrations/callback` while the real route is `/{provider}/callback`; and the connect test loops `[BusinessOwner, Manager]` expecting both to succeed, but `role:business_owner` 403s Manager (independently confirmed by an isolated request). Treat this test file as aspirational/stale, not as a spec.
+- **Callback redirect target is hardcoded, not environment-derived.** `IntegrationsController::callback()` line 44 does `redirect('http://localhost:5173/dashboard/integrations')` unconditionally. The commented-out alternative return (`view('integrations::callback-success', ...)`) and this module's own `resources/views/{callback-success,index}.blade.php` / `routes/web.php` are dead scaffolding from the `nwidart/laravel-modules` generator — the real frontend is the separate SPA referenced in the repo-level CLAUDE.md, not these Blade views.
+- **Scope-vs-implementation gap.** Google's OAuth scope list (`config/config.php:35`) requests `gmail.readonly gmail.send documents spreadsheets drive.file`, but only Gmail *send* has an implemented API caller (`GmailClient`) — Docs/Sheets/Drive scopes are requested at consent time with no corresponding code anywhere in the repo. Likewise, ClickUp's connect flow fetches and stores `teams`, and HubSpot requests `crm.objects.contacts.*` scopes, but **no code path calls the ClickUp or HubSpot REST APIs** using the stored token beyond the OAuth handshake itself — connecting these providers currently does nothing beyond persisting a token.
+- **Two unrelated "send email" paths exist; only one is live.** `SendEmailAction`/`IntegrationManager::runAction()` (Laravel mailer) has no callers. The Workflows `send-email` node bypasses this module's action system entirely and goes straight to `GmailClient` (see Cross-Module Dependencies) — don't assume `integrations.actions.send-email` config controls workflow email sending.
+- Tokens are encrypted with `Crypt::encryptString()` (app-key symmetric encryption, reversible by design — they're bearer tokens that must be replayed), not hashed.
+- `EventServiceProvider` (`app/Providers/EventServiceProvider.php`) has an empty `$listen` array — this module dispatches/handles no domain events today.
+
+## Cross-Module Dependencies
+
+- **Workflows → Integrations (the only live integration point):** `Modules/Workflows/app/Services/Execution/Executors/SendEmailExecutor.php` constructor-injects `GmailClient` and separately queries `IntegrationConnection::where('integration_provider_id', 'google')->where('tenant_id', $context->instance()->tenant_id)` directly — it does **not** go through `IntegrationManager`. If no Google connection exists for the tenant, the node fails non-retryably with a "Connect Google via Integrations" message. This is what actually backs the `send-email` workflow node described in the repo-level CLAUDE.md.
+- **`ai-generator` node does NOT depend on Integrations**, despite the superficial similarity — confirmed by grep: `Modules/Workflows/app/Services/Execution/Executors/AiGeneratorExecutor.php` depends only on Workflows' own `AiContentGenerator` contract. Its knowledge-base documents come from the `KnowledgeBase` module, not this one.
+- No other module (`Auth`, `Team`, `Users`) references any Integrations class.
+- Integrations depends on `Modules\Auth\Models\Tenant` (both models' `tenant()` relation) and the app-level `role`/`auth:api` middleware. It has no dependency on Workflows or any other module in the other direction.
+- **Don't conflate with Notifications' Google usage:** `Modules/Notifications/app/Notifications/Channels/FcmChannel.php` performs its own, entirely separate Google OAuth (service-account JWT grant for Firebase Cloud Messaging) — unrelated to this module's `GoogleDriver`/user-consent OAuth flow.
+
+## Testing
+
+- `Modules/Integrations/tests/Feature/` and `tests/Unit/` are **empty** (`.gitkeep` only). `composer.json` maps `Modules\Integrations\Tests\` → `tests/` for autoloading, but the repo-root `phpunit.xml` only registers repo-root `tests/Unit` and `tests/Feature` as suites — files placed under the module's own `tests/` would not run under `composer test` without a `phpunit.xml` change.
+- Actual coverage lives at the **repo root**: `tests/Feature/IntegrationsApiTest.php` (namespace `Tests\Feature`, using the app's own `Tests\TestCase`, not a module-local test case). As documented above, 3 of its 4 tests currently fail against the present source.
+- No mocks beyond `Http::fake()` for ClickUp's token/team endpoints in that one test file. No dedicated factories; tests build `Tenant`/`User` rows directly via `::query()->create()` and seed providers via `$this->seed(IntegrationsDatabaseSeeder::class)`.
