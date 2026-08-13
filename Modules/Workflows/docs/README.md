@@ -14,7 +14,7 @@ All models in `app/Models/`. Migrations in `database/migrations/` (23 files, one
 | `WorkflowVersion` | `workflow`, `tenant`, `publishedBy` | **Immutable** once published — holds the `definition` JSON (nodes+edges) that `ExecutionPlanCompiler` compiles from. This is the only thing the runtime reads; never the live `WorkflowNode`/`WorkflowEdge` rows. |
 | `WorkflowNode` / `WorkflowEdge` | belong to `workflow` + `version` | The **canvas** graph — what the frontend edits and what verification runs against pre-publish. Not read by the execution engine. |
 | `WorkflowTemplate` | `tenant`, `createdBy` | Prebuilt definitions surfaced via `GET /templates` (seeded by `WorkflowTemplateSeeder`). |
-| `WorkflowInstance` | `workflow`, `workflowVersion`, `tenant`, `parent`/`parentExecution` (self-referential for sub-workflow/dynamic-flow children), `nodeExecutions` (hasMany), `tasks` (hasMany), `events` (hasMany), `dynamicFlow`/`dynamicFlows`, `childInstances` | One per trigger firing. `status` is `WorkflowInstanceStatus` (pending/running/waiting/paused/completed/failed/cancelled). |
+| `WorkflowInstance` | `workflow`, `workflowVersion`, `tenant`, `parent`/`parentExecution` (self-referential for sub-workflow/dynamic-flow children), `nodeExecutions` (hasMany), `tasks` (hasMany), `events` (hasMany), `dynamicFlow`/`dynamicFlows`, `childInstances`, `customer` (belongsTo `Modules\Customers\Models\Customer`, nullable) | One per trigger firing. `status` is `WorkflowInstanceStatus` (pending/running/waiting/paused/completed/failed/cancelled). `customer_id` is set by the opt-in "customer context" trigger feature — see [`Modules/Customers/docs/README.md`](../../Customers/docs/README.md). |
 | `WorkflowNodeExecution` | `instance`, `tenant`, `parent`/`children` (self-referential join tracking), `task` (hasOne) | The **runtime token** — one row per node visit. `status` is `NodeExecutionStatus` (pending/running/succeeded/failed/waiting/skipped/consumed). This table, not `WorkflowNode`, is what the engine advances. |
 | `WorkflowTask` | `instance`, `execution`, `tenant`, `assignee`, `completedBy` | Human-in-the-loop step created by `task-node`; has an SLA (`dueWithin`) enforced by `ExpireOverdueInstancesCommand`. |
 | `WorkflowDynamicFlow` | `tenant`, `instance`, `execution`, `createdBy`, `childInstance` | Backs the `dynamic-flow` pause/design/resume cycle. `status` is `DynamicFlowStatus` (awaiting_design/executing/completed/cancelled). |
@@ -29,7 +29,7 @@ All models in `app/Models/`. Migrations in `database/migrations/` (23 files, one
 | Service | File | Purpose |
 |---|---|---|
 | `WorkflowManagementService` | `WorkflowManagementService.php` | List/create/update-draft/update-status/soft-delete/purge. Plain class, no `BaseService`. |
-| `WorkflowVersioningService` | `WorkflowVersioningService.php` | Publish (runs verification first) + version history. Extends `BaseService`; uses `DB::transaction()` closures internally (deviates from the controller-owns-transactions convention other modules follow — see repo-level CLAUDE.md). |
+| `WorkflowVersioningService` | `WorkflowVersioningService.php` | Publish (runs verification first) + version history. Extends `BaseService`; uses `DB::transaction()` closures internally (deviates from the controller-owns-transactions convention other modules follow — see repo-level CLAUDE.md). `assertNotDeleted()` is defined on this class as well as `WorkflowManagementService` (identical duplicated body, not inherited/shared) — previously it was only on `WorkflowManagementService`, so every `publish()` call threw `BadMethodCallException` via `BaseService::__call()`; fixed. |
 | `WorkflowTriggeringService` | `WorkflowTriggeringService.php` | `triggerWebhook` / `triggerManual` → delegates to `WorkflowDispatcher` to create an instance. |
 | `WorkflowAuthorizationService` | `WorkflowAuthorizationService.php` | Extends `BaseService`. `canView`/`canManage`/`assertBusinessOwner`/`assertSameTenant` — tenant + role gating for workflow access. |
 | `WorkflowTemplateService` | `WorkflowTemplateService.php` | Extends `BaseService`. Lists/resolves `WorkflowTemplate`s. |
@@ -62,7 +62,9 @@ Scheduled console commands (`app/Console/Commands/`, registered in `WorkflowsSer
 
 ## Verification Pipeline
 
-8 rules run in order inside `WorkflowVerificationService::verify()` (`app/Services/Verification/WorkflowVerificationService.php`): `SyntaxVerificationRule` → `GraphControlFlowVerificationRule` → `StructuredControlFlowVerificationRule` → `ExpressionVerificationRule` → `ContextualVerificationRule` → `NodeTypeVerificationRule` → `DataFlowVerificationRule` → `FormTriggerVerificationRule`.
+9 rules run in order inside `WorkflowVerificationService::verify()` (`app/Services/Verification/WorkflowVerificationService.php`): `SyntaxVerificationRule` → `GraphControlFlowVerificationRule` → `StructuredControlFlowVerificationRule` → `ExpressionVerificationRule` → `ContextualVerificationRule` → `NodeTypeVerificationRule` → `DataFlowVerificationRule` → `FormTriggerVerificationRule` → `CustomerContextVerificationRule`.
+
+`CustomerContextVerificationRule` validates the opt-in "customer context" mapping on `manual-trigger`/`form-trigger` nodes (mapped field selected, matches a declared trigger field, is `required: true` for form-trigger, and the tenant has a linking field configured) — see [`Modules/Customers/docs/README.md`](../../Customers/docs/README.md).
 
 `NodeTypeVerificationRule` fans out to per-node-type `Rules/NodeType/*` (registered via DI tagging in `WorkflowsServiceProvider`, keyed by each rule's `nodeType()` — there's no `addNodeTypeRule()` method). Each top-level rule implements `skipForSegment(): bool`, honored when verifying a `dynamic-flow` segment (`VerificationMode::Segment` — a mid-execution sub-flow with no trigger/saved workflow context).
 
@@ -74,8 +76,8 @@ Seeded by `NodeDefinitionSeeder` (`database/seeders/NodeDefinitionSeeder.php`) i
 
 | Category | Key | Label | Description |
 |---|---|---|---|
-| Trigger | `manual-trigger` | Manual | Manual start with test variables |
-| Trigger | `form-trigger` | Form Trigger | Public or tenant-gated form submission |
+| Trigger | `manual-trigger` | Manual | Manual start with test variables. Optional `customerContextEnabled`/`customerContextField` — see [`Modules/Customers/docs/README.md`](../../Customers/docs/README.md). |
+| Trigger | `form-trigger` | Form Trigger | Public or tenant-gated form submission. Same optional customer-context fields as `manual-trigger`. |
 | Trigger | `dynamic-entry` | Entry Point | Sub-flow entry point, receives parent context |
 | Logic | `if-node` | If | Conditional branching |
 | Logic | `and-node` | Fork | Splits into parallel branches |
@@ -94,7 +96,6 @@ Prefix `/api/v1/workflows`, behind `auth:api` + `active.user`, defined in `route
 
 - `POST /broadcasting/auth` exists because Laravel's default `Broadcast::routes()` only supports the `web` guard; this project's users are JWT (`api` guard), so this module defines its own auth endpoint for Reverb private channels.
 - Public form endpoints (`GET/POST /api/v1/public/forms/{publicToken}[/submit]`) live **outside** the `/workflows` prefix and outside `auth:api` entirely — gated instead at the `PublicFormService` layer to workflows that are published + active + `trigger.config.accessLevel === 'public'`, and throttled (`30,1`) since they're open to the internet.
-- **Likely bug**: the dynamic-flow design routes (`/instances/{instance}/dynamic-flow`, `.../dynamic-flow/definition`, `routes/api.php` lines 45-46) reference `DynamicFlowController::class`, but that class has no `use` import in this file (the other 8 controllers used in this file do). Route files have no `namespace` declaration, so `DynamicFlowController::class` resolves to the bare global-namespace string `"DynamicFlowController"` instead of `Modules\Workflows\Http\Controllers\DynamicFlowController` — hitting either route should currently throw "Target class [DynamicFlowController] does not exist" rather than reaching the controller. Add `use Modules\Workflows\Http\Controllers\DynamicFlowController;` to fix.
 - Mobile-specific task file/comment endpoints live under `/tasks/{task}/files` and `/tasks/{task}/comments` — see `docs/mobile-api.md` at the repo root for the mobile client's full contract.
 
 ## Cross-Module Dependencies
@@ -104,6 +105,7 @@ Prefix `/api/v1/workflows`, behind `auth:api` + `active.user`, defined in `route
 - **KnowledgeBase**: `ai-generator` node's `knowledgeBaseDocuments` field is consumed by `AiGeneratorExecutor` — see `Modules/KnowledgeBase/docs/README.md`.
 - **Integrations**: `send-email` node sends through Integrations' connected Gmail workspace — see `Modules/Integrations/docs/README.md`.
 - **Notifications**: `DynamicFlowDesignRequested` (`app/Notifications/`) and task-assignment notifications route through the Notifications module — see `Modules/Notifications/docs/README.md`.
+- **Customers**: `manual-trigger`/`form-trigger` executors resolve/create a `Customer` via `Modules\Customers\Services\CustomerResolutionService` when the trigger's optional customer-context mapping is enabled; linked customers become readable as `{{customer.x}}` in downstream templates. `CustomerContextVerificationRule` queries `Modules\Customers\Models\CustomerSettings` at verification time. See `Modules/Customers/docs/README.md` — that module also reaches back into `Workflow`/`WorkflowVersion` in one place (blocking a tenant's linking-field change while a published workflow depends on it).
 
 ## Key Business Rules & Gotchas
 

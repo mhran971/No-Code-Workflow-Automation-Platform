@@ -125,7 +125,7 @@ class WorkflowExecutionEngine
             $context->setContextValue((string) $execution->node_key, $result->output);
         }
 
-        if ($instance->isDirty('context')) {
+        if ($instance->isDirty(['context', 'customer_id'])) {
             $instance->save();
         }
 

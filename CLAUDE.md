@@ -36,7 +36,7 @@ cd frontend && npm run test     # Vitest
 | Frontend | React 19 + TypeScript + Vite (`frontend/`) |
 | API docs | OpenAPI via `dedoc/scramble`, served at `/docs/api` |
 
-**Modules:** `Auth`, `Integrations`, `KnowledgeBase`, `Notifications`, `Team`, `Workflows` (see `modules_statuses.json`)
+**Modules:** `Auth`, `Customers`, `Integrations`, `KnowledgeBase`, `Notifications`, `Team`, `Workflows` (see `modules_statuses.json`)
 
 ### Module Documentation
 
@@ -45,6 +45,7 @@ Each module has a `docs/README.md` with its data model, services, routes, and go
 | Module | Docs |
 |---|---|
 | Auth | [`Modules/Auth/docs/README.md`](Modules/Auth/docs/README.md) |
+| Customers | [`Modules/Customers/docs/README.md`](Modules/Customers/docs/README.md) |
 | Integrations | [`Modules/Integrations/docs/README.md`](Modules/Integrations/docs/README.md) (see also `docs/api.md` in the same folder) |
 | KnowledgeBase | [`Modules/KnowledgeBase/docs/README.md`](Modules/KnowledgeBase/docs/README.md) |
 | Notifications | [`Modules/Notifications/docs/README.md`](Modules/Notifications/docs/README.md) |

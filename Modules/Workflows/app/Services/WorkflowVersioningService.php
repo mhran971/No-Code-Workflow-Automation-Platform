@@ -126,6 +126,15 @@ class WorkflowVersioningService extends BaseService
             ->get();
     }
 
+    protected function assertNotDeleted(Workflow $workflow): void
+    {
+        if ($workflow->status === WorkflowStatus::Deleted) {
+            throw ValidationException::withMessages([
+                'workflow' => 'Deleted workflows cannot be modified.',
+            ]);
+        }
+    }
+
     protected function structuralDefinition(array $definition): array
     {
         return [

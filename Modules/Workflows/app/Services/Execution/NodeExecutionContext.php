@@ -83,6 +83,7 @@ class NodeExecutionContext
             'context' => $this->instance->context ?? [],
             'trigger' => $this->instance->payload ?? [],
             'input' => $this->execution->input ?? [],
+            'customer' => $this->instance->customer?->toTemplateArray() ?? [],
         ];
     }
 
@@ -117,5 +118,14 @@ class NodeExecutionContext
     public function mergeContext(array $values): void
     {
         $this->instance->context = array_replace_recursive($this->instance->context ?? [], $values);
+    }
+
+    /**
+     * Buffer linking the instance to a resolved Customer (persisted by the runtime on commit,
+     * same as context mutations — see WorkflowExecutionEngine::onSucceed()'s isDirty() check).
+     */
+    public function setCustomerId(int $customerId): void
+    {
+        $this->instance->customer_id = $customerId;
     }
 }

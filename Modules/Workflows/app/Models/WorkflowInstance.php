@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Auth\Models\Tenant;
+use Modules\Customers\Models\Customer;
 use Modules\Workflows\Enums\TriggerType;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
 
@@ -16,6 +17,7 @@ class WorkflowInstance extends Model
         'workflow_version_id',
         'parent_instance_id',
         'parent_execution_id',
+        'customer_id',
         'is_dynamic',
         'dynamic_flow_id',
         'tenant_id',
@@ -72,6 +74,12 @@ class WorkflowInstance extends Model
     public function parentExecution(): BelongsTo
     {
         return $this->belongsTo(WorkflowNodeExecution::class, 'parent_execution_id');
+    }
+
+    /** Linked via the "customer context" trigger feature — see Modules\Customers docs. */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function nodeExecutions(): HasMany

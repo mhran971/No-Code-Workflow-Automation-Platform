@@ -7,6 +7,7 @@ use Modules\Workflows\Enums\VerificationMode;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Services\Verification\Data\WorkflowVerificationResult;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
+use Modules\Workflows\Services\Verification\Rules\CustomerContextVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\DataFlowVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\FormTriggerVerificationRule;
@@ -27,6 +28,7 @@ class WorkflowVerificationService
         protected NodeTypeVerificationRule $nodeTypeRule,
         protected DataFlowVerificationRule $dataFlowRule,
         protected FormTriggerVerificationRule $formTriggerRule,
+        protected CustomerContextVerificationRule $customerContextRule,
     ) {}
 
     public function verify(array $definition, ?Workflow $workflow = null, ?User $actor = null, VerificationMode $mode = VerificationMode::Full): WorkflowVerificationResult
@@ -57,6 +59,7 @@ class WorkflowVerificationService
             $this->nodeTypeRule,
             $this->dataFlowRule,
             $this->formTriggerRule,
+            $this->customerContextRule,
         ];
     }
 }

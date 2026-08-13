@@ -4,5 +4,6 @@
     "Team": true,
     "Integrations": true,
     "Workflows": true,
-    "Notifications": true
+    "Notifications": true,
+    "Customers": true
 }

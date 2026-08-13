@@ -2,13 +2,22 @@
 
 namespace Modules\Workflows\Services\Execution\Executors;
 
+use Modules\Customers\Services\CustomerResolutionService;
 use Modules\Workflows\Enums\NodeCategory;
+use Modules\Workflows\Services\Execution\Concerns\ResolvesCustomerContext;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
 use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
 
 class FormTriggerExecutor implements NodeExecutor
 {
+    use ResolvesCustomerContext;
+
+    public function __construct(CustomerResolutionService $customerResolver)
+    {
+        $this->customerResolver = $customerResolver;
+    }
+
     public function type(): string
     {
         return 'form-trigger';
@@ -26,6 +35,7 @@ class FormTriggerExecutor implements NodeExecutor
         // Seed the instance context with the form submission so downstream nodes
         // can reference fields with {{context.fieldName}}.
         $context->mergeContext($formData);
+        $this->applyCustomerContext($context);
 
         return NodeExecutionResult::proceed(
             $context->plan()->outgoing($context->nodeKey()),

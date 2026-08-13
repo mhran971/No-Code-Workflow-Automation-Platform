@@ -22,6 +22,12 @@ class NodeDefinitionSeeder extends Seeder
                 'icon' => 'MousePointerClick',
                 'configFields' => [
                     ['key' => 'variables', 'label' => 'Test Variables', 'type' => 'json', 'placeholder' => '{"key": "value"}'],
+                    ['key' => 'customerContextEnabled', 'label' => 'Link to Customer', 'type' => 'toggle', 'defaultValue' => false],
+                    [
+                        'key' => 'customerContextField', 'label' => 'Customer Linking Variable', 'type' => 'field_reference',
+                        'placeholder' => 'Select which test variable supplies the tenant\'s linking field',
+                        'options' => ['sourceField' => 'variables'],
+                    ],
                 ],
             ],
             [
@@ -45,6 +51,12 @@ class NodeDefinitionSeeder extends Seeder
                             ['label' => 'Public', 'value' => 'public'],
                             ['label' => 'Tenant Users Only', 'value' => 'tenant'],
                         ],
+                    ],
+                    ['key' => 'customerContextEnabled', 'label' => 'Link to Customer', 'type' => 'toggle', 'defaultValue' => false],
+                    [
+                        'key' => 'customerContextField', 'label' => 'Customer Linking Field', 'type' => 'field_reference',
+                        'placeholder' => 'Select which form field supplies the tenant\'s linking field',
+                        'options' => ['sourceField' => 'formFields'],
                     ],
                 ],
             ],

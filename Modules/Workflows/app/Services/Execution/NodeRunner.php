@@ -54,7 +54,7 @@ class NodeRunner
         }
 
         $instance = WorkflowInstance::query()
-            ->with('workflowVersion')
+            ->with(['workflowVersion', 'customer'])
             ->findOrFail($execution->instance_id);
 
         $plan = $this->resolvePlan($instance);

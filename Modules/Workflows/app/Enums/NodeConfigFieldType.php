@@ -14,4 +14,5 @@ enum NodeConfigFieldType: string
     case EMAIL = 'email';
     case BRANCHES = 'branches';
     case READONLY = 'readonly';
+    case FIELD_REFERENCE = 'field_reference';
 }
