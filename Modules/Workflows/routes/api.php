@@ -67,6 +67,9 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::patch('/{workflow}/draft', [WorkflowController::class, 'updateDraft'])->name('workflows.draft.update');
     Route::post('/{workflow}/publish', [WorkflowController::class, 'publish'])->name('workflows.publish');
     Route::get('/{workflow}/versions', [WorkflowController::class, 'versions'])->name('workflows.versions.index');
+    Route::get('/{workflow}/versions/compare', [WorkflowController::class, 'compareVersions'])->name('workflows.versions.compare');
+    Route::get('/{workflow}/versions/{version}', [WorkflowController::class, 'showVersion'])->name('workflows.versions.show');
+    Route::post('/{workflow}/versions/{version}/rollback', [WorkflowController::class, 'rollback'])->name('workflows.versions.rollback');
     Route::patch('/{workflow}/status', [WorkflowController::class, 'updateStatus'])->name('workflows.status.update');
     Route::delete('/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
     Route::delete('/{workflow}/purge', [WorkflowController::class, 'purge'])->name('workflows.purge');
