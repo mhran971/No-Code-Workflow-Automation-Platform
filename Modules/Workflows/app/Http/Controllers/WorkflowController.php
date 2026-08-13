@@ -7,12 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
 use Modules\Workflows\Http\Requests\PublishWorkflowRequest;
+use Modules\Workflows\Http\Requests\RollbackWorkflowRequest;
 use Modules\Workflows\Http\Requests\StoreWorkflowRequest;
 use Modules\Workflows\Http\Requests\UpdateDraftRequest;
 use Modules\Workflows\Http\Requests\UpdateWorkflowStatusRequest;
 use Modules\Workflows\Http\Requests\ValidateWorkflowDefinitionRequest;
 use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
+use Modules\Workflows\Models\WorkflowVersion;
 use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\WorkflowTemplateService;
@@ -109,6 +111,39 @@ class WorkflowController extends Controller
         return response()->json([
             'data' => WorkflowVersionResource::collection($versions),
         ]);
+    }
+
+    public function showVersion(Workflow $workflow, WorkflowVersion $version): JsonResponse
+    {
+        $version = $this->versioningService->showVersion($this->actor(), $workflow, $version);
+
+        return response()->json([
+            'data' => new WorkflowVersionResource($version, true),
+        ]);
+    }
+
+    public function compareVersions(Request $request, Workflow $workflow): JsonResponse
+    {
+        $fromVersion = WorkflowVersion::findOrFail($request->query('from_version_id'));
+        $toVersion = WorkflowVersion::findOrFail($request->query('to_version_id'));
+
+        $diff = $this->versioningService->compareVersions($this->actor(), $workflow, $fromVersion, $toVersion);
+
+        return response()->json([
+            'data' => $diff,
+        ]);
+    }
+
+    public function rollback(RollbackWorkflowRequest $request, Workflow $workflow, WorkflowVersion $version): JsonResponse
+    {
+        $newVersion = $this->versioningService->rollback($this->actor(), $workflow, $version, $request->validated());
+        $workflow->refresh();
+
+        return response()->json([
+            'workflow_id' => $workflow->id,
+            'rolled_back_version' => new WorkflowVersionResource($newVersion),
+            'workflow_status' => $workflow->status?->value,
+        ], 201);
     }
 
     public function updateStatus(UpdateWorkflowStatusRequest $request, Workflow $workflow): JsonResponse
