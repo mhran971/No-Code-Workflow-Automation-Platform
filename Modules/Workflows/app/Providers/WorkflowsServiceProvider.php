@@ -123,6 +123,7 @@ class WorkflowsServiceProvider extends ServiceProvider
         $this->app->singleton(InstanceLifecycleManager::class);
 
         $this->app->singleton(MergeCoordinator::class);
+        $this->app->singleton(\Modules\Workflows\Services\EscalationService::class);
 
         $this->app->tag([
             IfNodeTypeRule::class,
