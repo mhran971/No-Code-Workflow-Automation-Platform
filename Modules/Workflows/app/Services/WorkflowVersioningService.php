@@ -126,6 +126,132 @@ class WorkflowVersioningService extends BaseService
             ->get();
     }
 
+    public function showVersion(User $actor, Workflow $workflow, WorkflowVersion $version): WorkflowVersion
+    {
+        $this->authorizationService->assertCanView($actor, $workflow);
+        $this->assertVersionBelongsToWorkflow($version, $workflow);
+
+        return $version->load(['publishedBy:id,first_name,last_name,name,email', 'workflow:id,current_version_id']);
+    }
+
+    public function compareVersions(
+        User $actor,
+        Workflow $workflow,
+        WorkflowVersion $from,
+        WorkflowVersion $to
+    ): array {
+        $this->authorizationService->assertCanView($actor, $workflow);
+        $this->assertVersionBelongsToWorkflow($from, $workflow);
+        $this->assertVersionBelongsToWorkflow($to, $workflow);
+
+        $fromDefinition = is_array($from->definition) ? $from->definition : [];
+        $toDefinition = is_array($to->definition) ? $to->definition : [];
+
+        $fromNodes = collect(is_array($fromDefinition['nodes'] ?? null) ? $fromDefinition['nodes'] : [])->keyBy('id');
+        $toNodes = collect(is_array($toDefinition['nodes'] ?? null) ? $toDefinition['nodes'] : [])->keyBy('id');
+
+        $fromEdges = collect(is_array($fromDefinition['edges'] ?? null) ? $fromDefinition['edges'] : [])->keyBy('id');
+        $toEdges = collect(is_array($toDefinition['edges'] ?? null) ? $toDefinition['edges'] : [])->keyBy('id');
+
+        return [
+            'from_version' => [
+                'id' => $from->id,
+                'version_number' => $from->version_number,
+                'version_label' => $from->version_label,
+            ],
+            'to_version' => [
+                'id' => $to->id,
+                'version_number' => $to->version_number,
+                'version_label' => $to->version_label,
+            ],
+            'nodes_added' => $toNodes->diffKeys($fromNodes)->keys()->values()->all(),
+            'nodes_removed' => $fromNodes->diffKeys($toNodes)->keys()->values()->all(),
+            'nodes_modified' => $toNodes->intersectByKeys($fromNodes)
+                ->filter(fn (mixed $node, string $id) => $this->fingerprint($node) !== $this->fingerprint($fromNodes[$id]))
+                ->keys()
+                ->values()
+                ->all(),
+            'edges_added' => $toEdges->diffKeys($fromEdges)->keys()->values()->all(),
+            'edges_removed' => $fromEdges->diffKeys($toEdges)->keys()->values()->all(),
+            'edges_modified' => $toEdges->intersectByKeys($fromEdges)
+                ->filter(fn (mixed $edge, string $id) => $this->fingerprint($edge) !== $this->fingerprint($fromEdges[$id]))
+                ->keys()
+                ->values()
+                ->all(),
+            'trigger_changed' => $this->fingerprint($fromDefinition['trigger'] ?? null)
+                !== $this->fingerprint($toDefinition['trigger'] ?? null),
+            'settings_changed' => $this->fingerprint($fromDefinition['settings'] ?? null)
+                !== $this->fingerprint($toDefinition['settings'] ?? null),
+        ];
+    }
+
+    public function rollback(User $actor, Workflow $workflow, WorkflowVersion $version, array $data = []): WorkflowVersion
+    {
+        $this->authorizationService->assertCanManage($actor, $workflow);
+        $this->assertNotDeleted($workflow);
+        $this->assertVersionBelongsToWorkflow($version, $workflow);
+
+        if ((int) $workflow->current_version_id === (int) $version->id) {
+            throw ValidationException::withMessages([
+                'version' => 'This version is already the current active version.',
+            ]);
+        }
+
+        $definition = is_array($version->definition) ? $version->definition : [];
+
+        $validation = $this->verificationService->verify($definition, $workflow, $actor)->toArray();
+
+        if (! $validation['is_publishable']) {
+            throw ValidationException::withMessages([
+                'definition' => $validation['errors'],
+            ]);
+        }
+
+        return DB::transaction(function () use ($actor, $workflow, $version, $definition, $data): WorkflowVersion {
+            $nextVersionNumber = ((int) $workflow->versions()->max('version_number')) + 1;
+            $versionLabel = $this->nextVersionLabel($workflow->current_version_label, 'structural');
+
+            if ($workflow->versions()->where('version_label', $versionLabel)->exists()) {
+                throw ValidationException::withMessages([
+                    'version_label' => 'Version label already exists for this workflow.',
+                ]);
+            }
+
+            $releaseNote = $data['release_note']
+                ?? sprintf('Rollback to %s', $version->version_label ?? "v#{$version->version_number}");
+
+            $newVersion = WorkflowVersion::query()->create([
+                'workflow_id' => (int) $workflow->id,
+                'tenant_id' => (int) $workflow->tenant_id,
+                'version_number' => $nextVersionNumber,
+                'version_label' => $versionLabel,
+                'definition' => $definition,
+                'release_note' => $releaseNote,
+                'published_by_id' => (int) $actor->id,
+                'published_at' => now(),
+                'rollback_source_version_id' => (int) $version->id,
+            ]);
+
+            $workflow->forceFill([
+                'current_version_id' => (int) $newVersion->id,
+                'current_version_number' => $nextVersionNumber,
+                'current_version_label' => $versionLabel,
+                'status' => WorkflowStatus::Active,
+            ])->save();
+
+            return $newVersion->load('publishedBy:id,first_name,last_name,name,email');
+        });
+    }
+
+    protected function assertVersionBelongsToWorkflow(WorkflowVersion $version, Workflow $workflow): void
+    {
+        if ((int) $version->workflow_id !== (int) $workflow->id) {
+            throw ValidationException::withMessages([
+                'version' => 'The specified version does not belong to this workflow.',
+            ]);
+        }
+    }
+
     protected function assertNotDeleted(Workflow $workflow): void
     {
         if ($workflow->status === WorkflowStatus::Deleted) {
