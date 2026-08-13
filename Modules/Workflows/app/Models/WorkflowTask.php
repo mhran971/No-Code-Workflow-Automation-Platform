@@ -28,6 +28,7 @@ class WorkflowTask extends Model
         'draft_response',
         'completed_by_id',
         'completed_at',
+        'escalated_at',
     ];
 
     protected function casts(): array
@@ -38,6 +39,7 @@ class WorkflowTask extends Model
             'draft_response' => 'array',
             'due_at' => 'datetime',
             'completed_at' => 'datetime',
+            'escalated_at' => 'datetime',
         ];
     }
 
