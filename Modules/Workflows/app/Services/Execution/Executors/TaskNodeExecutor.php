@@ -9,15 +9,22 @@ use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
 use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
 
+use Modules\Workflows\Services\EscalationService;
+
 /**
  * Creates a human-task row and parks the execution until the assignee submits a response
  * (via WorkflowTaskController) or the SLA timer fires.
  *
  * On resume (user submits or SLA expires), the executor is invoked again. It finds the
- * task row and proceeds if completed/expired, or re-parks if still open and within policy.
+ * task row and proceeds if completed/expired/escalated, or re-parks if still open and within policy.
  */
 class TaskNodeExecutor implements NodeExecutor
 {
+    public function __construct(protected ?EscalationService $escalationService = null)
+    {
+        $this->escalationService ??= app(EscalationService::class);
+    }
+
     public function type(): string
     {
         return 'task-node';
@@ -35,7 +42,7 @@ class TaskNodeExecutor implements NodeExecutor
 
         $task = WorkflowTask::query()->where('execution_id', $executionId)->first();
 
-        // Resume path: task was completed or expired since we last parked.
+        // Resume path: task was completed or escalated/expired since we last parked.
         if ($task !== null && $task->status !== 'open') {
             $response = $task->response ?? [];
             $context->mergeContext(['task_response' => $response]);
@@ -46,14 +53,13 @@ class TaskNodeExecutor implements NodeExecutor
             );
         }
 
-        // SLA-breach path: timer fired but task still open — expire and proceed.
+        // SLA-breach path: timer fired but task still open — auto-escalate and proceed.
         if ($task !== null && $context->execution()->wait_until !== null && now()->gte($context->execution()->wait_until)) {
-            $task->update(['status' => 'expired']);
-            // TODO: send a notification here
+            $this->escalationService->escalate($task);
 
             return NodeExecutionResult::proceed(
                 $context->plan()->outgoing($context->nodeKey()),
-                ['task_response' => null, 'task_status' => 'expired'],
+                ['task_response' => null, 'task_status' => $task->fresh()->status],
             );
         }
 
