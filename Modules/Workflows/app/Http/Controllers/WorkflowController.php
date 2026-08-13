@@ -118,7 +118,7 @@ class WorkflowController extends Controller
         $version = $this->versioningService->showVersion($this->actor(), $workflow, $version);
 
         return response()->json([
-            'data' => new WorkflowVersionResource($version, true),
+            'data' => WorkflowVersionResource::withDefinition($version),
         ]);
     }
 

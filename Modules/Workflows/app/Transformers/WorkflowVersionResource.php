@@ -8,12 +8,17 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class WorkflowVersionResource extends JsonResource
 {
     /** @var bool */
-    protected $includeDefinition;
+    protected $includeDefinition = false;
 
-    public function __construct($resource, bool $includeDefinition = false)
+    /**
+     * Create a resource instance that includes the definition field.
+     */
+    public static function withDefinition($resource): static
     {
-        parent::__construct($resource);
-        $this->includeDefinition = $includeDefinition;
+        $instance = new static($resource);
+        $instance->includeDefinition = true;
+
+        return $instance;
     }
 
     /**
@@ -26,7 +31,7 @@ class WorkflowVersionResource extends JsonResource
             'version_number' => $this->version_number,
             'version_label' => $this->version_label,
             'release_note' => $this->release_note,
-            'is_current' => $this->workflow
+            'is_current' => $this->relationLoaded('workflow') && $this->workflow
                 ? (int) $this->id === (int) $this->workflow->current_version_id
                 : null,
             'rollback_source_version_id' => $this->rollback_source_version_id,
