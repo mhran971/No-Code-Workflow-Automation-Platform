@@ -21,6 +21,7 @@ use Modules\Workflows\Services\Execution\Executors\FormTriggerExecutor;
 use Modules\Workflows\Services\Execution\Executors\IfNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\ManualTriggerExecutor;
 use Modules\Workflows\Services\Execution\Executors\MergeNodeExecutor;
+use Modules\Workflows\Services\Execution\Executors\ParseJsonExecutor;
 use Modules\Workflows\Services\Execution\Executors\SendEmailExecutor;
 use Modules\Workflows\Services\Execution\Executors\SubWorkflowExecutor;
 use Modules\Workflows\Services\Execution\Executors\SwitchNodeExecutor;
@@ -45,6 +46,7 @@ use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeR
 use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\MergeNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\ParseJsonNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SendEmailNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SubWorkflowNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\SwitchNodeTypeRule;
@@ -135,6 +137,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             SubWorkflowNodeTypeRule::class,
             DynamicEntryNodeTypeRule::class,
             AiGeneratorNodeTypeRule::class,
+            ParseJsonNodeTypeRule::class,
         ], 'node-type-rules');
 
         $this->app->when(NodeTypeVerificationRule::class)
@@ -150,6 +153,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(SwitchNodeExecutor::class));
             $registry->register($this->app->make(TerminationNodeExecutor::class));
             $registry->register($this->app->make(SendEmailExecutor::class));
+            $registry->register($this->app->make(ParseJsonExecutor::class));
 
             $registry->register($this->app->make(ForkNodeExecutor::class));
             $registry->register($this->app->make(TaskNodeExecutor::class));

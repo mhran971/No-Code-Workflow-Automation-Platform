@@ -121,6 +121,19 @@ class NodeDefinitionSeeder extends Seeder
             ],
 
             [
+                'type' => 'parse-json',
+                'label' => 'Parse JSON',
+                'category' => 'logic',
+                'description' => 'Parse a stringified JSON context variable into an object',
+                'color' => 'node-logic',
+                'icon' => 'Braces',
+                'configFields' => [
+                    ['key' => 'inputVariable', 'label' => 'Input Variable', 'type' => 'text', 'required' => true, 'placeholder' => 'context.rawJson'],
+                    ['key' => 'outputVariable', 'label' => 'Output Variable Name', 'type' => 'text', 'required' => true, 'placeholder' => 'parsedData'],
+                ],
+            ],
+
+            [
                 'type' => 'termination-node',
                 'label' => 'Terminate',
                 'category' => 'logic',

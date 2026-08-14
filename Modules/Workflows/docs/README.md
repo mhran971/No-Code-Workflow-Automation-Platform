@@ -56,7 +56,7 @@ All models in `app/Models/`. Migrations in `database/migrations/` (23 files, one
 | `InstanceAdmissionService` (`Admission/`) | `InstanceAdmissionService.php` | `canAdmit(tenantId)` — tenant-level concurrency/admission gate; instances that can't be admitted stay `Pending` until `AdmitPendingInstancesCommand` promotes them. |
 | `EventBroadcaster` | `EventBroadcaster.php` | Dispatches lifecycle events after `DB::afterCommit()`; forwards child-instance (sub-workflow/dynamic-flow) events up to the parent via `ChildInstanceEventForwarded`. |
 | `Expression/ExpressionEvaluator` + `TemplateInterpolator` | `Expression/` | Runtime evaluation of `if-node`/`switch` conditions and `{{context.x}}` template interpolation in node configs (e.g. email subject/body). Distinct from the design-time `ExpressionLanguageValidator` parser used by verification. |
-| Executors (`Executors/`, implement `Contracts/NodeExecutor`) | one file per node type | `ManualTriggerExecutor`, `FormTriggerExecutor`, `WebhookTriggerExecutor`, `IfNodeExecutor`, `SwitchNodeExecutor`, `ForkNodeExecutor`, `MergeNodeExecutor`, `TerminationNodeExecutor`, `SendEmailExecutor`, `TaskNodeExecutor`, `SubWorkflowExecutor`, `DynamicFlowExecutor`, `DynamicEntryExecutor` — all registered in `WorkflowsServiceProvider`. `AiGeneratorExecutor` also exists in this folder but is **not** registered — see Gotchas. Each returns a `NodeExecutionResult` tagged with a `ResultKind` (Proceed/Branch/Wait/Fail/Terminate/Noop). |
+| Executors (`Executors/`, implement `Contracts/NodeExecutor`) | one file per node type | `ManualTriggerExecutor`, `FormTriggerExecutor`, `WebhookTriggerExecutor`, `IfNodeExecutor`, `SwitchNodeExecutor`, `ForkNodeExecutor`, `MergeNodeExecutor`, `TerminationNodeExecutor`, `SendEmailExecutor`, `ParseJsonExecutor`, `TaskNodeExecutor`, `SubWorkflowExecutor`, `DynamicFlowExecutor`, `DynamicEntryExecutor` — all registered in `WorkflowsServiceProvider`. `AiGeneratorExecutor` also exists in this folder but is **not** registered — see Gotchas. Each returns a `NodeExecutionResult` tagged with a `ResultKind` (Proceed/Branch/Wait/Fail/Terminate/Noop). |
 
 Scheduled console commands (`app/Console/Commands/`, registered in `WorkflowsServiceProvider::boot()`): `workflows:scan-timers` (every minute — resolves durable waits like task SLA/merge timeout), `workflows:admit-pending` (every minute — promotes admitted `Pending` instances), `workflows:expire-overdue` (daily — expires overdue tasks/instances).
 
@@ -83,6 +83,7 @@ Seeded by `NodeDefinitionSeeder` (`database/seeders/NodeDefinitionSeeder.php`) i
 | Logic | `and-node` | Fork | Splits into parallel branches |
 | Logic | `merge` | Merge | Synchronizes branches — `mergeMode`: parallel (wait for all) or conditional (first arrives) |
 | Logic | `switch` | Switch | Multi-path routing on a value |
+| Logic | `parse-json` | Parse JSON | Parses a stringified JSON `inputVariable` into an object, written to `outputVariable` |
 | Logic | `termination-node` | Terminate | Marks end of a branch; all branches must terminate for the instance to complete |
 | AI | `ai-generator` | AI Generator | Content generation using knowledge-base documents — see [`Modules/KnowledgeBase/docs/README.md`](../../KnowledgeBase/docs/README.md) |
 | Flows | `sub-workflow` | Sub Workflow | Executes another workflow as a child instance |
