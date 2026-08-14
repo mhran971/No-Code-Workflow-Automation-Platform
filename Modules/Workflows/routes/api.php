@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
+use Modules\Workflows\Http\Controllers\DashboardController;
 use Modules\Workflows\Http\Controllers\DynamicFlowController;
 use Modules\Workflows\Http\Controllers\MobileTaskCommentsController;
 use Modules\Workflows\Http\Controllers\MobileTaskFilesController;
@@ -34,6 +35,9 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
     Route::post('/validate', [WorkflowController::class, 'validateDefinition'])->name('workflows.definition.validate');
     Route::get('/templates', [WorkflowController::class, 'templates'])->name('workflows.templates.index');
+
+    // Business Owner dashboard — tenant-scoped KPI cards.
+    Route::get('/dashboard/operations', [DashboardController::class, 'operations'])->name('workflows.dashboard.operations');
 
     // Instance routes with /instances prefix must come before /{workflow}.
     Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
