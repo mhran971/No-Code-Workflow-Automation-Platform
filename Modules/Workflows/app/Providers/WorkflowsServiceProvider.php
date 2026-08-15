@@ -14,6 +14,7 @@ use Modules\Workflows\Observers\WorkflowTaskObserver;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
 use Modules\Workflows\Services\Execution\EventBroadcaster;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
+use Modules\Workflows\Services\Execution\Executors\ClickUpCreateTaskExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicEntryExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicFlowExecutor;
 use Modules\Workflows\Services\Execution\Executors\ForkNodeExecutor;
@@ -42,6 +43,7 @@ use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\AiGeneratorNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\ClickUpCreateTaskNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
@@ -138,6 +140,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             DynamicEntryNodeTypeRule::class,
             AiGeneratorNodeTypeRule::class,
             ParseJsonNodeTypeRule::class,
+            ClickUpCreateTaskNodeTypeRule::class,
         ], 'node-type-rules');
 
         $this->app->when(NodeTypeVerificationRule::class)
@@ -154,6 +157,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(TerminationNodeExecutor::class));
             $registry->register($this->app->make(SendEmailExecutor::class));
             $registry->register($this->app->make(ParseJsonExecutor::class));
+            $registry->register($this->app->make(ClickUpCreateTaskExecutor::class));
 
             $registry->register($this->app->make(ForkNodeExecutor::class));
             $registry->register($this->app->make(TaskNodeExecutor::class));

@@ -132,6 +132,7 @@ Lives in `app/Services/Execution/`. Token-based and queue-driven — it executes
 | Flows | `sub-workflow` | Execute another workflow as a step |
 | Flows | `dynamic-flow` | Pauses for a manager to design a runtime sub-flow (segment), then executes it |
 | Actions | `send-email` | Email sending with HTML support |
+| Actions | `clickup-create-task` | Creates a task in a ClickUp list via the connected ClickUp workspace |
 | Actions | `task-node` | Task assignment with SLA (`dueWithin`) and reminders |
 
 ### API Routes

@@ -225,6 +225,20 @@ class NodeDefinitionSeeder extends Seeder
                 ],
             ],
             [
+                'type' => 'clickup-create-task',
+                'label' => 'ClickUp: Create Task',
+                'category' => 'action',
+                'description' => 'Create a task in a ClickUp list',
+                'color' => 'node-action',
+                'icon' => 'CheckSquare',
+                'configFields' => [
+                    ['key' => 'workspaceId', 'label' => 'ClickUp Workspace', 'type' => 'text', 'required' => true, 'placeholder' => 'Workspace (Team) ID'],
+                    ['key' => 'listId', 'label' => 'ClickUp List', 'type' => 'text', 'required' => true, 'placeholder' => 'List ID'],
+                    ['key' => 'name', 'label' => 'Task Name', 'type' => 'text', 'required' => true, 'placeholder' => 'e.g. Follow up with {{context.customerName}}'],
+                    ['key' => 'markdownContent', 'label' => 'Content (Markdown)', 'type' => 'textarea', 'placeholder' => '## Details\n{{context.details}}'],
+                ],
+            ],
+            [
                 'type' => 'task-node',
                 'label' => 'Task Node',
                 'category' => 'action',
