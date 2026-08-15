@@ -123,6 +123,46 @@ Example:
 await fetch('/api/v1/integrations/google/disconnect', { method: 'DELETE' });
 ```
 
+### List ClickUp workspaces
+
+```http
+GET /api/v1/integrations/clickup/workspaces
+```
+
+Requires `auth:api` + `role:business_owner,manager` (looser than the connect/disconnect/index
+endpoints above, since this backs workflow-design UI — e.g. populating the `clickup-create-task`
+node's workspace picker — which Managers also use, not just Business Owners).
+
+Returns the tenant's connected ClickUp workspaces (ClickUp calls them "teams"), fetched live from
+ClickUp on every call:
+
+```json
+{ "data": [{ "id": "900", "name": "Acme Workspace" }] }
+```
+
+`404` with `{"message": "..."}` if the tenant has no ClickUp connection yet.
+
+### List ClickUp lists in a workspace
+
+```http
+GET /api/v1/integrations/clickup/workspaces/{workspaceId}/lists
+```
+
+Same auth as above. Returns every List reachable from the given workspace — Lists inside Folders,
+plus folderless Lists directly under a Space — flattened into one array (ClickUp has no single
+"all lists in a workspace" endpoint, so this call fans out across Spaces/Folders internally):
+
+```json
+{
+  "data": [
+    { "id": "901", "name": "Backlog", "space": "Engineering", "folder": null },
+    { "id": "902", "name": "Sprint 14", "space": "Engineering", "folder": "Sprints" }
+  ]
+}
+```
+
+`404` if not connected; any ClickUp API error surfaces with ClickUp's own HTTP status and message.
+
 ## Frontend flow
 
 1. Fetch `GET /api/v1/integrations`

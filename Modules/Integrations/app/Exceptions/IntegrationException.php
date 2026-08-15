@@ -36,6 +36,16 @@ class IntegrationException extends Exception
         return new self("The {$action} action is not configured.", 404);
     }
 
+    public static function connectionNotFound(string $provider): self
+    {
+        return new self("No {$provider} connection found for this tenant. Connect {$provider} via Integrations first.", 404);
+    }
+
+    public static function apiCallFailed(string $provider, string $detail, int $status = 502): self
+    {
+        return new self("The {$provider} API returned an error: {$detail}", $status);
+    }
+
     public function status(): int
     {
         return $this->status;
