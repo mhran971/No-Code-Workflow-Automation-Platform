@@ -20,6 +20,7 @@ use Modules\Workflows\Services\Execution\Executors\DynamicFlowExecutor;
 use Modules\Workflows\Services\Execution\Executors\ForkNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\FormTriggerExecutor;
 use Modules\Workflows\Services\Execution\Executors\HubSpotCreateContactExecutor;
+use Modules\Workflows\Services\Execution\Executors\HubSpotCreateDealExecutor;
 use Modules\Workflows\Services\Execution\Executors\IfNodeExecutor;
 use Modules\Workflows\Services\Execution\Executors\ManualTriggerExecutor;
 use Modules\Workflows\Services\Execution\Executors\MergeNodeExecutor;
@@ -48,6 +49,7 @@ use Modules\Workflows\Services\Verification\Rules\NodeType\ClickUpCreateTaskNode
 use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\ForkNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\HubSpotCreateContactNodeTypeRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\HubSpotCreateDealNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\IfNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\MergeNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\ParseJsonNodeTypeRule;
@@ -144,6 +146,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             ParseJsonNodeTypeRule::class,
             ClickUpCreateTaskNodeTypeRule::class,
             HubSpotCreateContactNodeTypeRule::class,
+            HubSpotCreateDealNodeTypeRule::class,
         ], 'node-type-rules');
 
         $this->app->when(NodeTypeVerificationRule::class)
@@ -162,6 +165,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(ParseJsonExecutor::class));
             $registry->register($this->app->make(ClickUpCreateTaskExecutor::class));
             $registry->register($this->app->make(HubSpotCreateContactExecutor::class));
+            $registry->register($this->app->make(HubSpotCreateDealExecutor::class));
 
             $registry->register($this->app->make(ForkNodeExecutor::class));
             $registry->register($this->app->make(TaskNodeExecutor::class));

@@ -134,6 +134,7 @@ Lives in `app/Services/Execution/`. Token-based and queue-driven — it executes
 | Actions | `send-email` | Email sending with HTML support |
 | Actions | `clickup-create-task` | Creates a task in a ClickUp list via the connected ClickUp workspace |
 | Actions | `hubspot-create-contact` | Creates a contact (first/last name, email, phone) in the connected HubSpot account |
+| Actions | `hubspot-create-deal` | Creates a deal in the connected HubSpot account, optionally associated with an existing contact |
 | Actions | `task-node` | Task assignment with SLA (`dueWithin`) and reminders |
 
 ### API Routes

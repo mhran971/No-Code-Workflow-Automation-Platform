@@ -239,6 +239,23 @@ class NodeDefinitionSeeder extends Seeder
                 ],
             ],
             [
+                'type' => 'hubspot-create-deal',
+                'label' => 'HubSpot: Create Deal',
+                'category' => 'action',
+                'description' => 'Create a deal in the connected HubSpot account',
+                'color' => 'node-action',
+                'icon' => 'Handshake',
+                'configFields' => [
+                    ['key' => 'dealName', 'label' => 'Deal Name', 'type' => 'text', 'required' => true, 'placeholder' => '{{context.dealName}}'],
+                    ['key' => 'dealStage', 'label' => 'Deal Stage ID', 'type' => 'text', 'required' => true, 'placeholder' => 'Internal stage ID'],
+                    ['key' => 'pipeline', 'label' => 'Pipeline ID', 'type' => 'text', 'placeholder' => 'Internal pipeline ID (optional)'],
+                    ['key' => 'amount', 'label' => 'Amount', 'type' => 'text', 'placeholder' => '{{context.amount}}'],
+                    ['key' => 'closeDate', 'label' => 'Close Date', 'type' => 'text', 'placeholder' => '{{context.closeDate}} (ISO 8601)'],
+                    ['key' => 'ownerId', 'label' => 'Owner ID', 'type' => 'text', 'placeholder' => 'HubSpot owner ID'],
+                    ['key' => 'contactId', 'label' => 'Associate Contact ID', 'type' => 'text', 'placeholder' => '{{context.contactId}}'],
+                ],
+            ],
+            [
                 'type' => 'clickup-create-task',
                 'label' => 'ClickUp: Create Task',
                 'category' => 'action',

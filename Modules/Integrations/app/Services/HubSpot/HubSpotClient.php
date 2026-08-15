@@ -34,6 +34,25 @@ class HubSpotClient
     }
 
     /**
+     * @param  array<string, string>  $properties  HubSpot deal property name => value (blank entries should already be filtered out by the caller)
+     * @param  list<array{to: array{id: int}, types: list<array{associationCategory: string, associationTypeId: int}>}>  $associations
+     * @return array<string, mixed> The created deal, as returned by HubSpot.
+     */
+    public function createDeal(IntegrationConnection $connection, array $properties, array $associations = []): array
+    {
+        $token = $this->freshAccessToken($connection);
+
+        $body = ['properties' => $properties];
+        if ($associations !== []) {
+            $body['associations'] = $associations;
+        }
+
+        $response = Http::withToken($token)->post(self::API_BASE.'/crm/v3/objects/deals', $body);
+
+        return $this->jsonOrFail($response);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function jsonOrFail(Response $response): array

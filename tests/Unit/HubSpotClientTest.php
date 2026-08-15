@@ -95,6 +95,46 @@ class HubSpotClientTest extends TestCase
         }
     }
 
+    public function test_creates_deal_without_associations(): void
+    {
+        $connection = $this->makeConnection(expiresInMinutes: 30);
+
+        Http::fake([
+            'https://api.hubapi.com/crm/v3/objects/deals' => Http::response(['id' => '38492011'], 200),
+        ]);
+
+        $client = new HubSpotClient;
+        $result = $client->createDeal($connection, ['dealname' => 'Big Deal', 'dealstage' => 'contractsent']);
+
+        $this->assertSame('38492011', $result['id']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://api.hubapi.com/crm/v3/objects/deals'
+                && $request['properties']['dealname'] === 'Big Deal'
+                && ! array_key_exists('associations', $request->data());
+        });
+    }
+
+    public function test_creates_deal_with_associations(): void
+    {
+        $connection = $this->makeConnection(expiresInMinutes: 30);
+
+        Http::fake([
+            'https://api.hubapi.com/crm/v3/objects/deals' => Http::response(['id' => '38492011'], 200),
+        ]);
+
+        $associations = [[
+            'to' => ['id' => 12345],
+            'types' => [['associationCategory' => 'HUBSPOT_DEFINED', 'associationTypeId' => 3]],
+        ]];
+
+        $client = new HubSpotClient;
+        $client->createDeal($connection, ['dealname' => 'Big Deal', 'dealstage' => 'contractsent'], $associations);
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.hubapi.com/crm/v3/objects/deals'
+            && $request['associations'][0]['to']['id'] === 12345);
+    }
+
     private function makeConnection(int $expiresInMinutes): IntegrationConnection
     {
         $tenant = Tenant::query()->create(['business_name' => 'Acme', 'business_type' => BusinessType::SaaS->value]);
