@@ -133,6 +133,7 @@ Lives in `app/Services/Execution/`. Token-based and queue-driven — it executes
 | Flows | `dynamic-flow` | Pauses for a manager to design a runtime sub-flow (segment), then executes it |
 | Actions | `send-email` | Email sending with HTML support |
 | Actions | `clickup-create-task` | Creates a task in a ClickUp list via the connected ClickUp workspace |
+| Actions | `hubspot-create-contact` | Creates a contact (first/last name, email, phone) in the connected HubSpot account |
 | Actions | `task-node` | Task assignment with SLA (`dueWithin`) and reminders |
 
 ### API Routes

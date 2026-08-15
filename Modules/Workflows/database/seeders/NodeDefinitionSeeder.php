@@ -225,6 +225,20 @@ class NodeDefinitionSeeder extends Seeder
                 ],
             ],
             [
+                'type' => 'hubspot-create-contact',
+                'label' => 'HubSpot: Create Contact',
+                'category' => 'action',
+                'description' => 'Create a contact in the connected HubSpot account',
+                'color' => 'node-action',
+                'icon' => 'UserPlus',
+                'configFields' => [
+                    ['key' => 'firstName', 'label' => 'First Name', 'type' => 'text', 'placeholder' => '{{context.firstName}}'],
+                    ['key' => 'lastName', 'label' => 'Last Name', 'type' => 'text', 'placeholder' => '{{context.lastName}}'],
+                    ['key' => 'email', 'label' => 'Email', 'type' => 'text', 'placeholder' => '{{context.email}}'],
+                    ['key' => 'phone', 'label' => 'Phone', 'type' => 'text', 'placeholder' => '{{context.phone}}'],
+                ],
+            ],
+            [
                 'type' => 'clickup-create-task',
                 'label' => 'ClickUp: Create Task',
                 'category' => 'action',
