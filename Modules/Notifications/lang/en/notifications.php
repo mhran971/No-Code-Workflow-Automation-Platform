@@ -13,4 +13,8 @@ return [
         'title' => 'Overdue task: :title',
         'body' => 'This task has passed its deadline.',
     ],
+    'task_escalated' => [
+        'title' => 'Task Escalated: :title',
+        'body' => 'A task assigned to :assignee has passed its due date and was escalated to you.',
+    ],
 ];

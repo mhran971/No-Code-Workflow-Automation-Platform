@@ -16,7 +16,7 @@ class ListTasksRequest extends FormRequest
     {
         return [
             'sort' => ['sometimes', Rule::in(['due_asc', 'due_desc', 'created_asc'])],
-            'status' => ['sometimes', Rule::in(['open', 'completed', 'expired', 'cancelled'])],
+            'status' => ['sometimes', Rule::in(['open', 'completed', 'escalated', 'cancelled'])],
             'search' => ['sometimes', 'string', 'max:255'],
             'assignee_id' => ['sometimes', 'integer', 'exists:users,id'],
             'page' => ['sometimes', 'integer', 'min:1'],

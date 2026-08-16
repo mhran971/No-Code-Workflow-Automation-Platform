@@ -36,7 +36,7 @@ class WorkflowTaskController extends Controller
      * Query params:
      *   sort        — due_asc | due_desc | created_asc  (default: due_asc)
      *   search      — searches title and description
-     *   status      — open | completed | expired | cancelled (default: open)
+     *   status      — open | completed | escalated | cancelled (default: open)
      *   assignee_id — filter by a specific assignee (BusinessOwner and Manager only)
      */
     public function index(ListTasksRequest $request): AnonymousResourceCollection
@@ -52,13 +52,10 @@ class WorkflowTaskController extends Controller
 
         $status = $request->filled('status') ? $request->string('status')->toString() : 'open';
 
-        if ($status === 'expired') {
-            $query->where('status', 'open')
-                ->whereNotNull('due_at')
-                ->where('due_at', '<', now());
+        if ($status === 'escalated') {
+            $query->where('status', 'escalated');
         } elseif ($status === 'open') {
-            $query->where('status', 'open')
-                ->where(fn ($q) => $q->whereNull('due_at')->orWhere('due_at', '>=', now()));
+            $query->where('status', 'open');
         } else {
             $query->where('status', $status);
         }

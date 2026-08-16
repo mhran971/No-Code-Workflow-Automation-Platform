@@ -18,6 +18,7 @@ class WorkflowVersion extends Model
         'release_note',
         'published_by_id',
         'published_at',
+        'rollback_source_version_id',
     ];
 
     protected function casts(): array
@@ -42,5 +43,10 @@ class WorkflowVersion extends Model
     public function publishedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'published_by_id');
+    }
+
+    public function rollbackSource(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'rollback_source_version_id');
     }
 }

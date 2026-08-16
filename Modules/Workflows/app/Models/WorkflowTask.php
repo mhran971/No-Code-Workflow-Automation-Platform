@@ -28,6 +28,7 @@ class WorkflowTask extends Model
         'draft_response',
         'completed_by_id',
         'completed_at',
+        'escalated_at',
     ];
 
     protected function casts(): array
@@ -38,6 +39,7 @@ class WorkflowTask extends Model
             'draft_response' => 'array',
             'due_at' => 'datetime',
             'completed_at' => 'datetime',
+            'escalated_at' => 'datetime',
         ];
     }
 
@@ -67,20 +69,18 @@ class WorkflowTask extends Model
     }
 
     /**
-     * An open task whose due date has passed. Cancelled and completed tasks are never expired —
-     * their status is final and takes precedence.
+     * Whether this task has been escalated due to an SLA breach.
      */
-    public function isExpired(): bool
+    public function isEscalated(): bool
     {
-        return $this->status === 'open' && $this->due_at !== null && $this->due_at->isPast();
+        return $this->status === 'escalated';
     }
 
     /**
-     * The status as it should be shown to callers: overdue open tasks display as `expired`
-     * without the underlying `open` status (and the parked execution) actually changing.
+     * The status as it should be shown to callers.
      */
     public function displayStatus(): string
     {
-        return $this->isExpired() ? 'expired' : $this->status;
+        return $this->status;
     }
 }
