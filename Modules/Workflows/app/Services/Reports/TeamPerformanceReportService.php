@@ -5,7 +5,7 @@ namespace Modules\Workflows\Services\Reports;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;

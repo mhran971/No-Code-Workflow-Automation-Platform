@@ -5,7 +5,7 @@ namespace Modules\Workflows\Services\Reports;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Modules\Auth\Enums\Role;
 use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
@@ -83,13 +83,9 @@ class WorkflowAnalyticsReportService
 
         // Global KPIs
         $totalExecutions = $instances->count();
-        $completedInstances = $instances->filter(fn ($i) => $i->status === WorkflowInstanceStatus::Completed || $i->status === 'completed');
-        $failedInstances = $instances->filter(fn ($i) => $i->status === WorkflowInstanceStatus::Failed || $i->status === 'failed');
-        $runningInstances = $instances->filter(fn ($i) => in_array($i->status, [
-            WorkflowInstanceStatus::Running,
-            WorkflowInstanceStatus::Waiting,
-            WorkflowInstanceStatus::Pending,
-            WorkflowInstanceStatus::Paused,
+        $completedInstances = $instances->filter(fn ($i) => ($i->status instanceof \BackedEnum ? $i->status->value : $i->status) === 'completed');
+        $failedInstances = $instances->filter(fn ($i) => ($i->status instanceof \BackedEnum ? $i->status->value : $i->status) === 'failed');
+        $runningInstances = $instances->filter(fn ($i) => in_array($i->status instanceof \BackedEnum ? $i->status->value : $i->status, [
             'running', 'waiting', 'pending', 'paused',
         ], true));
 
@@ -113,20 +109,21 @@ class WorkflowAnalyticsReportService
         $avgDurationSeconds = $validDurationCount > 0 ? round($totalDurationSec / $validDurationCount, 2) : 0.0;
 
         // Bottlenecks & Node Execution Analysis
-        $bottlenecks = $this->analyzeBottlenecks($team->tenant_id, $instanceIds, $workflows);
+        $bottlenecks = $this->analyzeBottlenecks((int) $team->tenant_id, $instanceIds, $workflows);
 
         // Per-Workflow Breakdown Table
         $workflowsTable = [];
         foreach ($workflows as $wf) {
             $wfInstances = $instances->where('workflow_id', $wf->id);
             $wfTotal = $wfInstances->count();
-            $wfSuccess = $wfInstances->filter(fn ($i) => $i->status === WorkflowInstanceStatus::Completed || $i->status === 'completed')->count();
-            $wfFailed = $wfInstances->filter(fn ($i) => $i->status === WorkflowInstanceStatus::Failed || $i->status === 'failed')->count();
+            $wfSuccess = $wfInstances->filter(fn ($i) => ($i->status instanceof \BackedEnum ? $i->status->value : $i->status) === 'completed')->count();
+            $wfFailed = $wfInstances->filter(fn ($i) => ($i->status instanceof \BackedEnum ? $i->status->value : $i->status) === 'failed')->count();
 
             $wfTotalSec = 0.0;
             $wfValidCount = 0;
             foreach ($wfInstances as $inst) {
-                if (($inst->status === WorkflowInstanceStatus::Completed || $inst->status === 'completed') && $inst->started_at && $inst->finished_at) {
+                $instStatus = $inst->status instanceof \BackedEnum ? $inst->status->value : $inst->status;
+                if ($instStatus === 'completed' && $inst->started_at && $inst->finished_at) {
                     $wfTotalSec += $inst->started_at->diffInSeconds($inst->finished_at);
                     $wfValidCount++;
                 }
@@ -142,7 +139,7 @@ class WorkflowAnalyticsReportService
             $workflowsTable[] = [
                 'id' => $wf->id,
                 'name' => $wf->name,
-                'status' => $wf->status?->value ?? (string) $wf->status,
+                'status' => $wf->status instanceof \BackedEnum ? $wf->status->value : (string) ($wf->status ?? ''),
                 'version' => $wf->current_version_number ?? 1,
                 'total_runs' => $wfTotal,
                 'success_runs' => $wfSuccess,
@@ -255,7 +252,7 @@ class WorkflowAnalyticsReportService
 
             $avgDuration = $durations->count() > 0 ? round($durations->avg(), 2) : 0.0;
             $maxDuration = $durations->count() > 0 ? round($durations->max(), 2) : 0.0;
-            $failureCount = $executions->filter(fn ($ne) => $ne->status?->value === 'failed' || (string) $ne->status === 'failed')->count();
+            $failureCount = $executions->filter(fn ($ne) => ($ne->status instanceof \BackedEnum ? $ne->status->value : $ne->status) === 'failed')->count();
 
             $nodeAggregates[] = [
                 'workflow_id' => $workflowId,
@@ -296,7 +293,7 @@ class WorkflowAnalyticsReportService
 
         $counts = [];
         foreach ($instances as $inst) {
-            $st = $inst->status instanceof WorkflowInstanceStatus ? $inst->status->value : (string) $inst->status;
+            $st = $inst->status instanceof \BackedEnum ? $inst->status->value : (string) ($inst->status ?? '');
             $counts[$st] = ($counts[$st] ?? 0) + 1;
         }
 
@@ -331,8 +328,8 @@ class WorkflowAnalyticsReportService
             $dateStr = $date->toDateString();
             $dayInstances = $instances->filter(fn ($i) => $i->created_at && $i->created_at->toDateString() === $dateStr);
             $total = $dayInstances->count();
-            $success = $dayInstances->filter(fn ($i) => $i->status === WorkflowInstanceStatus::Completed || $i->status === 'completed')->count();
-            $failed = $dayInstances->filter(fn ($i) => $i->status === WorkflowInstanceStatus::Failed || $i->status === 'failed')->count();
+            $success = $dayInstances->filter(fn ($i) => ($i->status instanceof \BackedEnum ? $i->status->value : $i->status) === 'completed')->count();
+            $failed = $dayInstances->filter(fn ($i) => ($i->status instanceof \BackedEnum ? $i->status->value : $i->status) === 'failed')->count();
 
             $trend[] = [
                 'date' => $dateStr,
