@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
+use Modules\Workflows\Http\Controllers\DashboardController;
 use Modules\Workflows\Http\Controllers\DynamicFlowController;
 use Modules\Workflows\Http\Controllers\MobileTaskCommentsController;
 use Modules\Workflows\Http\Controllers\MobileTaskFilesController;
@@ -34,6 +35,9 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
     Route::post('/validate', [WorkflowController::class, 'validateDefinition'])->name('workflows.definition.validate');
     Route::get('/templates', [WorkflowController::class, 'templates'])->name('workflows.templates.index');
+
+    // Business Owner dashboard — tenant-scoped KPI cards.
+    Route::get('/dashboard/operations', [DashboardController::class, 'operations'])->name('workflows.dashboard.operations');
 
     // Instance routes with /instances prefix must come before /{workflow}.
     Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
@@ -67,6 +71,9 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::patch('/{workflow}/draft', [WorkflowController::class, 'updateDraft'])->name('workflows.draft.update');
     Route::post('/{workflow}/publish', [WorkflowController::class, 'publish'])->name('workflows.publish');
     Route::get('/{workflow}/versions', [WorkflowController::class, 'versions'])->name('workflows.versions.index');
+    Route::get('/{workflow}/versions/compare', [WorkflowController::class, 'compareVersions'])->name('workflows.versions.compare');
+    Route::get('/{workflow}/versions/{version}', [WorkflowController::class, 'showVersion'])->name('workflows.versions.show');
+    Route::post('/{workflow}/versions/{version}/rollback', [WorkflowController::class, 'rollback'])->name('workflows.versions.rollback');
     Route::patch('/{workflow}/status', [WorkflowController::class, 'updateStatus'])->name('workflows.status.update');
     Route::delete('/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
     Route::delete('/{workflow}/purge', [WorkflowController::class, 'purge'])->name('workflows.purge');

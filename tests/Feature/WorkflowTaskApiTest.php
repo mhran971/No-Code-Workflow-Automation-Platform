@@ -173,22 +173,23 @@ class WorkflowTaskApiTest extends TestCase
         ]);
     }
 
-    public function test_overdue_open_task_displays_as_expired(): void
+    public function test_escalated_task_is_returned_by_escalated_filter(): void
     {
         $tenant = $this->createTenant();
-        $manager = $this->createUser($tenant, Role::Manager, 'manager-expired');
+        $manager = $this->createUser($tenant, Role::Manager, 'manager-escalated');
         $team = $this->createTeam($tenant, $manager, 'Operations');
         $this->assignToTeam($tenant, $manager, $team);
 
-        $overdueTask = $this->createTask($tenant, $team, $manager, '2000-01-01 00:00:00');
+        $escalatedTask = $this->createTask($tenant, $team, $manager, '2000-01-01 00:00:00');
+        $escalatedTask->update(['status' => 'escalated', 'escalated_at' => now()]);
         $onTimeTask = $this->createTask($tenant, $team, $manager, '2999-01-01 00:00:00');
         /** @var Authenticatable $managerAuth */
         $managerAuth = $manager;
 
         $this->actingAs($managerAuth, 'api')
-            ->getJson("/api/v1/workflows/tasks/{$overdueTask->id}")
+            ->getJson("/api/v1/workflows/tasks/{$escalatedTask->id}")
             ->assertOk()
-            ->assertJsonPath('data.status', 'expired');
+            ->assertJsonPath('data.status', 'escalated');
 
         $this->actingAs($managerAuth, 'api')
             ->getJson("/api/v1/workflows/tasks/{$onTimeTask->id}")
@@ -196,15 +197,15 @@ class WorkflowTaskApiTest extends TestCase
             ->assertJsonPath('data.status', 'open');
 
         $this->assertDatabaseHas('workflow_tasks', [
-            'id' => $overdueTask->id,
-            'status' => 'open',
+            'id' => $escalatedTask->id,
+            'status' => 'escalated',
         ]);
 
         $this->actingAs($managerAuth, 'api')
-            ->getJson('/api/v1/workflows/tasks?status=expired')
+            ->getJson('/api/v1/workflows/tasks?status=escalated')
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $overdueTask->id);
+            ->assertJsonPath('data.0.id', $escalatedTask->id);
 
         $this->actingAs($managerAuth, 'api')
             ->getJson('/api/v1/workflows/tasks?status=open')
