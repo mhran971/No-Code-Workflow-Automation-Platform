@@ -113,7 +113,7 @@ class TenantOperationsDashboardServiceTest extends TestCase
         $this->createTask($instance, 'open');
         $this->createTask($instance, 'open');
         $this->createTask($instance, 'completed');
-        $this->createTask($instance, 'expired');
+        $this->createTask($instance, 'escalated');
         $this->createTask($instance, 'cancelled');
 
         $count = $this->service->countPendingTasks($this->tenant->id);

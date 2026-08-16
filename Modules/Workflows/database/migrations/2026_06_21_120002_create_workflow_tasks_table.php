@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->json('input_schema')->nullable();
-            $table->string('status')->default('open'); // open|completed|expired|cancelled|escalated
+            $table->string('status')->default('open'); // open|completed|cancelled|escalated
             $table->timestamp('due_at')->nullable();
             $table->json('response')->nullable();
             $table->foreignId('completed_by_id')->nullable()->constrained('users')->nullOnDelete();
