@@ -126,11 +126,15 @@ Lives in `app/Services/Execution/`. Token-based and queue-driven — it executes
 | Logic | `and-node` | Fork — splits into parallel branches |
 | Logic | `merge` | Synchronizes incoming branches; `mergeMode` is `parallel` (wait for all) or `conditional` (first to arrive) |
 | Logic | `switch` | Multi-path routing based on a value |
+| Logic | `parse-json` | Parses a stringified JSON `inputVariable` into an object, written to `outputVariable` |
 | Logic | `termination-node` | Marks the end of a branch; all branches must terminate for the instance to complete |
 | AI | `ai-generator` | Content generation, backed by knowledge-base documents |
 | Flows | `sub-workflow` | Execute another workflow as a step |
 | Flows | `dynamic-flow` | Pauses for a manager to design a runtime sub-flow (segment), then executes it |
 | Actions | `send-email` | Email sending with HTML support |
+| Actions | `clickup-create-task` | Creates a task in a ClickUp list via the connected ClickUp workspace |
+| Actions | `hubspot-create-contact` | Creates a contact (first/last name, email, phone) in the connected HubSpot account |
+| Actions | `hubspot-create-deal` | Creates a deal in the connected HubSpot account, optionally associated with an existing contact |
 | Actions | `task-node` | Task assignment with SLA (`dueWithin`) and reminders |
 
 ### API Routes

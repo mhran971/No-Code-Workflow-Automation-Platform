@@ -121,6 +121,19 @@ class NodeDefinitionSeeder extends Seeder
             ],
 
             [
+                'type' => 'parse-json',
+                'label' => 'Parse JSON',
+                'category' => 'logic',
+                'description' => 'Parse a stringified JSON context variable into an object',
+                'color' => 'node-logic',
+                'icon' => 'Braces',
+                'configFields' => [
+                    ['key' => 'inputVariable', 'label' => 'Input Variable', 'type' => 'text', 'required' => true, 'placeholder' => 'context.rawJson'],
+                    ['key' => 'outputVariable', 'label' => 'Output Variable Name', 'type' => 'text', 'required' => true, 'placeholder' => 'parsedData'],
+                ],
+            ],
+
+            [
                 'type' => 'termination-node',
                 'label' => 'Terminate',
                 'category' => 'logic',
@@ -209,6 +222,51 @@ class NodeDefinitionSeeder extends Seeder
                         ],
                     ],
                     ['key' => 'body', 'label' => 'Body', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Dear {{context.firstName}},'],
+                ],
+            ],
+            [
+                'type' => 'hubspot-create-contact',
+                'label' => 'HubSpot: Create Contact',
+                'category' => 'action',
+                'description' => 'Create a contact in the connected HubSpot account',
+                'color' => 'node-action',
+                'icon' => 'UserPlus',
+                'configFields' => [
+                    ['key' => 'firstName', 'label' => 'First Name', 'type' => 'text', 'placeholder' => '{{context.firstName}}'],
+                    ['key' => 'lastName', 'label' => 'Last Name', 'type' => 'text', 'placeholder' => '{{context.lastName}}'],
+                    ['key' => 'email', 'label' => 'Email', 'type' => 'text', 'placeholder' => '{{context.email}}'],
+                    ['key' => 'phone', 'label' => 'Phone', 'type' => 'text', 'placeholder' => '{{context.phone}}'],
+                ],
+            ],
+            [
+                'type' => 'hubspot-create-deal',
+                'label' => 'HubSpot: Create Deal',
+                'category' => 'action',
+                'description' => 'Create a deal in the connected HubSpot account',
+                'color' => 'node-action',
+                'icon' => 'Handshake',
+                'configFields' => [
+                    ['key' => 'dealName', 'label' => 'Deal Name', 'type' => 'text', 'required' => true, 'placeholder' => '{{context.dealName}}'],
+                    ['key' => 'dealStage', 'label' => 'Deal Stage ID', 'type' => 'text', 'required' => true, 'placeholder' => 'Internal stage ID'],
+                    ['key' => 'pipeline', 'label' => 'Pipeline ID', 'type' => 'text', 'placeholder' => 'Internal pipeline ID (optional)'],
+                    ['key' => 'amount', 'label' => 'Amount', 'type' => 'text', 'placeholder' => '{{context.amount}}'],
+                    ['key' => 'closeDate', 'label' => 'Close Date', 'type' => 'text', 'placeholder' => '{{context.closeDate}} (ISO 8601)'],
+                    ['key' => 'ownerId', 'label' => 'Owner ID', 'type' => 'text', 'placeholder' => 'HubSpot owner ID'],
+                    ['key' => 'contactId', 'label' => 'Associate Contact ID', 'type' => 'text', 'placeholder' => '{{context.contactId}}'],
+                ],
+            ],
+            [
+                'type' => 'clickup-create-task',
+                'label' => 'ClickUp: Create Task',
+                'category' => 'action',
+                'description' => 'Create a task in a ClickUp list',
+                'color' => 'node-action',
+                'icon' => 'CheckSquare',
+                'configFields' => [
+                    ['key' => 'workspaceId', 'label' => 'ClickUp Workspace', 'type' => 'text', 'required' => true, 'placeholder' => 'Workspace (Team) ID'],
+                    ['key' => 'listId', 'label' => 'ClickUp List', 'type' => 'text', 'required' => true, 'placeholder' => 'List ID'],
+                    ['key' => 'name', 'label' => 'Task Name', 'type' => 'text', 'required' => true, 'placeholder' => 'e.g. Follow up with {{context.customerName}}'],
+                    ['key' => 'markdownContent', 'label' => 'Content (Markdown)', 'type' => 'textarea', 'placeholder' => '## Details\n{{context.details}}'],
                 ],
             ],
             [
