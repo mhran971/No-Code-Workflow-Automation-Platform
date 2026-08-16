@@ -14,12 +14,19 @@ class EscalationService
      */
     public function escalate(WorkflowTask $task): void
     {
-        $task->update([
+        $manager = $this->resolveManager($task);
+
+        $updates = [
             'status' => 'escalated',
             'escalated_at' => now(),
-        ]);
+        ];
 
-        $manager = $this->resolveManager($task);
+        if ($manager !== null) {
+            $updates['assignee_id'] = $manager->id;
+        }
+
+        $task->update($updates);
+
         if ($manager !== null) {
             $manager->notify(new TaskEscalatedNotification($task));
         }

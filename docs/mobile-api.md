@@ -136,18 +136,17 @@ Return pending and overdue task counts for the home screen stat cards. Counts ar
 
 Return a paginated list of tasks. Defaults to `status=open`, sorted by `due_at` ascending.
 
-`open` and `expired` are mutually exclusive: an open task whose `due_at` has passed is reported as
-`expired` (in both the `status` filter and the `status` field on each item) and is excluded from the
-`open` bucket. This is purely a display/filter distinction — the task stays actionable (its parked
-execution is unaffected) until it is submitted or its instance is cancelled. `completed` and
-`cancelled` tasks are unaffected by `due_at` and always keep their real status.
+When an open task's `due_at` passes without being completed, the system automatically **escalates** it:
+the task status changes to `escalated`, the task is reassigned to the team manager, and the manager
+receives a push notification. `escalated` is a real, persisted status — not a display-only distinction.
+`completed` and `cancelled` tasks are unaffected by `due_at` and always keep their real status.
 
 **Query parameters**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sort` | `due_asc` \| `due_desc` \| `created_asc` | `due_asc` | Sort order |
-| `status` | `open` \| `completed` \| `expired` \| `cancelled` | `open` | Filter by status |
+| `status` | `open` \| `completed` \| `escalated` \| `cancelled` | `open` | Filter by status |
 | `search` | string | — | Case-insensitive substring match against `title` and `description` (max 255 chars) |
 | `assignee_id` | integer | — | Filter by a specific assignee. **Not available to `Employee` role.** |
 | `page` | integer | `1` | Page number (20 items per page) |
@@ -270,7 +269,8 @@ Return full detail for a single task, including the form schema and any saved dr
 >
 > `completed_by` is `null` while the task is open. Once submitted, it contains `{ id, name }`.
 >
-> `status` is `expired` for an open task whose `due_at` has passed. `completed` and `cancelled` are
+> `status` is `escalated` when the task has passed its `due_at` and was auto-escalated to the team
+> manager. `completed` and `cancelled` are
 > final and are never overridden by `due_at`. A task is also set to `cancelled` automatically when
 > its workflow instance is cancelled.
 
