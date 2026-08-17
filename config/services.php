@@ -45,4 +45,10 @@ return [
         'project_id' => env('FIREBASE_PROJECT_ID', 'workflow-auto-notif'),
     ],
 
+    'rag' => [
+        'url' => env('RAG_SERVICE_URL', 'http://127.0.0.1:8000'),
+        'timeout' => env('RAG_SERVICE_TIMEOUT', 60),
+        'api_key' => env('RAG_SERVICE_API_KEY'),
+    ],
+
 ];

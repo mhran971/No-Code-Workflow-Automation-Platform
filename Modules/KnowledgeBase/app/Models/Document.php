@@ -13,10 +13,14 @@ class Document extends Model
         'document_type_id',
         'file_path',
         'is_active',
+        'index_status',
+        'index_error',
+        'chunks_count',
     ];
 
     protected $casts = [
         'is_active' => 'bool',
+        'chunks_count' => 'integer',
     ];
 
     public function tenant()
