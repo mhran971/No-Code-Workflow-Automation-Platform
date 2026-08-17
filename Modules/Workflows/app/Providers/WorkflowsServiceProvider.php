@@ -72,6 +72,7 @@ class WorkflowsServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
         $this->loadTranslationsFrom(module_path($this->name, 'lang'), 'workflows');
+        $this->loadViewsFrom(module_path($this->name, 'resources/views'), 'workflows');
 
         $this->commands([
             ScanWorkflowTimersCommand::class,
@@ -104,6 +105,10 @@ class WorkflowsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(RouteServiceProvider::class);
+
+        $this->app->singleton(\Modules\Workflows\Services\Reports\TeamPerformanceReportService::class);
+        $this->app->singleton(\Modules\Workflows\Services\Reports\WorkflowAnalyticsReportService::class);
+        $this->app->singleton(\Modules\Workflows\Services\Reports\ReportExportService::class);
 
         $this->app->singleton(WorkflowDefinitionNormalizer::class);
         $this->app->singleton(ExpressionLanguageValidator::class);

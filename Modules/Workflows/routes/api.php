@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Modules\Workflows\Http\Controllers\DashboardController;
 use Modules\Workflows\Http\Controllers\DynamicFlowController;
+use Modules\Workflows\Http\Controllers\ManagerReportsController;
 use Modules\Workflows\Http\Controllers\MobileTaskCommentsController;
 use Modules\Workflows\Http\Controllers\MobileTaskFilesController;
 use Modules\Workflows\Http\Controllers\NodeController;
@@ -61,6 +62,14 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/tasks/{task}/comments', [MobileTaskCommentsController::class, 'index'])->name('workflows.tasks.comments.index');
     Route::post('/tasks/{task}/comments', [MobileTaskCommentsController::class, 'store'])->name('workflows.tasks.comments.store');
     Route::delete('/tasks/{task}/comments/{comment}', [MobileTaskCommentsController::class, 'destroy'])->name('workflows.tasks.comments.destroy');
+
+    // Manager Reports — Team Performance & Workflow Analytics.
+    Route::prefix('reports')->group(function (): void {
+        Route::get('/team-performance', [ManagerReportsController::class, 'teamPerformance'])->name('workflows.reports.team-performance');
+        Route::get('/team-performance/export', [ManagerReportsController::class, 'exportTeamPerformance'])->name('workflows.reports.team-performance.export');
+        Route::get('/workflow-analytics', [ManagerReportsController::class, 'workflowAnalytics'])->name('workflows.reports.workflow-analytics');
+        Route::get('/workflow-analytics/export', [ManagerReportsController::class, 'exportWorkflowAnalytics'])->name('workflows.reports.workflow-analytics.export');
+    });
 
     // Collection routes.
     Route::get('/', [WorkflowController::class, 'index'])->name('workflows.index');
