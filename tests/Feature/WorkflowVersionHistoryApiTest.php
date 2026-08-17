@@ -214,6 +214,22 @@ class WorkflowVersionHistoryApiTest extends TestCase
         $this->assertContains('send-notification', $response->json('data.nodes_added'));
     }
 
+    public function test_compare_versions_with_version_labels_like_v1_and_v2(): void
+    {
+        [$tenant, $manager, $team, $workflow] = $this->scaffoldTwoVersions();
+
+        $versions = $workflow->versions()->orderBy('version_number')->get();
+        $v1Label = $versions[0]->version_label;
+        $v2Label = $versions[1]->version_label;
+
+        $response = $this->actingAs($manager, 'api')
+            ->getJson("/api/v1/workflows/{$workflow->id}/versions/compare?from_version_id={$v1Label}&to_version_id={$v2Label}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.from_version.version_label', $v1Label)
+            ->assertJsonPath('data.to_version.version_label', $v2Label);
+    }
+
     public function test_rollback_with_custom_release_note(): void
     {
         [$tenant, $manager, $team, $workflow] = $this->scaffoldTwoVersions();

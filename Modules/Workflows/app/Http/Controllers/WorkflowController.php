@@ -124,14 +124,39 @@ class WorkflowController extends Controller
 
     public function compareVersions(Request $request, Workflow $workflow): JsonResponse
     {
-        $fromVersion = WorkflowVersion::findOrFail($request->query('from_version_id'));
-        $toVersion = WorkflowVersion::findOrFail($request->query('to_version_id'));
+        $fromParam = $request->query('from_version_id') ?? $request->query('from_version');
+        $toParam = $request->query('to_version_id') ?? $request->query('to_version');
+
+        if (! $fromParam || ! $toParam) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'versions' => 'Both from_version_id and to_version_id query parameters are required.',
+            ]);
+        }
+
+        $fromVersion = $this->resolveVersion($workflow, $fromParam);
+        $toVersion = $this->resolveVersion($workflow, $toParam);
 
         $diff = $this->versioningService->compareVersions($this->actor(), $workflow, $fromVersion, $toVersion);
 
         return response()->json([
             'data' => $diff,
         ]);
+    }
+
+    protected function resolveVersion(Workflow $workflow, mixed $identifier): WorkflowVersion
+    {
+        if (is_numeric($identifier)) {
+            $version = $workflow->versions()->where('id', (int) $identifier)->first()
+                ?? $workflow->versions()->where('version_number', (int) $identifier)->first();
+        } else {
+            $version = $workflow->versions()->where('version_label', (string) $identifier)->first();
+        }
+
+        if (! $version) {
+            abort(404, "Workflow version [{$identifier}] not found for this workflow.");
+        }
+
+        return $version;
     }
 
     public function rollback(RollbackWorkflowRequest $request, Workflow $workflow, WorkflowVersion $version): JsonResponse
