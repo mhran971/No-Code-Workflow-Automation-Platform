@@ -146,6 +146,7 @@ Prefix: `/api/v1/workflows` — all routes behind `auth:api`, `active.user` unle
 | GET | `/nodes` | List available node types |
 | POST | `/validate` | Validate a workflow definition |
 | GET | `/templates` | Workflow templates |
+| POST | `/ai-generate` | Draft a workflow definition via the external RAG service (preview only, nothing persisted) |
 | POST | `/broadcasting/auth` | Reverb private-channel auth for JWT users |
 | GET | `/instances/{instance}` | Show workflow instance |
 | GET | `/instances/{instance}/failures` | Instance failure details |

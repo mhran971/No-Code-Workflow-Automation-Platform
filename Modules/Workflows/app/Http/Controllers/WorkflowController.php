@@ -56,21 +56,21 @@ class WorkflowController extends Controller
     }
 
     /**
-     * Ask the external RAG service to draft a workflow definition from a prompt/goal.
+     * Ask the external RAG service to draft a workflow definition from a prompt.
      * Returns a preview shaped like a template ({@see WorkflowTemplateResource}) plus a
      * `definition` — nothing is persisted here. Feed the returned `definition` straight
      * into POST / with method=ai_confirmed to actually create the workflow.
      */
     public function generateWithAi(GenerateWorkflowWithAiRequest $request): JsonResponse
     {
-        $payload = array_filter(
-            $request->validated(),
-            static fn (mixed $value): bool => $value !== null && $value !== []
-        );
+        $data = $request->validated();
 
-        if (isset($payload['article_ids'])) {
-            $payload['article_ids'] = array_map('strval', $payload['article_ids']);
-        }
+        $payload = array_filter([
+            'prompt' => trim((string) $data['prompt']),
+            'workflow_name' => $data['workflow_name'] ?? null,
+            // Scopes RAG's document grounding to this tenant only — never client-supplied.
+            'tenant_id' => (string) $this->actor()->tenant_id,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
 
         try {
             $result = $this->aiWorkflowGeneratorService->generate($payload);
@@ -84,10 +84,17 @@ class WorkflowController extends Controller
             'data' => [
                 'id' => null,
                 'name' => $workflow['name'] ?? $payload['workflow_name'] ?? null,
-                'description' => $workflow['description'] ?? null,
+                // `description` here is plain workflow metadata (same field StoreWorkflowRequest
+                // uses for method=blank/template) — never sent to RAG, which has no such input.
+                // The client's own text wins; the AI's generated summary is only a fallback
+                // suggestion when the client didn't type one.
+                'description' => $data['description'] ?? $workflow['description'] ?? null,
                 'category' => null,
                 'is_global' => false,
                 'usage_count' => 0,
+                // Not part of RAG's request/response — echoed back so the client can carry it
+                // straight into POST / (method=ai_confirmed), which requires team_id.
+                'team_id' => $data['team_id'] ?? null,
                 'definition' => $workflow['definition'] ?? null,
             ],
             'success' => $result['success'] ?? false,

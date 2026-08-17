@@ -26,9 +26,10 @@ class AiWorkflowGeneratorService
     }
 
     /**
-     * @param  array<string, mixed>  $payload  AIWorkflowRequest fields: prompt, workflow_name, team_id,
-     *                                          goal, trigger_description, steps, conditions,
-     *                                          additional_requirements, article_ids
+     * @param  array<string, mixed>  $payload  AIWorkflowRequest fields: prompt (required, ≥5 chars
+     *                                          trimmed), workflow_name, tenant_id (scopes RAG's
+     *                                          document grounding — always set by the caller from
+     *                                          the authenticated user, never from client input)
      * @return array<string, mixed> AIWorkflowResponse: success, workflow, validation, ai, context_documents_used
      */
     public function generate(array $payload): array
