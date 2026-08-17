@@ -36,6 +36,7 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::get('/nodes', [NodeController::class, 'index'])->name('workflows.nodes.index');
     Route::post('/validate', [WorkflowController::class, 'validateDefinition'])->name('workflows.definition.validate');
     Route::get('/templates', [WorkflowController::class, 'templates'])->name('workflows.templates.index');
+    Route::post('/ai-generate', [WorkflowController::class, 'generateWithAi'])->name('workflows.ai-generate');
 
     // Business Owner dashboard — tenant-scoped KPI cards.
     Route::get('/dashboard/operations', [DashboardController::class, 'operations'])->name('workflows.dashboard.operations');

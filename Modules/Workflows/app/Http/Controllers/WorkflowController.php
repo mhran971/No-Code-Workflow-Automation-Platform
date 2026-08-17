@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
+use Modules\Workflows\Http\Requests\GenerateWorkflowWithAiRequest;
 use Modules\Workflows\Http\Requests\PublishWorkflowRequest;
 use Modules\Workflows\Http\Requests\RollbackWorkflowRequest;
 use Modules\Workflows\Http\Requests\StoreWorkflowRequest;
@@ -15,6 +16,7 @@ use Modules\Workflows\Http\Requests\ValidateWorkflowDefinitionRequest;
 use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowVersion;
+use Modules\Workflows\Services\Ai\AiWorkflowGeneratorService;
 use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\WorkflowTemplateService;
@@ -22,6 +24,7 @@ use Modules\Workflows\Services\WorkflowVersioningService;
 use Modules\Workflows\Transformers\WorkflowResource;
 use Modules\Workflows\Transformers\WorkflowTemplateResource;
 use Modules\Workflows\Transformers\WorkflowVersionResource;
+use RuntimeException;
 
 class WorkflowController extends Controller
 {
@@ -30,6 +33,7 @@ class WorkflowController extends Controller
         protected WorkflowVerificationService $verificationService,
         protected WorkflowVersioningService $versioningService,
         protected WorkflowTemplateService $templateService,
+        protected AiWorkflowGeneratorService $aiWorkflowGeneratorService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -48,6 +52,48 @@ class WorkflowController extends Controller
 
         return response()->json([
             'data' => WorkflowTemplateResource::collection($templates),
+        ]);
+    }
+
+    /**
+     * Ask the external RAG service to draft a workflow definition from a prompt/goal.
+     * Returns a preview shaped like a template ({@see WorkflowTemplateResource}) plus a
+     * `definition` — nothing is persisted here. Feed the returned `definition` straight
+     * into POST / with method=ai_confirmed to actually create the workflow.
+     */
+    public function generateWithAi(GenerateWorkflowWithAiRequest $request): JsonResponse
+    {
+        $payload = array_filter(
+            $request->validated(),
+            static fn (mixed $value): bool => $value !== null && $value !== []
+        );
+
+        if (isset($payload['article_ids'])) {
+            $payload['article_ids'] = array_map('strval', $payload['article_ids']);
+        }
+
+        try {
+            $result = $this->aiWorkflowGeneratorService->generate($payload);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
+
+        $workflow = $result['workflow'] ?? [];
+
+        return response()->json([
+            'data' => [
+                'id' => null,
+                'name' => $workflow['name'] ?? $payload['workflow_name'] ?? null,
+                'description' => $workflow['description'] ?? null,
+                'category' => null,
+                'is_global' => false,
+                'usage_count' => 0,
+                'definition' => $workflow['definition'] ?? null,
+            ],
+            'success' => $result['success'] ?? false,
+            'validation' => $result['validation'] ?? null,
+            'ai' => $result['ai'] ?? null,
+            'context_documents_used' => $result['context_documents_used'] ?? [],
         ]);
     }
 
