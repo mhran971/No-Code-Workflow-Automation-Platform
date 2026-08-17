@@ -19,9 +19,9 @@ class GenerateWorkflowWithAiRequest extends FormRequest
             'prompt' => ['required', 'string'],
             // Plain workflow metadata — same field/limit as StoreWorkflowRequest's `description`
             // (method=blank/template). Never sent to the AI; just carried through the preview.
-            'description' => ['nullable', 'string', 'max:2000'],
-            'workflow_name' => ['nullable', 'string', 'max:255'],
-            'team_id' => ['nullable', 'integer'],
+            'description' => ['required', 'string', 'max:2000'],
+            'workflow_name' => ['required', 'string', 'max:255'],
+            'team_id' => ['required', 'integer'],
         ];
     }
 
