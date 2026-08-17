@@ -4,6 +4,7 @@ namespace Modules\Customers\Services;
 
 use App\Services\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 use Modules\Customers\Models\Customer;
 use Modules\Customers\Repositories\CustomerFieldRepository;
@@ -26,32 +27,57 @@ class CustomerService extends BaseService
 
     public function listForTenant(int $tenantId, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->customerRepository->paginateForTenant($tenantId, $perPage);
+        $customers = $this->customerRepository->paginateForTenant($tenantId, $perPage);
+        $fields = $this->customerFieldRepository->allForTenant($tenantId);
+
+        $customers->getCollection()->each(
+            fn (Customer $customer) => $customer->custom_field_values = $this->fillCustomFieldValues($fields, $customer->custom_field_values)
+        );
+
+        return $customers;
     }
 
     public function getForTenant(int $id, int $tenantId): ?Customer
     {
-        return $this->customerRepository->findForTenant($id, $tenantId);
+        $customer = $this->customerRepository->findForTenant($id, $tenantId);
+
+        if ($customer) {
+            $customer->custom_field_values = $this->fillCustomFieldValues(
+                $this->customerFieldRepository->allForTenant($tenantId),
+                $customer->custom_field_values
+            );
+        }
+
+        return $customer;
     }
 
     public function create(int $tenantId, array $data): Customer
     {
         $data['tenant_id'] = $tenantId;
-        $data['custom_field_values'] = $this->validateCustomFieldValues($tenantId, $data['custom_field_values'] ?? []);
+        $fields = $this->customerFieldRepository->allForTenant($tenantId);
+        $data['custom_field_values'] = $this->validateCustomFieldValues($fields, $data['custom_field_values'] ?? []);
 
-        return $this->customerRepository->create($data);
+        $customer = $this->customerRepository->create($data);
+        $customer->custom_field_values = $this->fillCustomFieldValues($fields, $customer->custom_field_values);
+
+        return $customer;
     }
 
     public function update(Customer $customer, array $data): Customer
     {
+        $fields = $this->customerFieldRepository->allForTenant((int) $customer->tenant_id);
+
         if (array_key_exists('custom_field_values', $data)) {
             $data['custom_field_values'] = $this->validateCustomFieldValues(
-                (int) $customer->tenant_id,
+                $fields,
                 array_merge($customer->custom_field_values ?? [], $data['custom_field_values'])
             );
         }
 
-        return $this->customerRepository->update($customer, $data);
+        $customer = $this->customerRepository->update($customer, $data);
+        $customer->custom_field_values = $this->fillCustomFieldValues($fields, $customer->custom_field_values);
+
+        return $customer;
     }
 
     public function delete(Customer $customer): void
@@ -64,9 +90,8 @@ class CustomerService extends BaseService
      * as-authored — type coercion per CustomerFieldType is left to the (out-of-scope) frontend
      * form renderer, matching how NodeConfigField values are handled on the Workflows side.
      */
-    protected function validateCustomFieldValues(int $tenantId, array $values): array
+    protected function validateCustomFieldValues(Collection $fields, array $values): array
     {
-        $fields = $this->customerFieldRepository->allForTenant($tenantId);
         $knownKeys = $fields->pluck('key')->all();
 
         $unknown = array_diff(array_keys($values), $knownKeys);
@@ -89,5 +114,21 @@ class CustomerService extends BaseService
         }
 
         return $values;
+    }
+
+    /**
+     * Ensures every currently-configured custom field is present in the returned values,
+     * defaulting to the field's default_value (or null) when the customer hasn't filled it in.
+     */
+    protected function fillCustomFieldValues(Collection $fields, ?array $values): array
+    {
+        $values ??= [];
+
+        $filled = [];
+        foreach ($fields as $field) {
+            $filled[$field->key] = $values[$field->key] ?? $field->default_value ?? null;
+        }
+
+        return $filled;
     }
 }
