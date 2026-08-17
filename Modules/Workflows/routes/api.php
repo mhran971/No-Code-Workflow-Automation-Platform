@@ -63,12 +63,14 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     Route::post('/tasks/{task}/comments', [MobileTaskCommentsController::class, 'store'])->name('workflows.tasks.comments.store');
     Route::delete('/tasks/{task}/comments/{comment}', [MobileTaskCommentsController::class, 'destroy'])->name('workflows.tasks.comments.destroy');
 
-    // Manager Reports — Team Performance & Workflow Analytics.
+    // Manager Reports — Team Performance, Workflow Analytics & Recommendations.
     Route::prefix('reports')->group(function (): void {
         Route::get('/team-performance', [ManagerReportsController::class, 'teamPerformance'])->name('workflows.reports.team-performance');
         Route::get('/team-performance/export', [ManagerReportsController::class, 'exportTeamPerformance'])->name('workflows.reports.team-performance.export');
         Route::get('/workflow-analytics', [ManagerReportsController::class, 'workflowAnalytics'])->name('workflows.reports.workflow-analytics');
         Route::get('/workflow-analytics/export', [ManagerReportsController::class, 'exportWorkflowAnalytics'])->name('workflows.reports.workflow-analytics.export');
+        Route::get('/recommendations', [ManagerReportsController::class, 'recommendations'])->name('workflows.reports.recommendations');
+        Route::get('/recommendations/export', [ManagerReportsController::class, 'exportRecommendations'])->name('workflows.reports.recommendations.export');
     });
 
     // Collection routes.

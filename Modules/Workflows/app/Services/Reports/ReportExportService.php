@@ -220,4 +220,168 @@ class ReportExportService
 
         return $pdf->download($filename);
     }
+
+    /**
+     * Export Workflow Recommendations Report as a streamed CSV file.
+     *
+     * @param  array<string, mixed>  $reportData
+     */
+    public function exportRecommendationsCsv(array $reportData): StreamedResponse
+    {
+        $filename = 'workflow-recommendations-' . ($reportData['period']['from'] ?? 'report') . '-to-' . ($reportData['period']['to'] ?? 'now') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        return response()->stream(function () use ($reportData): void {
+            $handle = fopen('php://output', 'w');
+
+            // Write UTF-8 BOM for Excel UTF-8 decoding
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Report Header Metadata
+            fputcsv($handle, ['Workflow Recommendations & Optimization Report']);
+            fputcsv($handle, ['Team', $reportData['team']['name'] ?? 'N/A']);
+            fputcsv($handle, ['Manager', $reportData['team']['manager']['name'] ?? 'N/A']);
+            fputcsv($handle, ['Period', ($reportData['period']['from'] ?? '') . ' to ' . ($reportData['period']['to'] ?? '')]);
+            fputcsv($handle, ['Health Score', ($reportData['health_score']['score'] ?? 100) . '/100 (' . ($reportData['health_score']['grade'] ?? 'Optimal') . ')']);
+            fputcsv($handle, []);
+
+            // 1. Bottlenecks
+            fputcsv($handle, ['--- 1. BOTTLENECK NODES (>50% ABOVE WORKFLOW MEDIAN) ---']);
+            fputcsv($handle, [
+                'Workflow ID',
+                'Workflow Name',
+                'Node Key',
+                'Node Type',
+                'Execution Count',
+                'Avg Duration (s)',
+                'Workflow Median (s)',
+                'Excess (%)',
+                'Severity',
+                'Recommendation',
+            ]);
+            foreach ($reportData['recommendations']['bottlenecks'] ?? [] as $bn) {
+                fputcsv($handle, [
+                    $bn['workflow_id'] ?? '',
+                    $bn['workflow_name'] ?? '',
+                    $bn['node_key'] ?? '',
+                    $bn['node_type'] ?? '',
+                    $bn['execution_count'] ?? '',
+                    $bn['avg_duration_seconds'] ?? '',
+                    $bn['workflow_median_seconds'] ?? '',
+                    $bn['excess_percentage'] ?? '' . '%',
+                    strtoupper($bn['severity'] ?? ''),
+                    $bn['suggestion'] ?? '',
+                ]);
+            }
+            fputcsv($handle, []);
+
+            // 2. High-Failure Nodes
+            fputcsv($handle, ['--- 2. HIGH-FAILURE NODES ---']);
+            fputcsv($handle, [
+                'Workflow ID',
+                'Workflow Name',
+                'Node Key',
+                'Node Type',
+                'Total Runs',
+                'Failed Runs',
+                'Failure Rate (%)',
+                'Severity',
+                'Recommendation',
+            ]);
+            foreach ($reportData['recommendations']['high_failure_nodes'] ?? [] as $fn) {
+                fputcsv($handle, [
+                    $fn['workflow_id'] ?? '',
+                    $fn['workflow_name'] ?? '',
+                    $fn['node_key'] ?? '',
+                    $fn['node_type'] ?? '',
+                    $fn['total_executions'] ?? '',
+                    $fn['failed_executions'] ?? '',
+                    $fn['failure_rate'] ?? '' . '%',
+                    strtoupper($fn['severity'] ?? ''),
+                    $fn['suggestion'] ?? '',
+                ]);
+            }
+            fputcsv($handle, []);
+
+            // 3. High Cancellation Workflows
+            fputcsv($handle, ['--- 3. HIGH CANCELLATION WORKFLOWS ---']);
+            fputcsv($handle, [
+                'Workflow ID',
+                'Workflow Name',
+                'Total Runs',
+                'Cancelled Runs',
+                'Cancellation Rate (%)',
+                'Avg Runtime Before Cancel (s)',
+                'Severity',
+                'Recommendation',
+            ]);
+            foreach ($reportData['recommendations']['high_cancellation_workflows'] ?? [] as $cw) {
+                fputcsv($handle, [
+                    $cw['workflow_id'] ?? '',
+                    $cw['workflow_name'] ?? '',
+                    $cw['total_instances'] ?? '',
+                    $cw['cancelled_instances'] ?? '',
+                    $cw['cancellation_rate'] ?? '' . '%',
+                    $cw['avg_runtime_before_cancel_seconds'] ?? '',
+                    strtoupper($cw['severity'] ?? ''),
+                    $cw['suggestion'] ?? '',
+                ]);
+            }
+            fputcsv($handle, []);
+
+            // 4. SLA Breach Hot Spots
+            fputcsv($handle, ['--- 4. SLA BREACH HOT SPOTS (HUMAN TASKS) ---']);
+            fputcsv($handle, [
+                'Workflow ID',
+                'Workflow Name',
+                'Node Key',
+                'Task Title',
+                'Total Tasks',
+                'Breached Tasks',
+                'Breach Rate (%)',
+                'Avg Overdue (Hours)',
+                'Severity',
+                'Recommendation',
+            ]);
+            foreach ($reportData['recommendations']['sla_breach_hot_spots'] ?? [] as $sb) {
+                fputcsv($handle, [
+                    $sb['workflow_id'] ?? '',
+                    $sb['workflow_name'] ?? '',
+                    $sb['node_key'] ?? '',
+                    $sb['task_title'] ?? '',
+                    $sb['total_tasks'] ?? '',
+                    $sb['breached_tasks'] ?? '',
+                    $sb['breach_rate'] ?? '' . '%',
+                    $sb['avg_overdue_hours'] ?? '',
+                    strtoupper($sb['severity'] ?? ''),
+                    $sb['suggestion'] ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    /**
+     * Export Workflow Recommendations Report as a downloadable PDF document.
+     *
+     * @param  array<string, mixed>  $reportData
+     */
+    public function exportRecommendationsPdf(array $reportData): Response
+    {
+        $filename = 'workflow-recommendations-' . ($reportData['period']['from'] ?? 'report') . '-to-' . ($reportData['period']['to'] ?? 'now') . '.pdf';
+
+        $pdf = Pdf::loadView('workflows::reports.workflow-recommendations-pdf', [
+            'report' => $reportData,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download($filename);
+    }
 }

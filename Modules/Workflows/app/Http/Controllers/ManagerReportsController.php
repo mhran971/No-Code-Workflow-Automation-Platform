@@ -9,9 +9,11 @@ use Modules\Auth\Models\User;
 use Modules\Workflows\Http\Requests\ExportReportRequest;
 use Modules\Workflows\Http\Requests\TeamPerformanceReportRequest;
 use Modules\Workflows\Http\Requests\WorkflowAnalyticsReportRequest;
+use Modules\Workflows\Http\Requests\WorkflowRecommendationsReportRequest;
 use Modules\Workflows\Services\Reports\ReportExportService;
 use Modules\Workflows\Services\Reports\TeamPerformanceReportService;
 use Modules\Workflows\Services\Reports\WorkflowAnalyticsReportService;
+use Modules\Workflows\Services\Reports\WorkflowRecommendationsReportService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ManagerReportsController extends Controller
@@ -19,6 +21,7 @@ class ManagerReportsController extends Controller
     public function __construct(
         protected TeamPerformanceReportService $teamPerformanceService,
         protected WorkflowAnalyticsReportService $workflowAnalyticsService,
+        protected WorkflowRecommendationsReportService $workflowRecommendationsService,
         protected ReportExportService $reportExportService,
     ) {}
 
@@ -76,6 +79,34 @@ class ManagerReportsController extends Controller
         }
 
         return $this->reportExportService->exportWorkflowAnalyticsCsv($data);
+    }
+
+    /**
+     * Get Manager Workflow Recommendations Report dataset.
+     */
+    public function recommendations(WorkflowRecommendationsReportRequest $request): JsonResponse
+    {
+        $data = $this->workflowRecommendationsService->getRecommendations($this->actor(), $request->validated());
+
+        return response()->json($data);
+    }
+
+    /**
+     * Export Manager Workflow Recommendations Report as CSV or PDF.
+     */
+    public function exportRecommendations(ExportReportRequest $request): Response|StreamedResponse
+    {
+        $filters = $request->validated();
+        $format = $filters['format'] ?? 'csv';
+        unset($filters['format']);
+
+        $data = $this->workflowRecommendationsService->getRecommendations($this->actor(), $filters);
+
+        if ($format === 'pdf') {
+            return $this->reportExportService->exportRecommendationsPdf($data);
+        }
+
+        return $this->reportExportService->exportRecommendationsCsv($data);
     }
 
     protected function actor(): User
