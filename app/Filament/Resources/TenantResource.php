@@ -151,6 +151,45 @@ class TenantResource extends Resource
                             ->warning()
                             ->send();
                     }),
+                Tables\Actions\Action::make('impersonate')
+                    ->label('Impersonate')
+                    ->icon('heroicon-o-finger-print')
+                    ->color('info')
+                    ->modalHeading(fn (Tenant $record): string => "Impersonate {$record->business_name} Owner")
+                    ->modalDescription('Generate an immediate JWT session for the owner of this tenant.')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->form(function (Tenant $record) {
+                        $owner = $record->users()->where('role', \Modules\Auth\Enums\Role::BusinessOwner)->first()
+                            ?? $record->users()->first();
+
+                        if (! $owner) {
+                            return [
+                                Forms\Components\Placeholder::make('no_owner')
+                                    ->label('Notice')
+                                    ->content('No users found for this tenant.'),
+                            ];
+                        }
+
+                        $token = auth('api')->login($owner);
+
+                        return [
+                            Forms\Components\TextInput::make('impersonated_user')
+                                ->label('User Account')
+                                ->default("{$owner->name} ({$owner->email})")
+                                ->disabled(),
+                            Forms\Components\TextInput::make('impersonated_role')
+                                ->label('Role')
+                                ->default($owner->role instanceof \Modules\Auth\Enums\Role ? $owner->role->value : $owner->role)
+                                ->disabled(),
+                            Forms\Components\Textarea::make('jwt_token')
+                                ->label('Bearer JWT Token')
+                                ->default($token)
+                                ->rows(4)
+                                ->disabled()
+                                ->helperText('Use this JWT token to test and troubleshoot API endpoints as this tenant owner.'),
+                        ];
+                    }),
                 Tables\Actions\DeleteAction::make()
                     ->modalHeading(fn (Tenant $record): string => "Delete {$record->business_name}")
                     ->modalDescription('Are you sure you want to delete this tenant? All associated users, teams, workflows, and executions will be permanently removed.'),
