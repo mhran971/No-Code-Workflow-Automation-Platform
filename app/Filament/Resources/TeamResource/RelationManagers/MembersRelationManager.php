@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TeamResource\RelationManagers;
 
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -76,7 +77,7 @@ class MembersRelationManager extends RelationManager
                 //
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 //

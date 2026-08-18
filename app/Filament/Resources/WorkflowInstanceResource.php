@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\WorkflowInstanceResource\Pages;
+use Filament\Actions;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -103,14 +104,14 @@ class WorkflowInstanceResource extends Resource
                 Tables\Filters\SelectFilter::make('trigger_type')
                     ->options([
                         TriggerType::Manual->value => 'Manual',
+                        TriggerType::Form->value => 'Form',
                         TriggerType::Webhook->value => 'Webhook',
-                        TriggerType::Schedule->value => 'Schedule',
-                        TriggerType::Event->value => 'Event',
+                        TriggerType::SubWorkflow->value => 'Sub-Workflow',
                     ]),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('cancel')
+                Actions\ViewAction::make(),
+                Actions\Action::make('cancel')
                     ->label('Cancel')
                     ->icon('heroicon-o-stop-circle')
                     ->color('danger')

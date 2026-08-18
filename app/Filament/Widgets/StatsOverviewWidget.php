@@ -25,7 +25,7 @@ class StatsOverviewWidget extends BaseWidget
         $activeUsers = User::where('is_active', true)->count();
 
         $totalWorkflows = Workflow::count();
-        $publishedWorkflows = Workflow::where('status', WorkflowStatus::Published)->count();
+        $publishedWorkflows = Workflow::where('status', WorkflowStatus::Active)->count();
 
         $totalRuns = WorkflowInstance::count();
         $completedRuns = WorkflowInstance::where('status', WorkflowInstanceStatus::Completed)->count();

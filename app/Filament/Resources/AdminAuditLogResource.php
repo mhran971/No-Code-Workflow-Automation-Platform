@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AdminAuditLogResource\Pages;
 use App\Models\AdminAuditLog;
+use Filament\Actions;
 use Filament\Infolists;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -71,7 +72,7 @@ class AdminAuditLogResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 //

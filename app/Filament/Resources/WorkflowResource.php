@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\WorkflowResource\Pages;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
@@ -43,9 +44,9 @@ class WorkflowResource extends Resource
                             ->nullable(),
                         Forms\Components\Select::make('status')
                             ->options([
-                                WorkflowStatus::Draft->value => 'Draft',
-                                WorkflowStatus::Published->value => 'Published',
-                                WorkflowStatus::Archived->value => 'Archived',
+                                WorkflowStatus::Active->value => 'Active',
+                                WorkflowStatus::Disabled->value => 'Disabled',
+                                WorkflowStatus::Deleted->value => 'Deleted',
                             ])
                             ->required(),
                         Forms\Components\Textarea::make('description')
@@ -80,9 +81,9 @@ class WorkflowResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (WorkflowStatus|string|null $state): string => match ($state instanceof WorkflowStatus ? $state->value : (string) $state) {
-                        WorkflowStatus::Published->value => 'success',
-                        WorkflowStatus::Draft->value => 'warning',
-                        WorkflowStatus::Archived->value => 'gray',
+                        WorkflowStatus::Active->value => 'success',
+                        WorkflowStatus::Disabled->value => 'warning',
+                        WorkflowStatus::Deleted->value => 'danger',
                         default => 'secondary',
                     }),
                 Tables\Columns\TextColumn::make('current_version_number')
@@ -117,28 +118,35 @@ class WorkflowResource extends Resource
                     ->preload(),
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        WorkflowStatus::Draft->value => 'Draft',
-                        WorkflowStatus::Published->value => 'Published',
-                        WorkflowStatus::Archived->value => 'Archived',
+                        WorkflowStatus::Active->value => 'Active',
+                        WorkflowStatus::Disabled->value => 'Disabled',
+                        WorkflowStatus::Deleted->value => 'Deleted',
                     ]),
                 Tables\Filters\Filter::make('has_active_instances')
                     ->label('Has Active Runs')
                     ->query(fn ($query) => $query->where('active_instances', '>', 0)),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('archive')
-                    ->label(fn (Workflow $record): string => $record->status === WorkflowStatus::Archived ? 'Unarchive' : 'Archive')
-                    ->icon('heroicon-o-archive-box')
-                    ->color('warning')
+                Actions\ViewAction::make(),
+                Actions\Action::make('toggleStatus')
+                    ->label(fn (Workflow $record): string => $record->status === WorkflowStatus::Active ? 'Disable' : 'Activate')
+                    ->icon(fn (Workflow $record): string => $record->status === WorkflowStatus::Active ? 'heroicon-o-pause' : 'heroicon-o-play')
+                    ->color(fn (Workflow $record): string => $record->status === WorkflowStatus::Active ? 'warning' : 'success')
                     ->requiresConfirmation()
                     ->action(function (Workflow $record): void {
-                        if ($record->status === WorkflowStatus::Archived) {
-                            $record->status = WorkflowStatus::Draft;
+                        if ($record->status === WorkflowStatus::Active) {
+                            $record->status = WorkflowStatus::Disabled;
                         } else {
-                            $record->status = WorkflowStatus::Archived;
+                            $record->status = WorkflowStatus::Active;
                         }
                         $record->save();
+
+                        \App\Models\AdminAuditLog::record(
+                            'workflow.status_changed',
+                            "Workflow '{$record->name}' status changed to " . ($record->status instanceof WorkflowStatus ? $record->status->value : $record->status),
+                            $record,
+                            ['status' => $record->status instanceof WorkflowStatus ? $record->status->value : $record->status]
+                        );
 
                         Notification::make()
                             ->title('Workflow status updated')
@@ -146,11 +154,11 @@ class WorkflowResource extends Resource
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\DeleteAction::make(),
+                Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

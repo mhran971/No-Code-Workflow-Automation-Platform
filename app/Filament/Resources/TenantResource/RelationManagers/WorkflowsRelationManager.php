@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TenantResource\RelationManagers;
 
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -25,9 +26,9 @@ class WorkflowsRelationManager extends RelationManager
                     ->columnSpanFull(),
                 Forms\Components\Select::make('status')
                     ->options([
-                        WorkflowStatus::Draft->value => 'Draft',
-                        WorkflowStatus::Published->value => 'Published',
-                        WorkflowStatus::Archived->value => 'Archived',
+                        WorkflowStatus::Active->value => 'Active',
+                        WorkflowStatus::Disabled->value => 'Disabled',
+                        WorkflowStatus::Deleted->value => 'Deleted',
                     ])
                     ->required(),
             ]);
@@ -50,9 +51,9 @@ class WorkflowsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (WorkflowStatus|string|null $state): string => match ($state instanceof WorkflowStatus ? $state->value : (string) $state) {
-                        WorkflowStatus::Published->value => 'success',
-                        WorkflowStatus::Draft->value => 'warning',
-                        WorkflowStatus::Archived->value => 'gray',
+                        WorkflowStatus::Active->value => 'success',
+                        WorkflowStatus::Disabled->value => 'warning',
+                        WorkflowStatus::Deleted->value => 'danger',
                         default => 'secondary',
                     }),
                 Tables\Columns\TextColumn::make('current_version_number')
@@ -77,16 +78,16 @@ class WorkflowsRelationManager extends RelationManager
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        WorkflowStatus::Draft->value => 'Draft',
-                        WorkflowStatus::Published->value => 'Published',
-                        WorkflowStatus::Archived->value => 'Archived',
+                        WorkflowStatus::Active->value => 'Active',
+                        WorkflowStatus::Disabled->value => 'Disabled',
+                        WorkflowStatus::Deleted->value => 'Deleted',
                     ]),
             ])
             ->headerActions([
                 //
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 //

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
@@ -135,9 +136,9 @@ class UserResource extends Resource
                     ->label('Active Status'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('resetPassword')
+                Actions\ViewAction::make(),
+                Actions\EditAction::make(),
+                Actions\Action::make('resetPassword')
                     ->label('Reset Password')
                     ->icon('heroicon-o-key')
                     ->color('warning')
@@ -165,11 +166,11 @@ class UserResource extends Resource
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\DeleteAction::make(),
+                Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

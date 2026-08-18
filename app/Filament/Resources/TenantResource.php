@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TenantResource\Pages;
 use App\Filament\Resources\TenantResource\RelationManagers;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
@@ -107,9 +108,9 @@ class TenantResource extends Resource
                     ->label('Maintenance Mode'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('toggleActive')
+                Actions\ViewAction::make(),
+                Actions\EditAction::make(),
+                Actions\Action::make('toggleActive')
                     ->label(fn (Tenant $record): string => $record->is_active ? 'Deactivate' : 'Activate')
                     ->icon(fn (Tenant $record): string => $record->is_active ? 'heroicon-o-no-symbol' : 'heroicon-o-check-circle')
                     ->color(fn (Tenant $record): string => $record->is_active ? 'danger' : 'success')
@@ -136,7 +137,7 @@ class TenantResource extends Resource
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\Action::make('toggleMaintenance')
+                Actions\Action::make('toggleMaintenance')
                     ->label(fn (Tenant $record): string => $record->maintenance_mode ? 'Disable Maintenance' : 'Enable Maintenance')
                     ->icon('heroicon-o-wrench-screwdriver')
                     ->color('warning')
@@ -165,7 +166,7 @@ class TenantResource extends Resource
                             ->warning()
                             ->send();
                     }),
-                Tables\Actions\Action::make('impersonate')
+                Actions\Action::make('impersonate')
                     ->label('Impersonate')
                     ->icon('heroicon-o-finger-print')
                     ->color('info')
@@ -204,13 +205,13 @@ class TenantResource extends Resource
                                 ->helperText('Use this JWT token to test and troubleshoot API endpoints as this tenant owner.'),
                         ];
                     }),
-                Tables\Actions\DeleteAction::make()
+                Actions\DeleteAction::make()
                     ->modalHeading(fn (Tenant $record): string => "Delete {$record->business_name}")
                     ->modalDescription('Are you sure you want to delete this tenant? All associated users, teams, workflows, and executions will be permanently removed.'),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
