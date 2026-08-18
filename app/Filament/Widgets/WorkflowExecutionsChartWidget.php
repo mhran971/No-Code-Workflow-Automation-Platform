@@ -9,7 +9,7 @@ use Modules\Workflows\Models\WorkflowInstance;
 
 class WorkflowExecutionsChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Daily Workflow Executions (Last 7 Days)';
+    protected ?string $heading = 'Daily Workflow Executions (Last 7 Days)';
 
     protected static ?int $sort = 2;
 

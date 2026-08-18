@@ -152,6 +152,13 @@ class UserResource extends Resource
                         $record->password = Hash::make($data['new_password']);
                         $record->save();
 
+                        \App\Models\AdminAuditLog::record(
+                            'user.password_reset',
+                            "Password was reset for user '{$record->email}'",
+                            $record,
+                            ['user_id' => $record->id, 'email' => $record->email]
+                        );
+
                         Notification::make()
                             ->title('Password reset successfully')
                             ->body("Password for {$record->email} has been updated.")

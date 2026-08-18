@@ -123,6 +123,13 @@ class TenantResource extends Resource
                         $record->deactivated_at = $record->is_active ? null : now();
                         $record->save();
 
+                        \App\Models\AdminAuditLog::record(
+                            $record->is_active ? 'tenant.activated' : 'tenant.deactivated',
+                            "Tenant '{$record->business_name}' was " . ($record->is_active ? 'activated' : 'deactivated'),
+                            $record,
+                            ['is_active' => $record->is_active]
+                        );
+
                         Notification::make()
                             ->title('Tenant status updated')
                             ->body("{$record->business_name} is now " . ($record->is_active ? 'Active' : 'Deactivated'))
@@ -144,6 +151,13 @@ class TenantResource extends Resource
                         $record->maintenance_mode = ! $record->maintenance_mode;
                         $record->maintenance_message = $record->maintenance_mode ? ($data['maintenance_message'] ?? null) : null;
                         $record->save();
+
+                        \App\Models\AdminAuditLog::record(
+                            $record->maintenance_mode ? 'tenant.maintenance_enabled' : 'tenant.maintenance_disabled',
+                            "Maintenance mode " . ($record->maintenance_mode ? 'enabled' : 'disabled') . " for '{$record->business_name}'",
+                            $record,
+                            ['maintenance_mode' => $record->maintenance_mode, 'maintenance_message' => $record->maintenance_message]
+                        );
 
                         Notification::make()
                             ->title('Maintenance mode updated')

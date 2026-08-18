@@ -8,7 +8,7 @@ use Modules\Auth\Models\Tenant;
 
 class TenantsOverviewChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Tenants by Business Type';
+    protected ?string $heading = 'Tenants by Business Type';
 
     protected static ?int $sort = 3;
 
