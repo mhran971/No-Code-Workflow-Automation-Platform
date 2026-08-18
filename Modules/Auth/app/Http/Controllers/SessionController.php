@@ -30,6 +30,15 @@ class SessionController extends Controller
             ], 403);
         }
 
+        if ($user !== null && $user->tenant_id) {
+            $userTenant = $user->tenant;
+            if ($userTenant && isset($userTenant->is_active) && ! (bool) $userTenant->is_active) {
+                return response()->json([
+                    'message' => 'This tenant workspace has been deactivated. Please contact platform support.',
+                ], 403);
+            }
+        }
+
         if (Schema::hasColumn('users', 'is_active')) {
             $credentials['is_active'] = true;
         }
