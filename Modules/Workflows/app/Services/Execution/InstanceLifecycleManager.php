@@ -26,7 +26,7 @@ class InstanceLifecycleManager
     protected array $allowed = [
         'pending' => ['running', 'failed', 'cancelled'],
         'running' => ['completed', 'failed', 'waiting', 'cancelled'],
-        'waiting' => ['running', 'failed', 'cancelled'],
+        'waiting' => ['running', 'failed', 'cancelled', 'completed'],
         'paused' => ['running'],
         'failed' => ['running'],
         'completed' => [],

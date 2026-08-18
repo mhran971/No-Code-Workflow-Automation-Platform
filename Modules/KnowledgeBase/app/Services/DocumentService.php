@@ -8,10 +8,12 @@ use Illuminate\Http\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Log;
+use Modules\KnowledgeBase\Jobs\IndexDocumentJob;
 use Modules\KnowledgeBase\Models\Document;
 use Modules\KnowledgeBase\Repositories\DocumentRepository;
 use Modules\KnowledgeBase\Repositories\TagRepository;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class DocumentService extends BaseService
 {
@@ -20,7 +22,8 @@ class DocumentService extends BaseService
     public function __construct(
         protected DocumentRepository $documentRepository,
         protected TagRepository $tagRepository,
-        protected TagService $tagService
+        protected TagService $tagService,
+        protected RagService $ragService
     ) {}
 
     /**
@@ -40,9 +43,12 @@ class DocumentService extends BaseService
             'title' => $title,
             'document_type_id' => $documentTypeId,
             'file_path' => $storedPath,
+            'index_status' => 'pending',
         ]);
 
         $document->tags()->sync($tagIds);
+
+        IndexDocumentJob::dispatch($document->id);
 
         return $document->load(['documentType', 'tags']);
     }
@@ -116,13 +122,28 @@ class DocumentService extends BaseService
         $document->update(['is_active' => (bool) $isActive]);
         Log::debug('Document active status updated', ['is_active' => $isActive, 'document' => $document]);
 
+        try {
+            $this->ragService->updateDocumentStatus((string) $document->id, (bool) $isActive, (string) $document->tenant_id);
+        } catch (Throwable $e) {
+            Log::warning("Failed to sync document {$document->id} status to RAG index: {$e->getMessage()}");
+        }
+
         return $document;
     }
 
     public function delete(Document $document): bool
     {
         // TODO: Check if there is historical data before deletion. If there is, we can only set is_active to false and keep the file for audit purposes.
+        $documentId = (string) $document->id;
+        $tenantId = (string) $document->tenant_id;
+
         $document->delete();
+
+        try {
+            $this->ragService->deleteDocument($documentId, $tenantId);
+        } catch (Throwable $e) {
+            Log::warning("Failed to remove document {$documentId} from RAG index: {$e->getMessage()}");
+        }
 
         return true;
     }

@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Auth\Models\User;
+use Modules\Workflows\Http\Requests\GenerateWorkflowWithAiRequest;
 use Modules\Workflows\Http\Requests\PublishWorkflowRequest;
 use Modules\Workflows\Http\Requests\RollbackWorkflowRequest;
 use Modules\Workflows\Http\Requests\StoreWorkflowRequest;
@@ -15,6 +16,7 @@ use Modules\Workflows\Http\Requests\ValidateWorkflowDefinitionRequest;
 use Modules\Workflows\Http\Resources\WorkflowValidationResultResource;
 use Modules\Workflows\Models\Workflow;
 use Modules\Workflows\Models\WorkflowVersion;
+use Modules\Workflows\Services\Ai\AiWorkflowGeneratorService;
 use Modules\Workflows\Services\Verification\WorkflowVerificationService;
 use Modules\Workflows\Services\WorkflowManagementService;
 use Modules\Workflows\Services\WorkflowTemplateService;
@@ -22,6 +24,7 @@ use Modules\Workflows\Services\WorkflowVersioningService;
 use Modules\Workflows\Transformers\WorkflowResource;
 use Modules\Workflows\Transformers\WorkflowTemplateResource;
 use Modules\Workflows\Transformers\WorkflowVersionResource;
+use RuntimeException;
 
 class WorkflowController extends Controller
 {
@@ -30,6 +33,7 @@ class WorkflowController extends Controller
         protected WorkflowVerificationService $verificationService,
         protected WorkflowVersioningService $versioningService,
         protected WorkflowTemplateService $templateService,
+        protected AiWorkflowGeneratorService $aiWorkflowGeneratorService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -48,6 +52,55 @@ class WorkflowController extends Controller
 
         return response()->json([
             'data' => WorkflowTemplateResource::collection($templates),
+        ]);
+    }
+
+    /**
+     * Ask the external RAG service to draft a workflow definition from a prompt.
+     * Returns a preview shaped like a template ({@see WorkflowTemplateResource}) plus a
+     * `definition` — nothing is persisted here. Feed the returned `definition` straight
+     * into POST / with method=ai_confirmed to actually create the workflow.
+     */
+    public function generateWithAi(GenerateWorkflowWithAiRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        $payload = array_filter([
+            'prompt' => trim((string) $data['prompt']),
+            'workflow_name' => $data['workflow_name'] ?? null,
+            // Scopes RAG's document grounding to this tenant only — never client-supplied.
+            'tenant_id' => (string) $this->actor()->tenant_id,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+
+        try {
+            $result = $this->aiWorkflowGeneratorService->generate($payload);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
+
+        $workflow = $result['workflow'] ?? [];
+
+        return response()->json([
+            'data' => [
+                'id' => null,
+                'name' => $workflow['name'] ?? $payload['workflow_name'] ?? null,
+                // `description` here is plain workflow metadata (same field StoreWorkflowRequest
+                // uses for method=blank/template) — never sent to RAG, which has no such input.
+                // The client's own text wins; the AI's generated summary is only a fallback
+                // suggestion when the client didn't type one.
+                'description' => $data['description'] ?? $workflow['description'] ?? null,
+                'category' => null,
+                'is_global' => false,
+                'usage_count' => 0,
+                // Not part of RAG's request/response — echoed back so the client can carry it
+                // straight into POST / (method=ai_confirmed), which requires team_id.
+                'team_id' => $data['team_id'] ?? null,
+                'definition' => $workflow['definition'] ?? null,
+            ],
+            'success' => $result['success'] ?? false,
+            'validation' => $result['validation'] ?? null,
+            'ai' => $result['ai'] ?? null,
+            'context_documents_used' => $result['context_documents_used'] ?? [],
         ]);
     }
 
