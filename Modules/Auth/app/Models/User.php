@@ -2,6 +2,8 @@
 
 namespace Modules\Auth\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -9,7 +11,7 @@ use Modules\Auth\Enums\Role;
 use Modules\Team\Models\Team;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable implements JWTSubject
+class User extends Authenticatable implements JWTSubject, FilamentUser
 {
     use HasApiTokens, Notifiable;
 
@@ -100,5 +102,14 @@ class User extends Authenticatable implements JWTSubject
         }
 
         return $this->hasOne(Team::class, 'manager_id', 'id')->where('tenant_id', $this->tenant_id)->first();
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($panel->getId() === 'admin') {
+            return $this->role === Role::SuperAdmin && (bool) $this->is_active;
+        }
+
+        return false;
     }
 }
