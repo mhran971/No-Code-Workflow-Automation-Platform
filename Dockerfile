@@ -1,27 +1,77 @@
-FROM php:8.2-cli
+FROM php:8.2-fpm
 
-RUN apt-get update && apt-get install -y \
-    git curl unzip zip \
-    libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+# Set environment variables
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies & build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    unzip \
+    zip \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
     libicu-dev \
     libpq-dev \
     libzip-dev \
     libonig-dev \
+    procps \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
-    gd intl pdo_pgsql pgsql zip mbstring exif pcntl bcmath \
+        gd \
+        intl \
+        pdo_pgsql \
+        pgsql \
+        zip \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        opcache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Install Node.js LTS (for building frontend / Filament assets if needed)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g npm@latest \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
+# Set working directory
 WORKDIR /var/www
+
+# Copy custom PHP configuration
+COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
+
+# Copy entrypoint script and set executable permissions
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Copy composer files first for layer caching
+COPY composer.json composer.lock ./
+
+# Install dependencies (ignoring scripts initially)
+RUN composer install --no-interaction --no-scripts --no-autoloader --prefer-dist
+
+# Copy the rest of the application codebase
 COPY . .
 
-RUN chmod +x /var/www/docker/entrypoint.sh
-
-RUN composer install --no-interaction --no-dev --optimize-autoloader \
+# Generate optimized autoload files and discover packages
+RUN composer dump-autoload --optimize \
+    && chown -R www-data:www-data /var/www \
     && chmod -R 775 storage bootstrap/cache
 
-ENTRYPOINT ["/var/www/docker/entrypoint.sh"]
-EXPOSE 8000
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]
+# Expose FastCGI port
+EXPOSE 9000
+
+# Set entrypoint and default command
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["php-fpm"]
