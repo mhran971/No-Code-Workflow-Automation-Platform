@@ -72,8 +72,12 @@ RUN composer install --no-interaction --no-scripts --no-autoloader --prefer-dist
 # Copy the rest of the application codebase
 COPY . .
 
-# Generate optimized autoload files and discover packages
-RUN composer dump-autoload --optimize \
+# Generate optimized autoload files. --no-scripts skips `artisan package:discover`
+# (Composer's postAutoloadDump hook), which boots the app and would otherwise
+# crash here: no runtime env vars (e.g. PUSHER_APP_KEY) exist during the image
+# build, only once Railway injects them into the running container. Package
+# discovery instead runs from entrypoint.sh, once real env vars are present.
+RUN composer dump-autoload --optimize --no-scripts \
     && chown -R www-data:www-data /var/www \
     && chmod -R 775 storage bootstrap/cache
 

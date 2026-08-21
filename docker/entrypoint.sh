@@ -17,6 +17,12 @@ mkdir -p \
 chown -R www-data:www-data storage bootstrap/cache || true
 chmod -R 775 storage bootstrap/cache || true
 
+# Discover packages now that real env vars (e.g. PUSHER_APP_KEY) are available.
+# Skipped at build time (see Dockerfile) since booting the app there would
+# crash with no runtime env present yet.
+echo "==> Discovering packages..."
+php artisan package:discover --ansi || true
+
 # Wait for database connection if configured for postgres/mysql
 if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     echo "==> Waiting for database (${DB_HOST}:${DB_PORT:-5432}) to become ready..."
