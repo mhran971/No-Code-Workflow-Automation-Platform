@@ -101,14 +101,6 @@ else
     php artisan view:clear || true
 fi
 
-# Render nginx config from template with the platform-assigned port (Railway
-# injects $PORT at runtime, so this can't be baked in at build time). Only
-# ${PORT} is substituted -- nginx's own $uri/$document_root/etc. are left alone.
-if [ -n "$PORT" ] && [ -f /etc/nginx/templates/default.conf.template ]; then
-    echo "==> Rendering nginx config for port ${PORT}..."
-    envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
-fi
-
 # Execute main container command
 echo "==> Starting process: $@"
 exec "$@"
