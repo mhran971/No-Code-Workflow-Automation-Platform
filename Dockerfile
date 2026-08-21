@@ -45,7 +45,6 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Install Node.js LTS (for building frontend / Filament assets if needed)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && npm install -g npm@latest \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
