@@ -18,6 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     libonig-dev \
     procps \
+    nginx \
+    supervisor \
+    gettext-base \
+    && rm -f /etc/nginx/sites-enabled/default \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -50,6 +54,11 @@ WORKDIR /var/www
 
 # Copy custom PHP configuration
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
+
+# Copy nginx config template (rendered with $PORT at container start) and
+# the supervisord config used to run nginx + php-fpm together as the "web" role
+COPY docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy entrypoint script and set executable permissions
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
