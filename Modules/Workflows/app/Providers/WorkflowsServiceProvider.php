@@ -11,9 +11,15 @@ use Modules\Workflows\Console\Commands\ScanWorkflowTimersCommand;
 use Modules\Workflows\Models\WorkflowInstance;
 use Modules\Workflows\Models\WorkflowTask;
 use Modules\Workflows\Observers\WorkflowTaskObserver;
+use Modules\Workflows\Services\Ai\RagAiClient;
+use Modules\Workflows\Services\EscalationService;
 use Modules\Workflows\Services\Execution\Admission\InstanceAdmissionService;
+use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
+use Modules\Workflows\Services\Execution\Contracts\AiTextClassifier;
 use Modules\Workflows\Services\Execution\EventBroadcaster;
 use Modules\Workflows\Services\Execution\ExecutionPlanCompiler;
+use Modules\Workflows\Services\Execution\Executors\AiClassifierExecutor;
+use Modules\Workflows\Services\Execution\Executors\AiGeneratorExecutor;
 use Modules\Workflows\Services\Execution\Executors\ClickUpCreateTaskExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicEntryExecutor;
 use Modules\Workflows\Services\Execution\Executors\DynamicFlowExecutor;
@@ -40,10 +46,14 @@ use Modules\Workflows\Services\Execution\NodeExecutorRegistry;
 use Modules\Workflows\Services\Execution\NodeRunner;
 use Modules\Workflows\Services\Execution\RetryPolicy;
 use Modules\Workflows\Services\Execution\WorkflowDispatcher;
+use Modules\Workflows\Services\Reports\ReportExportService;
+use Modules\Workflows\Services\Reports\TeamPerformanceReportService;
+use Modules\Workflows\Services\Reports\WorkflowAnalyticsReportService;
 use Modules\Workflows\Services\Verification\ExpressionLanguageValidator;
 use Modules\Workflows\Services\Verification\Rules\ContextualVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\ExpressionVerificationRule;
 use Modules\Workflows\Services\Verification\Rules\GraphControlFlowVerificationRule;
+use Modules\Workflows\Services\Verification\Rules\NodeType\AiClassifierNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\AiGeneratorNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\ClickUpCreateTaskNodeTypeRule;
 use Modules\Workflows\Services\Verification\Rules\NodeType\DynamicEntryNodeTypeRule;
@@ -106,9 +116,9 @@ class WorkflowsServiceProvider extends ServiceProvider
     {
         $this->app->register(RouteServiceProvider::class);
 
-        $this->app->singleton(\Modules\Workflows\Services\Reports\TeamPerformanceReportService::class);
-        $this->app->singleton(\Modules\Workflows\Services\Reports\WorkflowAnalyticsReportService::class);
-        $this->app->singleton(\Modules\Workflows\Services\Reports\ReportExportService::class);
+        $this->app->singleton(TeamPerformanceReportService::class);
+        $this->app->singleton(WorkflowAnalyticsReportService::class);
+        $this->app->singleton(ReportExportService::class);
 
         $this->app->singleton(WorkflowDefinitionNormalizer::class);
         $this->app->singleton(ExpressionLanguageValidator::class);
@@ -136,7 +146,11 @@ class WorkflowsServiceProvider extends ServiceProvider
         $this->app->singleton(InstanceLifecycleManager::class);
 
         $this->app->singleton(MergeCoordinator::class);
-        $this->app->singleton(\Modules\Workflows\Services\EscalationService::class);
+        $this->app->singleton(EscalationService::class);
+
+        $this->app->singleton(RagAiClient::class);
+        $this->app->bind(AiContentGenerator::class, RagAiClient::class);
+        $this->app->bind(AiTextClassifier::class, RagAiClient::class);
 
         $this->app->tag([
             IfNodeTypeRule::class,
@@ -149,6 +163,7 @@ class WorkflowsServiceProvider extends ServiceProvider
             SubWorkflowNodeTypeRule::class,
             DynamicEntryNodeTypeRule::class,
             AiGeneratorNodeTypeRule::class,
+            AiClassifierNodeTypeRule::class,
             ParseJsonNodeTypeRule::class,
             ClickUpCreateTaskNodeTypeRule::class,
             HubSpotCreateContactNodeTypeRule::class,
@@ -172,6 +187,8 @@ class WorkflowsServiceProvider extends ServiceProvider
             $registry->register($this->app->make(ClickUpCreateTaskExecutor::class));
             $registry->register($this->app->make(HubSpotCreateContactExecutor::class));
             $registry->register($this->app->make(HubSpotCreateDealExecutor::class));
+            $registry->register($this->app->make(AiGeneratorExecutor::class));
+            $registry->register($this->app->make(AiClassifierExecutor::class));
 
             $registry->register($this->app->make(ForkNodeExecutor::class));
             $registry->register($this->app->make(TaskNodeExecutor::class));

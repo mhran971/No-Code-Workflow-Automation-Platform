@@ -87,7 +87,10 @@ class ContextualVerificationRule implements VerificationRule
                 continue;
             }
 
-            $kbDocs = $node['config']['kbDocs'] ?? null;
+            // `knowledgeBaseDocuments` is the field name the node's config schema actually seeds
+            // (see NodeDefinitionSeeder); `kbDocs` is kept as a legacy alias for older definitions.
+            $field = array_key_exists('knowledgeBaseDocuments', $node['config'] ?? []) ? 'knowledgeBaseDocuments' : 'kbDocs';
+            $kbDocs = $node['config'][$field] ?? null;
 
             if ($kbDocs === null || $kbDocs === []) {
                 continue;
@@ -96,14 +99,14 @@ class ContextualVerificationRule implements VerificationRule
             $nodeId = is_string($node['id'] ?? null) ? $node['id'] : null;
 
             if (! is_array($kbDocs)) {
-                $result->addError('context.kb_docs_invalid', 'Knowledge Base documents must be an array of document IDs.', "nodes[{$index}].config.kbDocs", $nodeId);
+                $result->addError('context.kb_docs_invalid', 'Knowledge Base documents must be an array of document IDs.', "nodes[{$index}].config.{$field}", $nodeId);
 
                 continue;
             }
 
             foreach ($kbDocs as $docIndex => $docId) {
                 if (! is_numeric($docId)) {
-                    $result->addError('context.kb_doc_id_invalid', 'Knowledge Base document references must be numeric IDs.', "nodes[{$index}].config.kbDocs[{$docIndex}]", $nodeId);
+                    $result->addError('context.kb_doc_id_invalid', 'Knowledge Base document references must be numeric IDs.', "nodes[{$index}].config.{$field}[{$docIndex}]", $nodeId);
 
                     continue;
                 }
@@ -114,7 +117,7 @@ class ContextualVerificationRule implements VerificationRule
                     ->exists();
 
                 if (! $exists) {
-                    $result->addError('context.kb_doc_unknown', "Knowledge Base document '{$docId}' does not exist for this tenant.", "nodes[{$index}].config.kbDocs[{$docIndex}]", $nodeId);
+                    $result->addError('context.kb_doc_unknown', "Knowledge Base document '{$docId}' does not exist for this tenant.", "nodes[{$index}].config.{$field}[{$docIndex}]", $nodeId);
                 }
             }
         }
