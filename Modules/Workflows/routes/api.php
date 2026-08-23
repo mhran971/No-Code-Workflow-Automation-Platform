@@ -41,6 +41,9 @@ Route::prefix('v1/workflows')->middleware(['auth:api', 'active.user'])->group(fu
     // Business Owner dashboard — tenant-scoped KPI cards.
     Route::get('/dashboard/operations', [DashboardController::class, 'operations'])->name('workflows.dashboard.operations');
 
+    // Manager inbox — instances with a dynamic flow awaiting design, scoped to the manager's own team.
+    Route::get('/dynamic-flows/pending', [DynamicFlowController::class, 'pending'])->name('workflows.dynamic-flows.pending');
+
     // Instance routes with /instances prefix must come before /{workflow}.
     Route::get('/instances/{instance}', [WorkflowInstanceController::class, 'show'])->name('workflows.instances.show');
     Route::get('/instances/{instance}/failures', [WorkflowInstanceController::class, 'failures'])->name('workflows.instances.failures');

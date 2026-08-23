@@ -154,6 +154,7 @@ Prefix: `/api/v1/workflows` — all routes behind `auth:api`, `active.user` unle
 | POST | `/instances/{instance}/retry-from-node` | Retry instance from a given node |
 | GET | `/instances/{instance}/dynamic-flow` | Show pending dynamic-flow design request |
 | POST | `/instances/{instance}/dynamic-flow/definition` | Submit a designed dynamic-flow segment |
+| GET | `/dynamic-flows/pending` | Manager inbox: instances awaiting dynamic-flow design, scoped to the manager's own team |
 | GET | `/tasks/summary` | Human-task inbox summary (counts by state) |
 | GET | `/tasks` | List human tasks (role-based) |
 | GET | `/tasks/{task}` | Show task detail |

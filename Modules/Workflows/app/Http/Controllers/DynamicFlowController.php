@@ -4,7 +4,10 @@ namespace Modules\Workflows\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Controller;
+use Modules\Auth\Enums\Role;
+use Modules\Auth\Models\User;
 use Modules\Team\Models\Team;
 use Modules\Team\Repositories\AuditTrailRepository;
 use Modules\Workflows\Enums\DynamicFlowStatus;
@@ -156,6 +159,39 @@ class DynamicFlowController extends Controller
         ], 201);
     }
 
+    /**
+     * List instances with a dynamic flow awaiting design, scoped to the manager's own team only.
+     * Unlike assertCanDesignDynamicFlow(), this does not extend to workflows the manager merely created
+     * outside their managed team — the inbox is strictly team-scoped.
+     */
+    public function pending(Request $request): JsonResponse
+    {
+        $actor = $request->user();
+
+        if ($actor->role !== Role::Manager) {
+            abort(403, 'Only managers can view instances awaiting their attention.');
+        }
+
+        $team = $this->resolveManagedTeam($actor);
+
+        if ($team === null) {
+            return response()->json(new LengthAwarePaginator([], 0, 20));
+        }
+
+        $instances = WorkflowInstance::query()
+            ->where('tenant_id', $actor->tenant_id)
+            ->whereHas('workflow', fn ($query) => $query->where('team_id', $team->id))
+            ->whereHas('dynamicFlows', fn ($query) => $query->where('status', DynamicFlowStatus::AwaitingDesign))
+            ->with([
+                'workflow:id,name,team_id',
+                'dynamicFlows' => fn ($query) => $query->where('status', DynamicFlowStatus::AwaitingDesign),
+            ])
+            ->latest('started_at')
+            ->paginate(20);
+
+        return response()->json($instances);
+    }
+
     protected function assertCanDesignDynamicFlow($actor, WorkflowInstance $instance): void
     {
         $workflow = $instance->workflow;
@@ -168,15 +204,20 @@ class DynamicFlowController extends Controller
             return;
         }
 
-        $team = Team::query()
-            ->where('tenant_id', (int) $actor->tenant_id)
-            ->where('manager_id', (int) $actor->id)
-            ->first();
+        $team = $this->resolveManagedTeam($actor);
 
         if ($team !== null && (int) $workflow->team_id === (int) $team->id) {
             return;
         }
 
         abort(403, 'Only the workflow creator or a team manager can design a dynamic flow.');
+    }
+
+    protected function resolveManagedTeam(User $actor): ?Team
+    {
+        return Team::query()
+            ->where('tenant_id', (int) $actor->tenant_id)
+            ->where('manager_id', (int) $actor->id)
+            ->first();
     }
 }
