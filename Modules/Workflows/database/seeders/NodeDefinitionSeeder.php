@@ -154,7 +154,19 @@ class NodeDefinitionSeeder extends Seeder
                 'configFields' => [
                     ['key' => 'tone', 'label' => 'Tone', 'type' => 'text'],
                     ['key' => 'prompt', 'label' => 'Prompt', 'type' => 'textarea', 'required' => true],
-                    ['key' => 'knowledgeBaseDocuments', 'label' => 'Knowledge Base Documents', 'type' => 'tags'],
+                    ['key' => 'outputVariable', 'label' => 'Output Variable Name', 'type' => 'text'],
+                ],
+            ],
+            [
+                'type' => 'ai-classifier',
+                'label' => 'AI Classifier',
+                'category' => 'ai',
+                'description' => 'Classify text into one of several categories with AI',
+                'color' => 'node-ai',
+                'icon' => 'Tags',
+                'configFields' => [
+                    ['key' => 'text', 'label' => 'Text to Classify', 'type' => 'textarea', 'required' => true],
+                    ['key' => 'categories', 'label' => 'Categories', 'type' => 'tags', 'required' => true],
                     ['key' => 'outputVariable', 'label' => 'Output Variable Name', 'type' => 'text'],
                 ],
             ],

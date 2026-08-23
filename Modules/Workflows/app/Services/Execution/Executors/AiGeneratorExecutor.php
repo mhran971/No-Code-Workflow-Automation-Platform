@@ -6,6 +6,7 @@ use Modules\Workflows\Enums\NodeCategory;
 use Modules\Workflows\Services\Execution\Contracts\AiContentGenerator;
 use Modules\Workflows\Services\Execution\Contracts\NodeExecutor;
 use Modules\Workflows\Services\Execution\Data\NodeExecutionResult;
+use Modules\Workflows\Services\Execution\Exceptions\AiServiceException;
 use Modules\Workflows\Services\Execution\NodeExecutionContext;
 
 class AiGeneratorExecutor implements NodeExecutor
@@ -28,7 +29,11 @@ class AiGeneratorExecutor implements NodeExecutor
         $prompt = $context->render((string) ($config['prompt'] ?? ''));
         $outputVar = trim((string) ($config['outputVariable'] ?? 'ai_output'));
 
-        $content = $this->ai->generate($prompt, $config);
+        try {
+            $content = $this->ai->generate($prompt, (string) $context->instance()->tenant_id, $config);
+        } catch (AiServiceException $e) {
+            return NodeExecutionResult::fail("AI Generator: {$e->getMessage()}", retryable: $e->isRetryable());
+        }
 
         if ($outputVar !== '') {
             $context->setContextValue($outputVar, $content);
