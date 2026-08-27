@@ -61,7 +61,8 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy entrypoint script and set executable permissions
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY docker/storage-init.sh /usr/local/bin/storage-init.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/storage-init.sh
 
 # Copy composer files first for layer caching
 COPY composer.json composer.lock ./

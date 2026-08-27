@@ -4,20 +4,10 @@ set -e
 # Base directory
 cd /var/www
 
-# Ensure required runtime storage directories exist
-mkdir -p \
-    storage/app/public \
-    storage/app/private \
-    storage/fonts \
-    storage/framework/cache/data \
-    storage/framework/sessions \
-    storage/framework/views \
-    storage/logs \
-    bootstrap/cache
-
-# Fix directory permissions for www-data
-chown -R www-data:www-data storage bootstrap/cache || true
-chmod -R 775 storage bootstrap/cache || true
+# Ensure the runtime storage tree exists and is writable. Each supervisord
+# program re-runs this too: a mounted volume can land on storage/ *after* this
+# entrypoint has finished, hiding whatever it just created behind the mount.
+/usr/local/bin/storage-init.sh
 
 # Discover packages now that real env vars (e.g. PUSHER_APP_KEY) are available.
 # Skipped at build time (see Dockerfile) since booting the app there would
