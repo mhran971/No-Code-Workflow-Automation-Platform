@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Database\Seeders\Demo\DemoDocumentLibrary;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Modules\Auth\Enums\BusinessType;
@@ -32,8 +33,12 @@ use RuntimeException;
 
 /**
  * Seeds the "Company" demo tenant: two cross-functional departments (Sales + IT), their people,
- * the integrations/knowledge-base rows the nodes depend on, and three published workflow artifacts
- * that together exercise every seeded node type.
+ * the integrations/knowledge-base rows the nodes depend on, and three published workflow artifacts.
+ *
+ * The definitions are kept deliberately small — a demo canvas has to be readable from across a room.
+ * Between them they exercise every seeded node type except `parse-json`, which is left out on purpose:
+ * no node here emits a JSON string worth parsing, and adding one only to have something to parse would
+ * be padding. Node types repeat only where the engine forces it (see the merge note below).
  *
  *   1. Child workflow  — "Company — Standard Estimation Pack v1" (IT team, manual-trigger).
  *      Published first, because the parent's `sub-workflow` node needs a real, published workflowId.
@@ -54,8 +59,11 @@ use RuntimeException;
  *    (VariableAvailability::validateTemplateVariables). Dotted paths are only legal inside if/switch
  *    expressions and the `variable` field, which are parsed rather than interpolated.
  *  - DataFlowVerificationRule only lets a node read a produced variable if it is guaranteed on every
- *    incoming path. That is why all four switch lanes converge on the same `estimationSummary` variable
+ *    incoming path. That is why all three switch lanes converge on the same `estimationSummary` variable
  *    before the proposal generator reads it.
+ *  - Every split costs a merge, so the parent's three merges are the floor for its switch + fork + if,
+ *    not duplication that could be tidied away. An if/switch branch may be empty and run straight into
+ *    its merge, which is how the rejected approval path avoids needing a node of its own.
  *  - `knowledgeBaseDocuments` must be numeric Document ids belonging to the tenant, not titles.
  *  - task-node `assignTo` must be an active user who is an active member of the workflow's OWN team.
  *
@@ -70,6 +78,12 @@ use RuntimeException;
  */
 class DemoSeeder extends Seeder
 {
+    /**
+     * The tenant this seeder owns, end to end. Everything the reset deletes is scoped to the tenant
+     * carrying this exact business name, so no other tenant's data is ever in range.
+     */
+    private const TENANT_NAME = 'Company';
+
     private const PASSWORD = 'P@ssword123';
 
     /** @var array<string, User> */
@@ -93,6 +107,8 @@ class DemoSeeder extends Seeder
             DocumentTypeSeeder::class,
         ]);
 
+        $this->resetTenant();
+
         $this->seedTenant();
         $this->seedPeopleAndTeams();
         $this->seedIntegrations();
@@ -102,13 +118,139 @@ class DemoSeeder extends Seeder
         $this->seedParentWorkflow((int) $child->id);
         $this->seedExpertReviewTemplate();
 
-        $this->command?->info('Demo tenant "Company" seeded. Sign in with any @company.example address / '.self::PASSWORD);
+        $this->command?->info(sprintf(
+            'Demo tenant "%s" seeded (id %d). Sign in with any @company.example address / %s',
+            self::TENANT_NAME,
+            $this->tenant->id,
+            self::PASSWORD,
+        ));
+    }
+
+    /**
+     * Wipes every trace of the demo tenant so `run()` always builds on bare ground.
+     *
+     * Scoped strictly to the tenant whose `business_name` is self::TENANT_NAME — no other tenant, and
+     * none of the shared catalog rows (node definitions, integration providers, document types, global
+     * workflow templates), is ever in range.
+     *
+     * The order below is not arbitrary and is not safe to shuffle. Most tenant-scoped tables cascade
+     * from `tenants`, but five foreign keys are RESTRICT and would abort the delete if their dependents
+     * were still present:
+     *
+     *   workflows.team_id            -> teams          RESTRICT
+     *   workflows.created_by_id      -> users          RESTRICT
+     *   workflow_versions.published_by_id -> users     RESTRICT
+     *   workflow_instances.workflow_version_id -> workflow_versions RESTRICT
+     *   teams.manager_id             -> users          RESTRICT
+     *
+     * So: runtime rows before design-time rows, workflows before teams, and everything before users.
+     * Deleting explicitly (rather than leaning on `$tenant->delete()` and letting the database unwind
+     * the cascade) also means this behaves identically on PostgreSQL and on SQLite, where foreign key
+     * enforcement is not guaranteed to be on.
+     */
+    private function resetTenant(): void
+    {
+        $tenants = Tenant::query()->where('business_name', self::TENANT_NAME)->get();
+
+        if ($tenants->isEmpty()) {
+            return;
+        }
+
+        foreach ($tenants as $tenant) {
+            $this->purgeTenant($tenant);
+        }
+    }
+
+    private function purgeTenant(Tenant $tenant): void
+    {
+        $tenantId = (int) $tenant->id;
+
+        // Stored files first: once the document rows are gone there is no record of which paths were ours.
+        $disk = Storage::disk(config('filesystems.default'));
+
+        foreach (Document::query()->where('tenant_id', $tenantId)->pluck('file_path') as $path) {
+            $disk->delete((string) $path);
+        }
+
+        $disk->deleteDirectory("documents/{$tenantId}");
+
+        // Captured before anything is deleted — these drive the tables that have no tenant_id of their own.
+        $userIds = DB::table('users')->where('tenant_id', $tenantId)->pluck('id');
+        $workflowIds = DB::table('workflows')->where('tenant_id', $tenantId)->pluck('id');
+        $instanceIds = DB::table('workflow_instances')->where('tenant_id', $tenantId)->pluck('id');
+        $documentIds = DB::table('documents')->where('tenant_id', $tenantId)->pluck('id');
+        $userMorph = (new User)->getMorphClass();
+
+        DB::transaction(function () use ($tenantId, $userIds, $workflowIds, $instanceIds, $documentIds, $userMorph): void {
+            // 1. Execution runtime — deepest dependents first.
+            DB::table('workflow_events')->where('tenant_id', $tenantId)->delete();
+            DB::table('workflow_instance_comments')->whereIn('workflow_instance_id', $instanceIds)->delete();
+            DB::table('workflow_instance_attachments')->whereIn('workflow_instance_id', $instanceIds)->delete();
+            DB::table('workflow_tasks')->where('tenant_id', $tenantId)->delete();
+            DB::table('workflow_dynamic_flows')->where('tenant_id', $tenantId)->delete();
+            DB::table('workflow_node_executions')->where('tenant_id', $tenantId)->delete();
+            DB::table('workflow_instances')->where('tenant_id', $tenantId)->delete();
+
+            // 2. Design-time graph. `workflows.current_version_id` points back at a version, so break
+            //    that link before removing the versions it references.
+            DB::table('workflow_edges')->whereIn('workflow_id', $workflowIds)->delete();
+            DB::table('workflow_nodes')->whereIn('workflow_id', $workflowIds)->delete();
+            DB::table('workflows')->where('tenant_id', $tenantId)->update(['current_version_id' => null]);
+            DB::table('workflow_versions')->where('tenant_id', $tenantId)->delete();
+            DB::table('workflows')->where('tenant_id', $tenantId)->delete();
+            // Tenant-owned templates only; global templates have a null tenant_id and are left alone.
+            DB::table('workflow_templates')->where('tenant_id', $tenantId)->delete();
+
+            // 3. Knowledge base.
+            DB::table('document_tag')->whereIn('document_id', $documentIds)->delete();
+            DB::table('documents')->where('tenant_id', $tenantId)->delete();
+            DB::table('tags')->where('tenant_id', $tenantId)->delete();
+
+            // 4. Customers.
+            DB::table('customers')->where('tenant_id', $tenantId)->delete();
+            DB::table('customer_fields')->where('tenant_id', $tenantId)->delete();
+            DB::table('customer_settings')->where('tenant_id', $tenantId)->delete();
+
+            // 5. Integrations (the connection rows; the shared providers stay).
+            DB::table('integration_connections')->where('tenant_id', $tenantId)->delete();
+
+            // 6. Org chart. Teams must go after workflows (RESTRICT) and before users (RESTRICT).
+            DB::table('team_memberships')->where('tenant_id', $tenantId)->delete();
+            DB::table('teams')->where('tenant_id', $tenantId)->delete();
+            DB::table('audit_trails')->where('tenant_id', $tenantId)->delete();
+            DB::table('platform_announcements')->where('target_tenant_id', $tenantId)->delete();
+
+            // 7. Rows hanging off the users with no foreign key to cascade them.
+            DB::table('notifications')
+                ->where('notifiable_type', $userMorph)
+                ->whereIn('notifiable_id', $userIds)
+                ->delete();
+            DB::table('personal_access_tokens')
+                ->where('tokenable_type', $userMorph)
+                ->whereIn('tokenable_id', $userIds)
+                ->delete();
+            DB::table('sessions')->whereIn('user_id', $userIds)->delete();
+            DB::table('device_tokens')->whereIn('user_id', $userIds)->delete();
+
+            DB::table('users')->where('tenant_id', $tenantId)->delete();
+            DB::table('tenants')->where('id', $tenantId)->delete();
+        });
+
+        $this->command?->warn(sprintf(
+            'Deleted existing demo tenant "%s" (id %d): %d user(s), %d workflow(s), %d instance(s), %d document(s).',
+            self::TENANT_NAME,
+            $tenantId,
+            $userIds->count(),
+            $workflowIds->count(),
+            $instanceIds->count(),
+            $documentIds->count(),
+        ));
     }
 
     private function seedTenant(): void
     {
         $this->tenant = Tenant::query()->updateOrCreate(
-            ['business_name' => 'Company'],
+            ['business_name' => self::TENANT_NAME],
             [
                 'business_type' => BusinessType::SoftwareHouse,
                 'is_active' => true,
@@ -442,7 +584,7 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * Intake and triage: capture in the CRM, score the opportunity, then qualify it.
+     * Intake and triage: capture the enquiry in the CRM, then let the classifier place it.
      *
      * @param  array<string, mixed>  $triggerConfig
      * @return list<array<string, mixed>>
@@ -467,7 +609,7 @@ class DemoSeeder extends Seeder
                     'email' => '{{context.contactEmail}}',
                     'phone' => '{{context.contactPhone}}',
                 ],
-                'position' => ['x' => 240, 'y' => 0],
+                'position' => ['x' => 260, 'y' => 0],
             ],
             [
                 'id' => 'create-deal',
@@ -484,7 +626,7 @@ class DemoSeeder extends Seeder
                     // skipped. The deal itself is still created.
                     'contactId' => '{{context.hubspotContactId}}',
                 ],
-                'position' => ['x' => 480, 'y' => 0],
+                'position' => ['x' => 520, 'y' => 0],
             ],
             [
                 'id' => 'score-complexity',
@@ -497,74 +639,24 @@ class DemoSeeder extends Seeder
                         ."Deployment: {{context.deploymentModel}}\nData sensitivity: {{context.dataSensitivity}}\n"
                         ."Systems to integrate: {{context.integrationsNeeded}}\n\n"
                         .'Rules: an on-premise deployment or regulated data is never "simple". '
-                        .'If the request depends on a domain that is absent from the capability matrix, answer "unclear".',
-                    'categories' => ['simple', 'standard', 'complex', 'unclear'],
+                        .'If the request depends on a domain that is absent from the capability matrix, answer "complex" — '
+                        .'an unknown gets a human, not a guess.',
+                    'categories' => ['simple', 'standard', 'complex'],
                     'knowledgeBaseDocuments' => [$this->documents['capabilityMatrix'], $this->documents['sowLibrary']],
                     'outputVariable' => 'triage',
                 ],
-                'position' => ['x' => 720, 'y' => 0],
-            ],
-            [
-                'id' => 'extract-requirements',
-                'type' => 'ai-generator',
-                'label' => 'Extract requirements',
-                'config' => [
-                    'tone' => 'precise',
-                    'prompt' => "Extract the structured requirements from this request.\n\n"
-                        ."Request: {{context.projectSummary}}\nDeployment: {{context.deploymentModel}}\n"
-                        ."Data sensitivity: {{context.dataSensitivity}}\nSystems to integrate: {{context.integrationsNeeded}}\n\n"
-                        ."Return ONLY valid JSON, with no markdown fences and no commentary, matching this schema:\n"
-                        .'{"drivers":[string],"constraints":[string],"integrations":[string],"complianceFlags":[string]}',
-                    'knowledgeBaseDocuments' => [$this->documents['capabilityMatrix']],
-                    'outputVariable' => 'requirementsJson',
-                ],
-                'position' => ['x' => 960, 'y' => 0],
-            ],
-            [
-                // parse-json takes a BARE context key, unlike every other node, which takes Mustache.
-                'id' => 'parse-requirements',
-                'type' => 'parse-json',
-                'label' => 'Read requirements',
-                'config' => [
-                    'inputVariable' => 'context.requirementsJson',
-                    'outputVariable' => 'requirements',
-                ],
-                'position' => ['x' => 1200, 'y' => 0],
-            ],
-            [
-                'id' => 'qualified',
-                'type' => 'if-node',
-                'label' => 'Qualified?',
-                'config' => [
-                    // Dotted paths are legal here: if/switch expressions are parsed, not interpolated.
-                    'conditionExpression' => 'context.estimatedBudget >= 15000 && context.triage.confidence >= 0.6',
-                ],
-                'position' => ['x' => 1440, 'y' => 0],
-            ],
-            [
-                'id' => 'polite-decline',
-                'type' => 'send-email',
-                'label' => 'Polite decline',
-                'config' => [
-                    'to' => '{{context.contactEmail}}',
-                    'cc' => 'presales@company.example',
-                    'subject' => 'Re: your solution request — {{context.companyName}}',
-                    'bodyType' => 'html',
-                    'body' => '<p>Hi {{context.contactFirstName}},</p>'
-                        .'<p>Thank you for reaching out to Company about your project. Based on the scope and budget you shared, '
-                        ."this isn't a strong fit for how we engage right now — but we'd genuinely like to stay in touch as the project develops.</p>"
-                        .'<p>— Company Pre-Sales</p>',
-                ],
-                'position' => ['x' => 1680, 'y' => 320],
+                'position' => ['x' => 780, 'y' => 0],
             ],
         ];
     }
 
     /**
-     * Routing: four lanes off a switch. Each lane ends by writing the SAME `estimationSummary`
-     * variable, which is what lets the conditional merge declare it and the proposal generator
-     * downstream read it — DataFlowVerificationRule only allows a read that is guaranteed on every
-     * incoming path.
+     * Routing: three lanes off a switch — two named options plus the default lane, which is the minimum
+     * a switch can have and still be a switch.
+     *
+     * Each lane ends by writing the SAME `estimationSummary` variable. That is not stylistic:
+     * DataFlowVerificationRule only permits a downstream read of a variable that is guaranteed on every
+     * incoming path, so it is what lets the conditional merge declare it and the proposal generator use it.
      *
      * @return list<array<string, mixed>>
      */
@@ -577,12 +669,12 @@ class DemoSeeder extends Seeder
                 'label' => 'Route by complexity',
                 'config' => [
                     'variable' => 'context.triage.classification',
-                    'options' => ['simple', 'standard', 'complex'],
+                    'options' => ['simple', 'standard'],
                 ],
-                'position' => ['x' => 1680, 'y' => 0],
+                'position' => ['x' => 1040, 'y' => 0],
             ],
 
-            // ── Lane: simple ────────────────────────────────────────────────
+            // ── Lane: simple — hand it to the reusable estimation pack ──────
             [
                 'id' => 'standard-estimation-pack',
                 'type' => 'sub-workflow',
@@ -598,10 +690,10 @@ class DemoSeeder extends Seeder
                     ],
                     'outputVariable' => 'estimationSummary',
                 ],
-                'position' => ['x' => 1920, 'y' => -480],
+                'position' => ['x' => 1300, 'y' => -260],
             ],
 
-            // ── Lane: standard — three reviews in parallel ──────────────────
+            // ── Lane: standard — an estimate and a capacity check, in parallel ──
             [
                 'id' => 'fork-reviews',
                 'type' => 'and-node',
@@ -609,11 +701,10 @@ class DemoSeeder extends Seeder
                 'config' => [
                     'branches' => [
                         ['name' => 'Technical estimate', 'key' => 'tech'],
-                        ['name' => 'Commercial pricing', 'key' => 'commercial'],
                         ['name' => 'Delivery capacity', 'key' => 'delivery'],
                     ],
                 ],
-                'position' => ['x' => 1920, 'y' => -240],
+                'position' => ['x' => 1300, 'y' => 0],
             ],
             [
                 'id' => 'architect-estimate',
@@ -631,25 +722,7 @@ class DemoSeeder extends Seeder
                         ['key' => 'riskLevel', 'label' => 'Delivery risk', 'type' => 'select', 'options' => ['Low', 'Medium', 'High']],
                     ],
                 ],
-                'position' => ['x' => 2160, 'y' => -360],
-            ],
-            [
-                'id' => 'commercial-pricing',
-                'type' => 'task-node',
-                'label' => 'Commercial pricing',
-                'config' => [
-                    'title' => 'Price the {{context.companyName}} proposal',
-                    'description' => "Apply the 2026 rate card to the architect's effort estimate. Any discount above 12% needs manager sign-off.",
-                    'assignTo' => (string) $this->users['pricingAnalyst']->id,
-                    'dueWithin' => 8,
-                    'inputFields' => [
-                        ['key' => 'listPrice', 'label' => 'List price', 'type' => 'number'],
-                        ['key' => 'discountPct', 'label' => 'Discount %', 'type' => 'number'],
-                        ['key' => 'paymentTerms', 'label' => 'Payment terms', 'type' => 'select',
-                            'options' => ['30 days', '50/50 milestone', 'Monthly retainer']],
-                    ],
-                ],
-                'position' => ['x' => 2160, 'y' => -240],
+                'position' => ['x' => 1560, 'y' => -80],
             ],
             [
                 'id' => 'capacity-check',
@@ -662,14 +735,14 @@ class DemoSeeder extends Seeder
                     'markdownContent' => "**Budget:** {{context.estimatedBudget}}\n**Go-live:** {{context.targetGoLive}}\n**Deployment:** {{context.deploymentModel}}\n\n"
                         .'Confirm bench availability for the estimated window and reply on this task.',
                 ],
-                'position' => ['x' => 2160, 'y' => -120],
+                'position' => ['x' => 1560, 'y' => 80],
             ],
             [
                 'id' => 'merge-reviews',
                 'type' => 'merge',
-                'label' => 'Wait for all three',
-                'config' => ['mergeMode' => 'parallel', 'branchCount' => 3],
-                'position' => ['x' => 2400, 'y' => -240],
+                'label' => 'Wait for both',
+                'config' => ['mergeMode' => 'parallel', 'branchCount' => 2],
+                'position' => ['x' => 1820, 'y' => 0],
             ],
             [
                 'id' => 'consolidate-estimate',
@@ -677,96 +750,49 @@ class DemoSeeder extends Seeder
                 'label' => 'Consolidate estimate',
                 'config' => [
                     'tone' => 'concise',
-                    'prompt' => "Consolidate the pre-sales reviews for {{context.companyName}} into one estimate summary.\n\n"
-                        ."Request: {{context.projectSummary}}\nRequirements: {{context.requirements}}\n"
-                        ."Reviewer response: {{context.task_response}}\n\n"
-                        .'State the effort, the price, the payment terms and the delivery risk. Never invent a figure that is not above.',
+                    'prompt' => "Consolidate the pre-sales review for {{context.companyName}} into one estimate summary.\n\n"
+                        ."Request: {{context.projectSummary}}\nReviewer response: {{context.task_response}}\n\n"
+                        .'State the effort, the price and the delivery risk. Never invent a figure that is not above.',
                     'knowledgeBaseDocuments' => [$this->documents['rateCard']],
                     'outputVariable' => 'estimationSummary',
                 ],
-                'position' => ['x' => 2640, 'y' => -240],
+                'position' => ['x' => 2080, 'y' => 0],
             ],
 
-            // ── Lane: complex — the manager designs the review path at runtime ──
+            // ── Default lane — complex, or anything the classifier could not place.
+            // This is the whole point of the demo: the platform's answer to "we don't
+            // know" is the same as its answer to "this is hard" — give a human the canvas.
             [
                 'id' => 'design-expert-review',
                 'type' => 'dynamic-flow',
                 'label' => 'Design expert review',
                 'config' => [
-                    'message' => 'This opportunity was classified as complex. Triage: {{context.triage}}. '
-                        .'Requirements: {{context.requirements}}. Build the review path this deal actually needs.',
+                    'message' => 'This opportunity did not fit a standard lane. Triage: {{context.triage}}. '
+                        .'Build the review path this deal actually needs.',
                     'aiSuggestion' => true,
-                    'outputVariable' => 'expertReview',
-                ],
-                'position' => ['x' => 1920, 'y' => 0],
-            ],
-            [
-                'id' => 'summarize-expert-review',
-                'type' => 'ai-generator',
-                'label' => 'Summarize expert review',
-                'config' => [
-                    'tone' => 'concise',
-                    'prompt' => "Turn the expert review findings for {{context.companyName}} into one estimate summary.\n\n"
-                        ."Request: {{context.projectSummary}}\nRequirements: {{context.requirements}}\n"
-                        ."Expert review output: {{context.expertReview}}\n\n"
-                        .'Carry every blocker and assumption through verbatim — do not soften them.',
-                    'knowledgeBaseDocuments' => [$this->documents['rateCard'], $this->documents['securityWhitepaper']],
                     'outputVariable' => 'estimationSummary',
                 ],
-                'position' => ['x' => 2400, 'y' => 0],
-            ],
-
-            // ── Lane: default — the classifier could not place this deal ────
-            [
-                'id' => 'manual-scoping',
-                'type' => 'task-node',
-                'label' => 'Manual scoping',
-                'config' => [
-                    'title' => 'Scope an unclassified RFP — {{context.companyName}}',
-                    'description' => 'The classifier could not place this opportunity against our capability matrix. Scope it by hand and record what made it unusual, so the matrix can be updated.',
-                    'assignTo' => (string) $this->users['accountExec']->id,
-                    'dueWithin' => 8,
-                    'inputFields' => [
-                        ['key' => 'scopeNotes', 'label' => 'Scope notes', 'type' => 'textarea'],
-                        ['key' => 'effortDays', 'label' => 'Rough effort (person-days)', 'type' => 'number'],
-                        ['key' => 'capabilityGap', 'label' => 'Capability gap', 'type' => 'select', 'options' => ['None', 'Partial', 'Significant']],
-                    ],
-                ],
-                'position' => ['x' => 1920, 'y' => 240],
-            ],
-            [
-                'id' => 'draft-manual-estimate',
-                'type' => 'ai-generator',
-                'label' => 'Draft manual estimate',
-                'config' => [
-                    'tone' => 'concise',
-                    'prompt' => "Turn the hand-written scoping notes for {{context.companyName}} into one estimate summary.\n\n"
-                        ."Request: {{context.projectSummary}}\nScoping response: {{context.task_response}}\n\n"
-                        .'Use only the figures in the scoping response.',
-                    'knowledgeBaseDocuments' => [$this->documents['rateCard']],
-                    'outputVariable' => 'estimationSummary',
-                ],
-                'position' => ['x' => 2400, 'y' => 240],
+                'position' => ['x' => 1300, 'y' => 260],
             ],
 
             [
-                // Conditional: exactly one of the four lanes ran. branchCount is the number of
+                // Conditional: exactly one of the three lanes ran. branchCount is the number of
                 // POSSIBLE inbound paths, not the number that will complete.
                 'id' => 'merge-routes',
                 'type' => 'merge',
                 'label' => 'Rejoin routing lanes',
                 'config' => [
                     'mergeMode' => 'conditional',
-                    'branchCount' => 4,
+                    'branchCount' => 3,
                     'outputVariables' => ['estimationSummary'],
                 ],
-                'position' => ['x' => 2880, 'y' => 0],
+                'position' => ['x' => 2340, 'y' => 0],
             ],
         ];
     }
 
     /**
-     * Proposal, approval and close-out.
+     * Proposal and approval.
      *
      * @return list<array<string, mixed>>
      */
@@ -781,10 +807,9 @@ class DemoSeeder extends Seeder
                     'tone' => 'professional',
                     'prompt' => "Write a client-ready solution proposal for {{context.companyName}} in the {{context.industry}} sector.\n\n"
                         ."Their request: {{context.projectSummary}}\nDeployment: {{context.deploymentModel}}\n"
-                        ."Data sensitivity: {{context.dataSensitivity}}\nRequirements: {{context.requirements}}\n"
-                        ."Estimate summary: {{context.estimationSummary}}\n\n"
+                        ."Data sensitivity: {{context.dataSensitivity}}\nEstimate summary: {{context.estimationSummary}}\n\n"
                         ."Sections: executive summary, proposed solution, scope and assumptions, delivery plan with phases, commercial summary, next steps.\n"
-                        .'Use the Company proposal template structure. Never invent a price — use only the figures above.',
+                        .'Use the proposal template structure. Never invent a price — use only the figures above.',
                     'knowledgeBaseDocuments' => [
                         $this->documents['proposalTemplate'],
                         $this->documents['rateCard'],
@@ -793,7 +818,7 @@ class DemoSeeder extends Seeder
                     ],
                     'outputVariable' => 'proposalDraft',
                 ],
-                'position' => ['x' => 3120, 'y' => 0],
+                'position' => ['x' => 2600, 'y' => 0],
             ],
             [
                 'id' => 'manager-approval',
@@ -805,19 +830,19 @@ class DemoSeeder extends Seeder
                     'assignTo' => (string) $this->users['salesManager']->id,
                     'dueWithin' => 8,
                     'inputFields' => [
-                        ['key' => 'decision', 'label' => 'Decision', 'type' => 'select', 'options' => ['approved', 'revise', 'rejected']],
+                        ['key' => 'decision', 'label' => 'Decision', 'type' => 'select', 'options' => ['approved', 'rejected']],
                         ['key' => 'approvedAmount', 'label' => 'Approved amount', 'type' => 'number'],
                         ['key' => 'comments', 'label' => 'Comments', 'type' => 'textarea'],
                     ],
                 ],
-                'position' => ['x' => 3360, 'y' => 0],
+                'position' => ['x' => 2860, 'y' => 0],
             ],
             [
                 'id' => 'approved',
                 'type' => 'if-node',
                 'label' => 'Approved?',
                 'config' => ['conditionExpression' => 'context.task_response.decision == "approved"'],
-                'position' => ['x' => 3600, 'y' => 0],
+                'position' => ['x' => 3120, 'y' => 0],
             ],
             [
                 'id' => 'send-proposal',
@@ -826,62 +851,31 @@ class DemoSeeder extends Seeder
                 'config' => [
                     'to' => '{{context.contactEmail}}',
                     'cc' => 'presales@company.example',
-                    'bcc' => 'crm@company.example',
-                    'subject' => 'Company proposal — {{context.companyName}}',
+                    'subject' => 'Proposal — {{context.companyName}}',
                     'bodyType' => 'html',
                     'body' => '<p>Hi {{context.contactFirstName}},</p>'
                         .'<p>Thank you for the detail you shared. Our proposal is below.</p>'
                         .'{{context.proposalDraft}}'
-                        .'<p>Happy to walk through it whenever suits you.</p><p>— Company Pre-Sales</p>',
+                        .'<p>Happy to walk through it whenever suits you.</p><p>— Pre-Sales</p>',
                 ],
-                'position' => ['x' => 3840, 'y' => -160],
+                'position' => ['x' => 3380, 'y' => -120],
             ],
             [
-                'id' => 'pre-kickoff',
-                'type' => 'clickup-create-task',
-                'label' => 'Pre-kickoff task',
-                'config' => [
-                    'workspaceId' => '9012345678',
-                    'listId' => '901300445566',
-                    'name' => 'Pre-kickoff — {{context.companyName}}',
-                    'markdownContent' => "Proposal sent. Target go-live: {{context.targetGoLive}}.\n\n"
-                        .'Prepare the kickoff deck and a provisional team allocation.',
-                ],
-                'position' => ['x' => 4080, 'y' => -160],
-            ],
-            [
-                'id' => 'rework-notice',
-                'type' => 'send-email',
-                'label' => 'Rework notice',
-                'config' => [
-                    'to' => 'presales-lead@company.example',
-                    'subject' => 'Proposal returned — {{context.companyName}}',
-                    'bodyType' => 'text',
-                    'body' => "The manager did not approve this proposal.\n\nReviewer response: {{context.task_response}}\n\n"
-                        .'The draft is stored in the instance context under proposalDraft.',
-                ],
-                'position' => ['x' => 3840, 'y' => 160],
-            ],
-            [
+                // The rejected branch runs straight into the merge. An if-node's branches must both
+                // reach the same conditional merge, but a branch is allowed to be empty — nothing is
+                // sent to the client, and the instance closes on the audit trail alone.
                 'id' => 'merge-approval',
                 'type' => 'merge',
                 'label' => 'Rejoin approval paths',
                 'config' => ['mergeMode' => 'conditional', 'branchCount' => 2],
-                'position' => ['x' => 4320, 'y' => 0],
-            ],
-            [
-                'id' => 'merge-qualification',
-                'type' => 'merge',
-                'label' => 'Rejoin qualification paths',
-                'config' => ['mergeMode' => 'conditional', 'branchCount' => 2],
-                'position' => ['x' => 4560, 'y' => 0],
+                'position' => ['x' => 3640, 'y' => 0],
             ],
             [
                 'id' => 'end',
                 'type' => 'termination-node',
                 'label' => 'Terminate',
                 'config' => [],
-                'position' => ['x' => 4800, 'y' => 0],
+                'position' => ['x' => 3900, 'y' => 0],
             ],
         ];
     }
@@ -895,44 +889,29 @@ class DemoSeeder extends Seeder
             ['rfp-intake', 'create-contact', 'default'],
             ['create-contact', 'create-deal', 'default'],
             ['create-deal', 'score-complexity', 'default'],
-            ['score-complexity', 'extract-requirements', 'default'],
-            ['extract-requirements', 'parse-requirements', 'default'],
-            ['parse-requirements', 'qualified', 'default'],
+            ['score-complexity', 'route-by-complexity', 'default'],
 
-            // Qualification split — both sides rejoin at merge-qualification.
-            ['qualified', 'route-by-complexity', 'true'],
-            ['qualified', 'polite-decline', 'false'],
-            ['polite-decline', 'merge-qualification', 'default'],
-
-            // Switch lanes. branch_type must equal the option value; the fourth edge is the default.
+            // Switch lanes. branch_type must equal the option value; the default lane is added below.
             ['route-by-complexity', 'standard-estimation-pack', 'simple'],
             ['route-by-complexity', 'fork-reviews', 'standard'],
-            ['route-by-complexity', 'design-expert-review', 'complex'],
 
             ['standard-estimation-pack', 'merge-routes', 'default'],
             ['architect-estimate', 'merge-reviews', 'default'],
-            ['commercial-pricing', 'merge-reviews', 'default'],
             ['capacity-check', 'merge-reviews', 'default'],
             ['merge-reviews', 'consolidate-estimate', 'default'],
             ['consolidate-estimate', 'merge-routes', 'default'],
-            ['design-expert-review', 'summarize-expert-review', 'default'],
-            ['summarize-expert-review', 'merge-routes', 'default'],
-            ['manual-scoping', 'draft-manual-estimate', 'default'],
-            ['draft-manual-estimate', 'merge-routes', 'default'],
+            ['design-expert-review', 'merge-routes', 'default'],
 
             ['merge-routes', 'draft-proposal', 'default'],
             ['draft-proposal', 'manager-approval', 'default'],
             ['manager-approval', 'approved', 'default'],
 
-            // Approval split — both sides rejoin at merge-approval.
+            // Approval split — the approved side sends, the rejected side just rejoins.
             ['approved', 'send-proposal', 'true'],
-            ['approved', 'rework-notice', 'false'],
-            ['send-proposal', 'pre-kickoff', 'default'],
-            ['pre-kickoff', 'merge-approval', 'default'],
-            ['rework-notice', 'merge-approval', 'default'],
+            ['approved', 'merge-approval', 'false'],
+            ['send-proposal', 'merge-approval', 'default'],
 
-            ['merge-approval', 'merge-qualification', 'default'],
-            ['merge-qualification', 'end', 'default'],
+            ['merge-approval', 'end', 'default'],
         ];
 
         $built = [];
@@ -946,18 +925,18 @@ class DemoSeeder extends Seeder
             ];
         }
 
-        // The default switch lane: an unclassifiable deal must still have somewhere to go, or it
-        // silently dead-ends. SwitchNodeTypeRule enforces options + 1 outgoing edges for this reason.
+        // The default switch lane: anything not matched by a named option must still have somewhere to
+        // go, or it silently dead-ends. SwitchNodeTypeRule enforces options + 1 outgoing edges for this.
         $built[] = [
             'id' => 'e-switch-default',
             'source_node_key' => 'route-by-complexity',
-            'target_node_key' => 'manual-scoping',
+            'target_node_key' => 'design-expert-review',
             'branch_type' => 'default',
             'is_default_branch' => true,
         ];
 
         // Every outgoing edge of a fork must name the parallel merge it converges on.
-        foreach ([['architect-estimate', 'tech'], ['commercial-pricing', 'commercial'], ['capacity-check', 'delivery']] as $i => [$target, $branchKey]) {
+        foreach ([['architect-estimate', 'tech'], ['capacity-check', 'delivery']] as $i => [$target, $branchKey]) {
             $built[] = [
                 'id' => 'e-fork-'.($i + 1),
                 'source_node_key' => 'fork-reviews',
@@ -1002,7 +981,6 @@ class DemoSeeder extends Seeder
                         'branches' => [
                             ['name' => 'Security review', 'key' => 'security'],
                             ['name' => 'Infrastructure sizing', 'key' => 'infra'],
-                            ['name' => 'Legal review', 'key' => 'legal'],
                         ],
                     ],
                     'position' => ['x' => 240, 'y' => 0],
@@ -1040,25 +1018,10 @@ class DemoSeeder extends Seeder
                     'position' => ['x' => 480, 'y' => 0],
                 ],
                 [
-                    'id' => 'legal-review',
-                    'type' => 'task-node',
-                    'label' => 'Legal review of on-prem terms',
-                    'config' => [
-                        'title' => 'Legal review of on-prem terms',
-                        'description' => 'Review liability, data residency and support terms for an on-premise regulated deployment.',
-                        'assignTo' => (string) $this->users['owner']->id,
-                        'dueWithin' => 24,
-                        'inputFields' => [
-                            ['key' => 'contractNotes', 'label' => 'Contract notes', 'type' => 'textarea'],
-                        ],
-                    ],
-                    'position' => ['x' => 480, 'y' => 160],
-                ],
-                [
                     'id' => 'merge-expert-reviews',
                     'type' => 'merge',
-                    'label' => 'Wait for all three',
-                    'config' => ['mergeMode' => 'parallel', 'branchCount' => 3],
+                    'label' => 'Wait for both',
+                    'config' => ['mergeMode' => 'parallel', 'branchCount' => 2],
                     'position' => ['x' => 720, 'y' => 0],
                 ],
                 [
@@ -1070,25 +1033,10 @@ class DemoSeeder extends Seeder
                         'prompt' => "Build a risk and assumptions register from the expert review responses.\n\n"
                             ."Review response: {{context.task_response}}\n\n"
                             .'List every risk with its owner and mitigation, then every assumption the estimate depends on. Do not soften a blocker into a risk.',
+                        'knowledgeBaseDocuments' => [$this->documents['securityWhitepaper']],
                         'outputVariable' => 'riskRegister',
                     ],
                     'position' => ['x' => 960, 'y' => 0],
-                ],
-                [
-                    'id' => 'lead-confirms',
-                    'type' => 'task-node',
-                    'label' => 'Presales lead confirms',
-                    'config' => [
-                        'title' => 'Presales lead confirms the expert review',
-                        'description' => 'Confirm the review is complete and the deal can proceed to proposal.',
-                        'assignTo' => (string) $this->users['salesManager']->id,
-                        'dueWithin' => 4,
-                        'inputFields' => [
-                            ['key' => 'proceed', 'label' => 'Proceed?', 'type' => 'select', 'options' => ['Proceed', 'Hold', 'Withdraw']],
-                            ['key' => 'summary', 'label' => 'Summary for the proposal', 'type' => 'textarea'],
-                        ],
-                    ],
-                    'position' => ['x' => 1200, 'y' => 0],
                 ],
                 [
                     'id' => 'end',
@@ -1102,13 +1050,10 @@ class DemoSeeder extends Seeder
                 ['id' => 'de1', 'source_node_key' => 'entry', 'target_node_key' => 'fork-expert-reviews', 'branch_type' => 'default'],
                 ['id' => 'de2', 'source_node_key' => 'fork-expert-reviews', 'target_node_key' => 'security-review', 'branch_type' => 'security', 'join_node_key' => 'merge-expert-reviews'],
                 ['id' => 'de3', 'source_node_key' => 'fork-expert-reviews', 'target_node_key' => 'infrastructure-sizing', 'branch_type' => 'infra', 'join_node_key' => 'merge-expert-reviews'],
-                ['id' => 'de4', 'source_node_key' => 'fork-expert-reviews', 'target_node_key' => 'legal-review', 'branch_type' => 'legal', 'join_node_key' => 'merge-expert-reviews'],
-                ['id' => 'de5', 'source_node_key' => 'security-review', 'target_node_key' => 'merge-expert-reviews', 'branch_type' => 'default'],
-                ['id' => 'de6', 'source_node_key' => 'infrastructure-sizing', 'target_node_key' => 'merge-expert-reviews', 'branch_type' => 'default'],
-                ['id' => 'de7', 'source_node_key' => 'legal-review', 'target_node_key' => 'merge-expert-reviews', 'branch_type' => 'default'],
-                ['id' => 'de8', 'source_node_key' => 'merge-expert-reviews', 'target_node_key' => 'risk-register', 'branch_type' => 'default'],
-                ['id' => 'de9', 'source_node_key' => 'risk-register', 'target_node_key' => 'lead-confirms', 'branch_type' => 'default'],
-                ['id' => 'de10', 'source_node_key' => 'lead-confirms', 'target_node_key' => 'end', 'branch_type' => 'default'],
+                ['id' => 'de4', 'source_node_key' => 'security-review', 'target_node_key' => 'merge-expert-reviews', 'branch_type' => 'default'],
+                ['id' => 'de5', 'source_node_key' => 'infrastructure-sizing', 'target_node_key' => 'merge-expert-reviews', 'branch_type' => 'default'],
+                ['id' => 'de6', 'source_node_key' => 'merge-expert-reviews', 'target_node_key' => 'risk-register', 'branch_type' => 'default'],
+                ['id' => 'de7', 'source_node_key' => 'risk-register', 'target_node_key' => 'end', 'branch_type' => 'default'],
             ],
         ];
 
@@ -1118,7 +1063,7 @@ class DemoSeeder extends Seeder
             ['tenant_id' => (int) $this->tenant->id, 'name' => 'Company — On-Prem Expert Review'],
             [
                 'created_by_id' => (int) $this->users['salesManager']->id,
-                'description' => 'The runtime sub-flow a manager composes inside the pre-sales Dynamic Flow node when a deal is on-premise and regulated: three parallel expert reviews, an AI risk register, and a lead confirmation.',
+                'description' => 'The runtime sub-flow a manager composes inside the pre-sales Dynamic Flow node when a deal is on-premise or regulated: a security review and an infrastructure sizing run in parallel, then an AI risk register.',
                 'category' => 'operations',
                 'definition' => $definition,
                 'is_active' => true,

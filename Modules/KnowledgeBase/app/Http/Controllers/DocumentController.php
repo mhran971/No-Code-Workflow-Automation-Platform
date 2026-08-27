@@ -88,7 +88,24 @@ class DocumentController extends Controller
     }
 
     /**
-     * Download the PDF file. Only same-tenant access.
+     * Stream the PDF for in-browser viewing (Content-Disposition: inline). Only same-tenant access.
+     *
+     * Same bytes as download(); the only difference is the disposition header, which is what decides
+     * whether a viewer renders the file or the browser saves it to disk.
+     */
+    public function preview(int $id): StreamedResponse|JsonResponse
+    {
+        $document = $this->documentService->getForCurrentUser($id);
+
+        if (! $document) {
+            return response()->json(['message' => 'Document not found or access denied.'], 404);
+        }
+
+        return $this->documentService->getFileResponse($document, true);
+    }
+
+    /**
+     * Download the PDF file as an attachment. Only same-tenant access.
      */
     public function download(int $id): StreamedResponse|JsonResponse
     {

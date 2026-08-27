@@ -7,6 +7,8 @@ cd /var/www
 # Ensure required runtime storage directories exist
 mkdir -p \
     storage/app/public \
+    storage/app/private \
+    storage/fonts \
     storage/framework/cache/data \
     storage/framework/sessions \
     storage/framework/views \

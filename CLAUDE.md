@@ -175,6 +175,8 @@ Prefix: `/api/v1/workflows` — all routes behind `auth:api`, `active.user` unle
 | POST | `/{workflow}/trigger/manual` | Manual trigger |
 | GET | `/{workflow}/instances` | List instances for a workflow |
 
+Knowledge-base documents are served **through the app**, never from a public URL — the `local` disk roots at `storage/app/private`, so there is no `storage:link` to make. `GET /api/v1/documents/{id}/preview` streams a PDF inline (for a viewer) and `.../download` streams it as an attachment; `DocumentResource` carries both as `preview_url`/`download_url`. Both are behind `auth:api`, so a client must fetch them with its bearer token — an `<iframe src>` sends no Authorization header and gets a 401.
+
 Public, unauthenticated form-trigger endpoints live outside the `/workflows` prefix at `GET/POST /api/v1/public/forms/{publicToken}[/submit]`, throttled (`30,1`) and gated in `PublicFormService` to workflows that are published, active, and marked `trigger.config.accessLevel === 'public'`.
 
 Auth module also exposes `GET /api/v1/me` (profile, role, tenant, team) alongside `POST /register`, `POST /login`, `POST /logout` — see `Modules/Auth/routes/api.php`.
@@ -187,13 +189,13 @@ Auth module also exposes `GET /api/v1/me` (profile, role, tenant, team) alongsid
 
 ## Demo Data
 
-`database/seeders/DemoSeeder.php` seeds a self-contained demo tenant ("Devista") — two departments as teams (Sales, IT), their users, placeholder HubSpot/ClickUp/Google connections, knowledge-base documents, and three published workflow artifacts that between them exercise **every** seeded node type:
+`database/seeders/DemoSeeder.php` seeds a self-contained demo tenant ("Company") — two departments as teams (Sales, IT), their users, placeholder HubSpot/ClickUp/Google connections, knowledge-base documents, and three published workflow artifacts. The definitions are kept small enough to read on a projector; between them they exercise every seeded node type **except `parse-json`**, which is deliberately excluded:
 
-| Artifact | Trigger | Team |
-|---|---|---|
-| `Devista — Standard Estimation Pack v1` (workflow) | `manual-trigger` | IT |
-| `Devista — Pre-Sales: RFP to Proposal` (workflow) | `form-trigger` | Sales |
-| `Devista — On-Prem Expert Review` (template) | `dynamic-entry` (segment) | — |
+| Artifact | Trigger | Team | Nodes |
+|---|---|---|---|
+| `Company — Standard Estimation Pack v1` (workflow) | `manual-trigger` | IT | 4 |
+| `Company — Pre-Sales: RFP to Proposal` (workflow) | `form-trigger` | Sales | 19 |
+| `Company — On-Prem Expert Review` (template) | `dynamic-entry` (segment) | — | 7 |
 
 It is **not** wired into `DatabaseSeeder` — the integration tokens are fake, so it is opt-in:
 
@@ -203,7 +205,9 @@ php artisan db:seed --class="Database\Seeders\DemoSeeder"
 
 It also renders six **real PDF knowledge-base documents** (`database/seeders/Demo/DemoDocumentLibrary.php` → dompdf) and writes them exactly where a genuine upload lands — `documents/{tenantId}/{uuid}.pdf` on `config('filesystems.default')`, matching `DocumentService::storeFile()` — so the download endpoint, RAG indexer and frontend viewer treat them like user-uploaded files. Their content is written to agree with the prompts that cite them (the capability matrix carries the "on-premise is never simple" rule, the rate card the 12% discount threshold, the phase model the required estimate table), so editing one means checking the other. The UUIDs are derived from the document key, so re-running overwrites the same six files rather than orphaning them.
 
-It is idempotent (safe to re-run) and self-validating: every definition is run through `WorkflowVerificationService` before being persisted, and the seeder throws rather than write a definition that could not be published. Read its class docblock before editing — it documents the structural rules the definitions are built around (SESE split/merge nesting, the single-identifier template-variable rule, and the data-flow guarantee that forces all four switch lanes to converge on one `estimationSummary` variable).
+**Re-running is destructive by design.** Before seeding, `resetTenant()` deletes the tenant whose `business_name` is `Company` and everything scoped to it — users, teams, workflows, versions, instances, tasks, documents (rows *and* stored PDFs), customers, integration connections, notifications, sessions — then rebuilds from scratch, so every run starts from bare ground and ids change. It is scoped strictly to that one tenant: other tenants, global workflow templates (`tenant_id` null), and the shared catalogs (node definitions, integration providers, document types) are never touched. The deletion order is load-bearing — five foreign keys are `RESTRICT` (notably `teams.manager_id` and `workflows.created_by_id` → `users`), so runtime rows go before design-time rows, workflows before teams, and everything before users.
+
+It is self-validating: every definition is run through `WorkflowVerificationService` before being persisted, and the seeder throws rather than write a definition that could not be published. Read its class docblock before editing — it documents the structural rules the definitions are built around (SESE split/merge nesting, the single-identifier template-variable rule, and the data-flow guarantee that forces all three switch lanes to converge on one `estimationSummary` variable). Note that the parent's three `merge` nodes are the floor for its switch + fork + if, not duplication: every split costs a merge.
 
 ## Testing
 

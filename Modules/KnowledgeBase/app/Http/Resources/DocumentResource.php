@@ -27,6 +27,11 @@ class DocumentResource extends JsonResource
             'index_status' => $this->index_status,
             'chunks_count' => $this->chunks_count,
             'uploaded_at' => $this->created_at?->toIso8601String(),
+            // Both routes sit behind auth:api, so a client must fetch them with its bearer token and
+            // render the response body (e.g. via a blob URL) — an <iframe src> carries no Authorization
+            // header and will come back 401.
+            'preview_url' => route('api.documents.preview', ['id' => $this->id]),
+            'download_url' => route('api.documents.download', ['id' => $this->id]),
         ];
     }
 }
