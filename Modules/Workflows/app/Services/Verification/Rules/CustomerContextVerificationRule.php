@@ -79,13 +79,13 @@ class CustomerContextVerificationRule implements VerificationRule
             return;
         }
 
-        if ($type === 'form-trigger' && ($match['required'] ?? false) !== true) {
-            $result->addError(
-                'customer_context.field_not_required',
-                "Form field '{$fieldKey}' must be marked required to be used as the customer linking field.",
-                'trigger.config.customerContextField',
-            );
-        }
+        // if ($type === 'form-trigger' && ($match['required'] ?? false) !== true) {
+        //     $result->addError(
+        //         'customer_context.field_not_required',
+        //         "Form field '{$fieldKey}' must be marked required to be used as the customer linking field.",
+        //         'trigger.config.customerContextField',
+        //     );
+        // }
 
         // manual-trigger: declared presence in `variables[]` is the whole check — a static
         // test variable is always present once declared, even if its value can be empty.
