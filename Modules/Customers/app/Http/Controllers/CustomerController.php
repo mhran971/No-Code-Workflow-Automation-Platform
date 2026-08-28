@@ -11,6 +11,8 @@ use Modules\Customers\Http\Requests\StoreCustomerRequest;
 use Modules\Customers\Http\Requests\UpdateCustomerRequest;
 use Modules\Customers\Http\Resources\CustomerResource;
 use Modules\Customers\Services\CustomerService;
+use Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest;
+use Modules\Workflows\Models\WorkflowInstance;
 
 class CustomerController extends Controller
 {
@@ -76,5 +78,51 @@ class CustomerController extends Controller
         $this->customerService->delete($customer);
 
         return response()->json(['message' => 'Customer deleted successfully.']);
+    }
+
+    /**
+     * List workflow instances linked to this customer (most recent first).
+     *
+     * Mirrors WorkflowInstanceController::index — same filters, same paginated
+     * response shape — but scoped to a customer instead of a workflow.
+     */
+    public function instances(ListWorkflowInstancesRequest $request, int $id): JsonResponse
+    {
+        $tenantId = (int) auth()->user()->tenant_id;
+        $customer = $this->customerService->getForTenant($id, $tenantId);
+
+        if (! $customer) {
+            return response()->json(['message' => 'Customer not found or access denied.'], 404);
+        }
+
+        $validated = $request->validated();
+
+        $query = WorkflowInstance::query()
+            ->where('customer_id', $customer->id)
+            ->where('tenant_id', $tenantId);
+
+        if (array_key_exists('status', $validated)) {
+            $query->where('status', $validated['status']);
+        }
+
+        if (array_key_exists('started_from', $validated)) {
+            $query->whereDate('started_at', '>=', $validated['started_from']);
+        }
+
+        if (array_key_exists('started_to', $validated)) {
+            $query->whereDate('started_at', '<=', $validated['started_to']);
+        }
+
+        if (array_key_exists('finished_from', $validated)) {
+            $query->whereDate('finished_at', '>=', $validated['finished_from']);
+        }
+
+        if (array_key_exists('finished_to', $validated)) {
+            $query->whereDate('finished_at', '<=', $validated['finished_to']);
+        }
+
+        $instances = $query->latest()->paginate(20);
+
+        return response()->json($instances);
     }
 }

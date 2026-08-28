@@ -23,4 +23,8 @@ Route::prefix('v1/customers')->middleware(['auth:api', 'active.user', 'role:busi
     Route::get('/{id}', [CustomerController::class, 'show'])->name('customers.show');
     Route::put('/{id}', [CustomerController::class, 'update'])->name('customers.update');
     Route::delete('/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+
+    // Workflow instances linked to this customer via the "customer context" trigger feature.
+    // Same paginated response shape as GET /api/v1/workflows/{workflow}/instances.
+    Route::get('/{id}/instances', [CustomerController::class, 'instances'])->name('customers.instances.index');
 });

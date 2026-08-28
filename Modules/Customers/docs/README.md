@@ -36,9 +36,12 @@ Prefix `/api/v1/customers`, all routes `auth:api` + `active.user` + `role:busine
 |---|---|---|
 | GET / POST | `/` | List (paginated, tenant-scoped) / create a customer |
 | GET / PUT / DELETE | `/{id}` | Show / update / delete a customer |
+| GET | `/{id}/instances` | List workflow instances linked to this customer (see below) |
 | GET / POST | `/fields` | List / create the tenant's custom-field schema |
 | PUT / DELETE | `/fields/{customerField}` | Update / delete a custom-field definition |
 | GET / PUT | `/settings` | Show / update the tenant's linking-field choice |
+
+`GET /{id}/instances` (`CustomerController::instances`) mirrors `Modules\Workflows`' `WorkflowInstanceController::index` — it reuses that module's `ListWorkflowInstancesRequest` (same optional filters: `status`, `started_from`, `started_to`, `finished_from`, `finished_to`, all `Y-m-d`) and returns the identical raw `LengthAwarePaginator` JSON of `WorkflowInstance` rows (`response()->json($paginator)`, 20/page, most-recent-first), just scoped by `workflow_instances.customer_id` + `tenant_id` instead of `workflow_id`. 404s (`{"message": ...}`) if the customer isn't in the caller's tenant. Reads `Modules\Workflows\Models\WorkflowInstance` directly — see Cross-Module Dependencies.
 
 ## Key Business Rules & Gotchas
 
@@ -52,7 +55,7 @@ Prefix `/api/v1/customers`, all routes `auth:api` + `active.user` + `role:busine
 ## Cross-Module Dependencies
 
 - **`Workflows -> Customers` (primary direction)**: `ManualTriggerExecutor`/`FormTriggerExecutor` inject `CustomerResolutionService`; `NodeExecutionContext::resolutionScope()` reads `WorkflowInstance.customer` for the `customer.*` template scope; `Modules\Workflows\...\CustomerContextVerificationRule` queries `CustomerSettings` directly to check a tenant has a linking field configured before allowing publish.
-- **`Customers -> Workflows` (one deliberate exception)**: `CustomerSettingsService::updateForTenant()` queries `Modules\Workflows\Models\Workflow`/`WorkflowVersion` to block a linking-field change while a published workflow depends on it (see Services above). This is the only place the dependency runs in this direction — precedent for this kind of one-off, undeclared cross-module coupling already exists elsewhere in this codebase (e.g. `Auth` <-> `Team`, per `Modules/Auth/docs/README.md`).
+- **`Customers -> Workflows` (deliberate exceptions)**: (1) `CustomerSettingsService::updateForTenant()` queries `Modules\Workflows\Models\Workflow`/`WorkflowVersion` to block a linking-field change while a published workflow depends on it (see Services above). (2) `CustomerController::instances` reads `Modules\Workflows\Models\WorkflowInstance` and reuses `Modules\Workflows\Http\Requests\ListWorkflowInstancesRequest` to serve `GET /{id}/instances` with the same shape as the Workflows-side endpoint. Precedent for this kind of one-off, undeclared cross-module coupling already exists elsewhere in this codebase (e.g. `Auth` <-> `Team`, per `Modules/Auth/docs/README.md`).
 - **`Auth`**: `Customer`/`CustomerField`/`CustomerSettings` all `belongsTo` `Modules\Auth\Models\Tenant`.
 - **Deliberately no dependency on `Modules\Workflows\Enums\NodeConfigFieldType`** despite `CustomerFieldType` mirroring its shape — see Enums above.
 
@@ -63,5 +66,6 @@ No `Modules/Customers/tests/` directory — this module follows the repo-wide co
 - `tests/Feature/CustomerContextVerificationTest.php` — `CustomerContextVerificationRule`'s branches (missing/undeclared/not-required mapping, tenant linking-field not configured, valid cases for both trigger types).
 - `tests/Feature/CustomerLinkingExecutionTest.php` — end-to-end lookup-or-create and reuse via a real publish + manual-trigger flow (email and phone linking fields), and a regression test proving `customerContextEnabled=false` changes nothing.
 - `tests/Feature/CustomerManagementApiTest.php` — CRUD, role gating (Employee denied), reserved-key/unknown-custom-field-key validation, and the linking-field-change-blocked-while-published-workflow-depends-on-it rule.
+- `tests/Feature/CustomerInstancesApiTest.php` — `GET /{id}/instances`: per-customer scoping, the shared status/date filters, invalid-status rejection, cross-tenant 404, Employee denied.
 - `tests/Unit/CustomerResolutionServiceTest.php` — lookup vs. create, normalization, tenant scoping.
 - `tests/Unit/Execution/NodeExecutionContextTest.php` — `resolutionScope()`'s `customer` key and `{{customer.x}}` template rendering (DB-backed despite living under `Unit/`, since it exercises `WorkflowInstance.customer`; consistent with other DB-touching tests in that directory).

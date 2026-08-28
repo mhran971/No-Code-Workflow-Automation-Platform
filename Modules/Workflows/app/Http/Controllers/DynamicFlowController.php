@@ -168,8 +168,8 @@ class DynamicFlowController extends Controller
     {
         $actor = $request->user();
 
-        if ($actor->role !== Role::Manager) {
-            abort(403, 'Only managers can view instances awaiting their attention.');
+        if ($actor->role !== Role::Manager || $actor->role !== Role::BusinessOwner) {
+            abort(403, 'Only managers and business owners can view instances awaiting their attention.');
         }
 
         $team = $this->resolveManagedTeam($actor);
