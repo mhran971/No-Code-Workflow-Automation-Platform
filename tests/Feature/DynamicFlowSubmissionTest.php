@@ -76,14 +76,55 @@ class DynamicFlowSubmissionTest extends TestCase
 
         $child = WorkflowInstance::query()->findOrFail($dynamicFlow->child_instance_id);
         $this->assertSame(WorkflowInstanceStatus::Completed, $child->status, 'Child instance should run to completion.');
+        $this->assertSame($instanceId, (int) $child->parent_instance_id);
 
         $instance->refresh();
-        $this->assertContains(
+        $this->assertSame(
+            WorkflowInstanceStatus::Completed,
             $instance->status,
-            [WorkflowInstanceStatus::Completed, WorkflowInstanceStatus::Running],
-            "Parent should resume after the child completes, got {$instance->status->value}.",
+            "Parent should resume and finish after the child completes, got {$instance->status->value}.",
         );
         $this->assertSame(DynamicFlowStatus::Completed, $dynamicFlow->fresh()->status);
+    }
+
+    public function test_parent_context_flows_into_the_segment_and_the_output_variable_flows_back(): void
+    {
+        [$tenant, $manager, $team] = $this->tenantWithManager();
+        $workflow = $this->publishedDynamicFlowWorkflow($tenant, $team, $manager);
+
+        /** @var Authenticatable $auth */
+        $auth = $manager;
+
+        $instanceId = $this->actingAs($auth, 'api')
+            ->postJson("/api/v1/workflows/{$workflow->id}/trigger/manual", ['hrEmail' => 'hr@acme.test'])
+            ->assertAccepted()
+            ->json('instance_id');
+
+        $this->actingAs($auth, 'api')
+            ->postJson("/api/v1/workflows/instances/{$instanceId}/dynamic-flow/definition", [
+                'definition' => [
+                    'nodes' => [
+                        ['id' => 'entry', 'type' => 'dynamic-entry', 'config' => []],
+                        ['id' => 'seg-term', 'type' => 'termination-node', 'config' => []],
+                    ],
+                    'edges' => [
+                        ['id' => 'seg-e1', 'source_node_key' => 'entry', 'target_node_key' => 'seg-term'],
+                    ],
+                    'variables' => [],
+                    'settings' => [],
+                ],
+            ])
+            ->assertCreated();
+
+        $dynamicFlow = WorkflowDynamicFlow::query()->where('instance_id', $instanceId)->firstOrFail();
+        $child = WorkflowInstance::query()->findOrFail($dynamicFlow->child_instance_id);
+
+        // Parent context reached the child via the dynamic-entry trigger.
+        $this->assertSame('hr@acme.test', data_get($child->context, 'hrEmail'));
+
+        // Child context came back to the parent under the node's outputVariable ("subResult").
+        $parent = WorkflowInstance::query()->findOrFail($instanceId);
+        $this->assertSame('hr@acme.test', data_get($parent->context, 'subResult.hrEmail'));
     }
 
     /**

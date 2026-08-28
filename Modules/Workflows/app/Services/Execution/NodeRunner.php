@@ -4,7 +4,6 @@ namespace Modules\Workflows\Services\Execution;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Modules\Workflows\Enums\DynamicFlowStatus;
 use Modules\Workflows\Enums\NodeExecutionStatus;
 use Modules\Workflows\Enums\WorkflowInstanceStatus;
 use Modules\Workflows\Events\NodeStarted;
@@ -39,8 +38,17 @@ class NodeRunner
             return $this->compiler->compileVersion($instance->workflowVersion);
         }
 
-        $dynamicFlow = WorkflowDynamicFlow::where('child_instance_id', $instance->id)
-            ->where('status', DynamicFlowStatus::Executing)
+        // Match on the parent_execution_id link first — it is written atomically when the child is
+        // dispatched, whereas child_instance_id is only backfilled after dispatch returns and may
+        // not be visible yet when a synchronously-run child executes its first node.
+        $dynamicFlow = WorkflowDynamicFlow::query()
+            ->where(function ($query) use ($instance): void {
+                $query->where('child_instance_id', $instance->id);
+
+                if ($instance->parent_execution_id !== null) {
+                    $query->orWhere('execution_id', $instance->parent_execution_id);
+                }
+            })
             ->firstOrFail();
 
         return $this->compiler->compile($dynamicFlow->definition ?? []);

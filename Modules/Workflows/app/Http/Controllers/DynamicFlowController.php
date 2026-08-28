@@ -72,13 +72,16 @@ class DynamicFlowController extends Controller
 
         $definition = $request->input('definition');
         $workflow = $instance->workflow;
-
-        // Inject parent context variables as trigger variables so the verifier
-        // knows they will be available at runtime via {{context.<key>}}.
         $parentContext = $instance->context ?? [];
+
+        // A dynamically-designed segment's entry node is always `dynamic-entry`. Declare it as the
+        // segment trigger so both verification and dispatch can resolve the entry node — without a
+        // trigger, WorkflowDispatcher has no node to seed the first execution from. Parent context
+        // keys are exposed as trigger variables so the verifier knows they resolve at runtime via
+        // {{context.<key>}}.
+        $definition['trigger'] = $definition['trigger'] ?? ['type' => 'dynamic-entry', 'config' => []];
+        $definition['trigger']['config'] = $definition['trigger']['config'] ?? [];
         if ($parentContext !== []) {
-            $definition['trigger'] = $definition['trigger'] ?? ['type' => 'manual-trigger', 'config' => []];
-            $definition['trigger']['config'] = $definition['trigger']['config'] ?? [];
             $definition['trigger']['config']['variables'] = array_map(
                 fn (string $key) => ['key' => $key],
                 array_keys($parentContext),
@@ -91,13 +94,22 @@ class DynamicFlowController extends Controller
             return response()->json(['errors' => $errors['errors']], 422);
         }
 
+        // Move the dynamic flow into the executing state *before* dispatching the child. The queue
+        // may run the child synchronously (sync driver) or a worker may finish it before this
+        // request returns; either way the parent's dynamic-flow node must already see
+        // `status = executing` when it re-enters, or it re-parks and never resumes.
         $dynamicFlow->update([
             'created_by_id' => $actor->id,
+            'definition' => $definition,
+            'status' => DynamicFlowStatus::Executing,
+        ]);
+
+        $instance->update([
+            'status' => WorkflowInstanceStatus::Running,
+            'paused_reason' => null,
         ]);
 
         try {
-            $parentContext = $instance->context ?? [];
-
             $childInstance = $this->dispatcher->dispatch(
                 $workflow,
                 TriggerType::SubWorkflow,
@@ -108,18 +120,20 @@ class DynamicFlowController extends Controller
                 $definition,
             );
         } catch (\Throwable $e) {
+            $dynamicFlow->update([
+                'status' => DynamicFlowStatus::AwaitingDesign,
+                'definition' => null,
+            ]);
+            $instance->update([
+                'status' => WorkflowInstanceStatus::Paused,
+                'paused_reason' => 'dynamic_flow:awaiting_design',
+            ]);
+
             return response()->json(['errors' => [$e->getMessage()]], 422);
         }
 
         $dynamicFlow->update([
-            'definition' => $definition,
-            'status' => DynamicFlowStatus::Executing,
             'child_instance_id' => $childInstance->id,
-        ]);
-
-        $instance->update([
-            'status' => WorkflowInstanceStatus::Running,
-            'paused_reason' => null,
         ]);
 
         WorkflowEvent::create([
@@ -168,7 +182,7 @@ class DynamicFlowController extends Controller
     {
         $actor = $request->user();
 
-        if ($actor->role !== Role::Manager || $actor->role !== Role::BusinessOwner) {
+        if ($actor->role !== Role::Manager && $actor->role !== Role::BusinessOwner) {
             abort(403, 'Only managers and business owners can view instances awaiting their attention.');
         }
 

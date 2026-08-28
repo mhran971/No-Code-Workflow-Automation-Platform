@@ -93,7 +93,14 @@ class DynamicFlowExecutor implements NodeExecutor
         WorkflowDynamicFlow $dynamicFlow,
         array $config,
     ): NodeExecutionResult {
-        $childInstance = $dynamicFlow->childInstance;
+        // Prefer the recorded child, but fall back to the parent_execution_id link: the controller
+        // marks the flow `executing` before it dispatches the child, so a synchronously-run child
+        // can wake this node before `child_instance_id` is persisted.
+        $childInstance = $dynamicFlow->childInstance
+            ?? WorkflowInstance::query()
+                ->where('parent_execution_id', $context->execution()->id)
+                ->latest('id')
+                ->first();
 
         // Child still running — re-park.
         if ($childInstance === null || ! $childInstance->isTerminal()) {

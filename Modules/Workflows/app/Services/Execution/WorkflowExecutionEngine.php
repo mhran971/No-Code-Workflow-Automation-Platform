@@ -168,7 +168,10 @@ class WorkflowExecutionEngine
             'wait_type' => $result->waitType,
         ]);
 
-        if (! $this->lifecycle->hasNonWaitingLiveExecutions($instance)) {
+        // A `paused` instance was halted deliberately by its executor (e.g. dynamic-flow awaiting a
+        // manager's design) and owns that state — don't clobber it with the generic `waiting` status.
+        if ($instance->status !== WorkflowInstanceStatus::Paused
+            && ! $this->lifecycle->hasNonWaitingLiveExecutions($instance)) {
             $this->lifecycle->transitionTo($instance, WorkflowInstanceStatus::Waiting);
         }
 

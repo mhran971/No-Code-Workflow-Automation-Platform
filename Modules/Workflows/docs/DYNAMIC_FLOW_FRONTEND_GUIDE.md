@@ -111,8 +111,8 @@ This is the **trigger node** for dynamically-designed sub-flows. It is always th
 ### 3.3 After Submission
 
 1. The definition is validated (Segment mode — no trigger required)
-2. Parent context keys are injected into the trigger config for verification
-3. If valid: a child instance is created, parent resumes to `running`, WebSocket events flow automatically
+2. The backend sets `definition.trigger` to `{ type: "dynamic-entry" }` (matching the segment's always-present entry node) and injects the parent context keys as `trigger.config.variables` for verification. This trigger is also what lets the dispatcher find the entry node when it spawns the child instance.
+3. If valid: the dynamic flow row moves to `executing`, the parent instance resumes to `running`, and a child instance is dispatched. WebSocket events flow automatically.
 4. If invalid: 422 with error messages, dynamic flow stays in `awaiting_design`, user can fix and resubmit
 
 ### 3.4 Child Executes
@@ -604,9 +604,8 @@ For both modes, the verification pipeline runs these checks in order:
 The verifier checks `trigger.config.variables` to know which `context.*` keys are available. For dynamic flows:
 
 - The `dynamic-entry` node has `category: 'trigger'`, so it is recognized as a trigger
-- Its trigger type defaults to `manual-trigger`
-- Without injection, `trigger.config.variables` is empty, causing `{{context.*}}` references to fail
-- **On Submit:** The backend automatically injects parent context keys
+- **On Submit:** the backend sets `trigger.type` to `dynamic-entry` and injects the parent context keys as `trigger.config.variables`
+- Without that injection, `trigger.config.variables` is empty, causing `{{context.*}}` references to fail
 - **On Verify (frontend):** Pass `extraTriggerVariables` to the validation hook so it injects parent context keys before sending
 
 ---
